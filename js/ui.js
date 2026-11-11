@@ -60,6 +60,7 @@ function resizeGameLayout() {
   const hintEl = document.getElementById('hint');
   if (!wrapper) return;
 
+  const isLevelMenuOpen = Boolean(menuOverlay && !menuOverlay.classList.contains('hidden'));
   const aspect = canvas.width / canvas.height; // 940 / 560
   const padX = 24;
   const padY = 20;
@@ -74,25 +75,36 @@ function resizeGameLayout() {
   const availH = Math.max(260, window.innerHeight - topbarH - hintH - padY);
 
   let targetW = availW;
-  let targetH = targetW / aspect;
-  if (targetH > availH) {
-    targetH = availH;
-    targetW = targetH * aspect;
-  }
+  let targetH = availH;
 
-  if (topbarEl) {
-    topbarEl.style.width = `${Math.floor(targetW)}px`;
-    const newTopbarH = topbarEl.offsetHeight;
-    if (newTopbarH !== topbarH) {
-      const availH2 = Math.max(260, window.innerHeight - newTopbarH - hintH - padY);
-      if (targetH > availH2) {
-        targetH = availH2;
-        targetW = targetH * aspect;
-        topbarEl.style.width = `${Math.floor(targetW)}px`;
+  if (isLevelMenuOpen) {
+    // Menu poziomów może być szersze niż proporcje areny 940:560, jeśli mieści się na ekranie
+    wrapper.style.aspectRatio = 'auto';
+  } else {
+    wrapper.style.aspectRatio = '940 / 560';
+    targetH = targetW / aspect;
+    if (targetH > availH) {
+      targetH = availH;
+      targetW = targetH * aspect;
+    }
+
+    if (topbarEl) {
+      topbarEl.style.width = `${Math.floor(targetW)}px`;
+      const newTopbarH = topbarEl.offsetHeight;
+      if (newTopbarH !== topbarH) {
+        const availH2 = Math.max(260, window.innerHeight - newTopbarH - hintH - padY);
+        if (targetH > availH2) {
+          targetH = availH2;
+          targetW = targetH * aspect;
+          topbarEl.style.width = `${Math.floor(targetW)}px`;
+        }
       }
     }
   }
 
+  if (topbarEl) {
+    topbarEl.style.width = `${Math.floor(targetW)}px`;
+  }
   wrapper.style.width = `${Math.floor(targetW)}px`;
   wrapper.style.height = `${Math.floor(targetH)}px`;
 }
@@ -193,6 +205,7 @@ function openShopScreen() {
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.remove('hidden');
+  resizeGameLayout();
   renderShopWeapons();
 }
 
@@ -213,6 +226,7 @@ function openSettingsScreen() {
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.remove('hidden');
+  resizeGameLayout();
   renderSettingsScreen();
 }
 
@@ -280,7 +294,7 @@ function renderSettingsScreen() {
   };
 }
 
-function renderHorizontalTrack(trackTitle, headerRightHtml, steps) {
+function renderHorizontalTrack(trackTitle, headerRightHtml, currentStateNode, nextPurchaseNode) {
   const trackEl = document.createElement('div');
   trackEl.className = 'tree-track';
   trackEl.innerHTML = `
@@ -292,59 +306,16 @@ function renderHorizontalTrack(trackTitle, headerRightHtml, steps) {
   `;
   const rowEl = trackEl.querySelector('.tree-nodes-row');
 
-  // Znajdź indeks ostatniego kupionego elementu na tym torze
-  let lastOwnedIdx = -1;
-  for (let i = 0; i < steps.length; i++) {
-    if (steps[i].isOwned) lastOwnedIdx = i;
-  }
-  const nextUnlockIdx = lastOwnedIdx + 1;
-
-  // Jeśli są wcześniejsze kupione elementy (przed ostatnim kupionym), zwiń je i rozwijaj po najechaniu
-  if (lastOwnedIdx > 0) {
-    const prevGroup = document.createElement('div');
-    prevGroup.className = 'tree-prev-group';
-
-    const pill = document.createElement('div');
-    pill.className = 'tree-prev-pill';
-    pill.innerHTML = `<div>📜 Kupione wcześniej (${lastOwnedIdx})</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">Najedź myszką, aby rozwinąć ▸</div>`;
-    prevGroup.appendChild(pill);
-
-    const prevItems = document.createElement('div');
-    prevItems.className = 'tree-prev-items';
-    for (let i = 0; i < lastOwnedIdx; i++) {
-      prevItems.appendChild(steps[i].createNodeEl('prev-owned'));
-      const conn = document.createElement('div');
-      conn.className = 'tree-connector active';
-      conn.textContent = '──►';
-      prevItems.appendChild(conn);
-    }
-    prevGroup.appendChild(prevItems);
-    rowEl.appendChild(prevGroup);
+  if (currentStateNode) {
+    rowEl.appendChild(currentStateNode);
   }
 
-  // Widoczny OSTATNI KUPIONY
-  if (lastOwnedIdx >= 0) {
-    rowEl.appendChild(steps[lastOwnedIdx].createNodeEl('last-owned'));
-  }
-
-  // Widoczny NASTĘPNY DO ODBLOKOWANIA
-  if (nextUnlockIdx < steps.length) {
-    if (lastOwnedIdx >= 0) {
-      const conn = document.createElement('div');
-      conn.className = 'tree-connector active';
-      conn.textContent = '──►';
-      rowEl.appendChild(conn);
-    }
-    rowEl.appendChild(steps[nextUnlockIdx].createNodeEl('next-unlock'));
-
-    // Jeśli jeszcze nic na tym torze nie kupiono (lastOwnedIdx === -1), pokaż też pierwszy zablokowany szczebel za bronią bazową
-    if (lastOwnedIdx === -1 && nextUnlockIdx + 1 < steps.length) {
-      const conn2 = document.createElement('div');
-      conn2.className = 'tree-connector';
-      conn2.textContent = '──►';
-      rowEl.appendChild(conn2);
-      rowEl.appendChild(steps[nextUnlockIdx + 1].createNodeEl('locked'));
-    }
+  if (nextPurchaseNode) {
+    const conn = document.createElement('div');
+    conn.className = 'tree-connector active';
+    conn.textContent = '──►';
+    rowEl.appendChild(conn);
+    rowEl.appendChild(nextPurchaseNode);
   }
 
   return trackEl;
@@ -354,7 +325,7 @@ function renderShopWeapons() {
   if (!shopWeaponsGrid) return;
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
   if (shopSubtitle) {
-    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b><br><span style="font-size:12px;color:#94a3b8;">Każdy poziomy tor pokazuje <b>ostatni kupiony</b> poziom oraz <b>następny do odblokowania</b> (wcześniej kupione rozwijają się po najechaniu).</span>`;
+    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b><br><span style="font-size:12px;color:#94a3b8;">Każdy tor pokazuje po lewej <b>aktualny stan</b>, a po prawej <b>następną rzecz do kupienia</b> (pierwszy zakup odblokowuje tor).</span>`;
   }
   shopWeaponsGrid.innerHTML = '';
 
@@ -362,115 +333,139 @@ function renderShopWeapons() {
   weaponsCatalog.forEach(w => {
     const isWeaponOwned = ownedWeapons.includes(w.id);
     const isDefault = defaultWeapon === w.id;
-    const steps = [];
+    const upgrades = w.upgrades || [];
 
-    // Krok 0: Broń bazowa
-    steps.push({
-      isOwned: isWeaponOwned,
-      createNodeEl: (roleClass) => {
-        const node = document.createElement('div');
-        node.className = `tree-node ${isWeaponOwned ? 'owned' : ''} ${roleClass} ${isDefault ? 'default-weapon' : ''}`;
-        const badge = isWeaponOwned ? '✅ OSTATNI KUPIONY (BROŃ)' : '🔓 NASTĘPNY DO ODBLOKOWANIA';
-        node.innerHTML = `
-          <div>
-            <div style="font-size:10px;font-weight:900;color:${isWeaponOwned ? '#4ade80' : '#facc15'};">${badge}</div>
-            <div class="lvl-title" style="font-size:15px;">${w.name}</div>
-            <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${w.desc}</div>
-            <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${w.ammoLabel}</div>
-          </div>
-          <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
-        `;
-        const btnWrap = node.querySelector('.custom-card-btns');
-        if (!isWeaponOwned) {
-          const btnBuy = document.createElement('button');
-          btnBuy.className = 'btn-green';
-          btnBuy.disabled = diamonds < w.cost;
-          btnBuy.textContent = diamonds >= w.cost ? `🛒 Kup broń (${w.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
-          btnBuy.onclick = () => {
-            if (diamonds < w.cost) return;
-            diamonds -= w.cost;
-            if (!ownedWeapons.includes(w.id)) ownedWeapons.push(w.id);
-            defaultWeapon = w.id;
-            player.weapon = w.id;
-            saveProgress();
-            updateHud();
-            renderShopWeapons();
-          };
-          btnWrap.appendChild(btnBuy);
-        } else {
-          const btnDef = document.createElement('button');
-          btnDef.className = isDefault ? 'btn-blue' : 'btn-purple';
-          btnDef.textContent = isDefault ? '⭐ Domyślna broń' : '⭐ Ustaw jako domyślną';
-          btnDef.onclick = () => {
-            defaultWeapon = w.id;
-            player.weapon = w.id;
-            saveProgress();
-            updateHud();
-            renderShopWeapons();
-          };
-          btnWrap.appendChild(btnDef);
-        }
-        return node;
+    // Znajdź ostatnie kupione ulepszenie tej broni
+    let lastOwnedUpg = null;
+    let nextUpg = null;
+    for (let i = 0; i < upgrades.length; i++) {
+      if (ownedUpgrades.includes(upgrades[i].id)) {
+        lastOwnedUpg = upgrades[i];
+      } else if (!nextUpg) {
+        nextUpg = upgrades[i];
       }
-    });
+    }
 
-    // Kolejne kroki: Wzmocnienia tej broni
-    (w.upgrades || []).forEach(upg => {
-      const isUpgOwned = ownedUpgrades.includes(upg.id);
-      const canUnlock = isWeaponOwned && (!upg.requiresUpgrade || ownedUpgrades.includes(upg.requiresUpgrade));
-      steps.push({
-        isOwned: isUpgOwned,
-        createNodeEl: (roleClass) => {
-          const node = document.createElement('div');
-          node.className = `tree-node ${isUpgOwned ? 'owned' : (!canUnlock ? 'locked' : '')} ${roleClass}`;
-          const badge = isUpgOwned
-            ? '✅ OSTATNI KUPIONY'
-            : (canUnlock ? '🔓 NASTĘPNY DO ODBLOKOWANIA' : `🔒 WYMAGA: ${w.shortName}`);
-          node.innerHTML = `
-            <div>
-              <div style="font-size:10px;font-weight:900;color:${isUpgOwned ? '#4ade80' : (canUnlock ? '#facc15' : '#94a3b8')};">${badge}</div>
-              <div class="lvl-title" style="font-size:15px;">${upg.name}</div>
-              <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${upg.desc}</div>
-              <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${upg.effectLabel}</div>
-            </div>
-            <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
-          `;
-          if (!isUpgOwned) {
-            const btnWrap = node.querySelector('.custom-card-btns');
-            const btnBuyUpg = document.createElement('button');
-            btnBuyUpg.className = 'btn-green';
-            btnBuyUpg.disabled = !canUnlock || diamonds < upg.cost;
-            btnBuyUpg.textContent = !canUnlock
-              ? `🔒 Kup najpierw ${w.shortName}`
-              : (diamonds >= upg.cost ? `🛒 Kup wzmocnienie (${upg.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${upg.cost})`);
-            btnBuyUpg.onclick = () => {
-              if (!canUnlock || diamonds < upg.cost) return;
-              diamonds -= upg.cost;
-              if (!ownedUpgrades.includes(upg.id)) ownedUpgrades.push(upg.id);
-              if (upg.id === 'bazooka_rockets_5' || upg.id === 'bazooka_rockets_7') {
-                bazookaUpgraded = true;
-                player.rockets = Math.max(player.rockets, getStartingRockets());
-              }
-              if (upg.id === 'pistol_ammo_1' || upg.id === 'pistol_ammo_2') {
-                player.ammo = Math.max(player.ammo, getStartingAmmo());
-              }
-              saveProgress();
-              updateHud();
-              renderShopWeapons();
-            };
-            btnWrap.appendChild(btnBuyUpg);
-          }
-          return node;
+    // 1. Węzeł AKTUALNEGO STANU (po lewej)
+    const currentNode = document.createElement('div');
+    if (!isWeaponOwned) {
+      currentNode.className = 'tree-node locked';
+      currentNode.innerHTML = `
+        <div>
+          <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
+          <div class="lvl-title" style="font-size:15px;color:#94a3b8;">${w.name}</div>
+          <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Nie posiadasz jeszcze tej broni.</div>
+          <div class="lvl-enemies" style="color:#64748b;font-size:11px;">Kup odblokowanie toru po prawej stronie, aby używać broni i kupować jej wzmocnienia!</div>
+        </div>
+      `;
+    } else {
+      currentNode.className = `tree-node owned last-owned ${isDefault ? 'default-weapon' : ''}`;
+      const stateTitle = lastOwnedUpg ? `${w.shortName} — ${lastOwnedUpg.name}` : w.name;
+      const stateDesc = lastOwnedUpg ? lastOwnedUpg.desc : w.desc;
+      const stateEffect = lastOwnedUpg ? lastOwnedUpg.effectLabel : w.ammoLabel;
+      currentNode.innerHTML = `
+        <div>
+          <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN</div>
+          <div class="lvl-title" style="font-size:15px;">${stateTitle}</div>
+          <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${stateDesc}</div>
+          <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${stateEffect}</div>
+        </div>
+        <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+      `;
+      const btnWrap = currentNode.querySelector('.custom-card-btns');
+      const btnDef = document.createElement('button');
+      btnDef.className = isDefault ? 'btn-blue' : 'btn-purple';
+      btnDef.textContent = isDefault ? '⭐ Domyślna broń' : '⭐ Ustaw jako domyślną';
+      btnDef.onclick = () => {
+        defaultWeapon = w.id;
+        player.weapon = w.id;
+        saveProgress();
+        updateHud();
+        renderShopWeapons();
+      };
+      btnWrap.appendChild(btnDef);
+    }
+
+    // 2. Węzeł NASTĘPNEJ RZECZY DO KUPIENIA (po prawej)
+    const nextNode = document.createElement('div');
+    if (!isWeaponOwned) {
+      // Pierwsza rzecz do kupienia to odblokowanie toru (zakup broni)
+      nextNode.className = 'tree-node next-unlock';
+      nextNode.innerHTML = `
+        <div>
+          <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)</div>
+          <div class="lvl-title" style="font-size:15px;">${w.name}</div>
+          <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${w.desc}</div>
+          <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${w.ammoLabel}</div>
+        </div>
+        <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+      `;
+      const btnWrap = nextNode.querySelector('.custom-card-btns');
+      const btnBuy = document.createElement('button');
+      btnBuy.className = 'btn-green';
+      btnBuy.disabled = diamonds < w.cost;
+      btnBuy.textContent = diamonds >= w.cost ? `🛒 Odblokuj tor (${w.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
+      btnBuy.onclick = () => {
+        if (diamonds < w.cost) return;
+        diamonds -= w.cost;
+        if (!ownedWeapons.includes(w.id)) ownedWeapons.push(w.id);
+        defaultWeapon = w.id;
+        player.weapon = w.id;
+        saveProgress();
+        updateHud();
+        renderShopWeapons();
+      };
+      btnWrap.appendChild(btnBuy);
+    } else if (nextUpg) {
+      nextNode.className = 'tree-node next-unlock';
+      nextNode.innerHTML = `
+        <div>
+          <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA</div>
+          <div class="lvl-title" style="font-size:15px;">${nextUpg.name}</div>
+          <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${nextUpg.desc}</div>
+          <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${nextUpg.effectLabel}</div>
+        </div>
+        <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+      `;
+      const btnWrap = nextNode.querySelector('.custom-card-btns');
+      const btnBuyUpg = document.createElement('button');
+      btnBuyUpg.className = 'btn-green';
+      btnBuyUpg.disabled = diamonds < nextUpg.cost;
+      btnBuyUpg.textContent = diamonds >= nextUpg.cost ? `🛒 Kup wzmocnienie (${nextUpg.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${nextUpg.cost})`;
+      btnBuyUpg.onclick = () => {
+        if (diamonds < nextUpg.cost) return;
+        diamonds -= nextUpg.cost;
+        if (!ownedUpgrades.includes(nextUpg.id)) ownedUpgrades.push(nextUpg.id);
+        if (nextUpg.id === 'bazooka_rockets_5' || nextUpg.id === 'bazooka_rockets_7') {
+          bazookaUpgraded = true;
+          player.rockets = Math.max(player.rockets, getStartingRockets());
         }
-      });
-    });
+        if (nextUpg.id === 'pistol_ammo_1' || nextUpg.id === 'pistol_ammo_2') {
+          player.ammo = Math.max(player.ammo, getStartingAmmo());
+        }
+        saveProgress();
+        updateHud();
+        renderShopWeapons();
+      };
+      btnWrap.appendChild(btnBuyUpg);
+    } else {
+      nextNode.className = 'tree-node owned';
+      nextNode.innerHTML = `
+        <div>
+          <div style="font-size:10px;font-weight:900;color:#4ade80;">🏆 MAKSYMALNY POZIOM</div>
+          <div class="lvl-title" style="font-size:15px;">Wszystkie wzmocnienia kupione!</div>
+          <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Ten tor broni został ulepszony do maksimum.</div>
+        </div>
+      `;
+    }
 
     const trackEl = renderHorizontalTrack(
       `🌳 Tor Broni: ${w.name}`,
       isWeaponOwned
         ? `<button class="btn-def-track ${isDefault ? 'btn-blue' : 'btn-purple'}" style="padding:3px 10px;font-size:11px;">${isDefault ? '⭐ Domyślna broń na start' : '⭐ Ustaw jako domyślną'}</button>`
-        : `<span style="font-size:12px;color:#94a3b8;">🔒 Broń niekupiona</span>`,
-      steps
+        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany</span>`,
+      currentNode,
+      nextNode
     );
     const hdrBtn = trackEl.querySelector('.btn-def-track');
     if (hdrBtn) {
@@ -486,70 +481,76 @@ function renderShopWeapons() {
   });
 
   // Tor Wzmocnienia Życia (HP)
-  const hpSteps = [];
-  hpSteps.push({
-    isOwned: true,
-    createNodeEl: (roleClass) => {
-      const node = document.createElement('div');
-      node.className = `tree-node owned ${roleClass}`;
-      node.innerHTML = `
-        <div>
-          <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ BAZA TORU</div>
-          <div class="lvl-title" style="font-size:15px;">${hpTrackConfig.baseName}</div>
-          <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${hpTrackConfig.baseDesc}</div>
-          <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Aktualny start: ${getStartingMaxHp()} HP</div>
-        </div>
-      `;
-      return node;
+  const hpUpgrades = hpTrackConfig.upgrades || [];
+  let lastOwnedHpUpg = null;
+  let nextHpUpg = null;
+  for (let i = 0; i < hpUpgrades.length; i++) {
+    if (ownedUpgrades.includes(hpUpgrades[i].id)) {
+      lastOwnedHpUpg = hpUpgrades[i];
+    } else if (!nextHpUpg) {
+      nextHpUpg = hpUpgrades[i];
     }
-  });
+  }
 
-  hpTrackConfig.upgrades.forEach(upg => {
-    const isUpgOwned = ownedUpgrades.includes(upg.id);
-    const canUnlock = !upg.requiresUpgrade || ownedUpgrades.includes(upg.requiresUpgrade);
-    hpSteps.push({
-      isOwned: isUpgOwned,
-      createNodeEl: (roleClass) => {
-        const node = document.createElement('div');
-        node.className = `tree-node ${isUpgOwned ? 'owned' : (!canUnlock ? 'locked' : '')} ${roleClass}`;
-        const badge = isUpgOwned ? '✅ OSTATNI KUPIONY' : '🔓 NASTĘPNY DO ODBLOKOWANIA';
-        node.innerHTML = `
-          <div>
-            <div style="font-size:10px;font-weight:900;color:${isUpgOwned ? '#4ade80' : '#facc15'};">${badge}</div>
-            <div class="lvl-title" style="font-size:15px;">${upg.name}</div>
-            <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${upg.desc}</div>
-            <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${upg.effectLabel}</div>
-          </div>
-          <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
-        `;
-        if (!isUpgOwned) {
-          const btnWrap = node.querySelector('.custom-card-btns');
-          const btnBuyHp = document.createElement('button');
-          btnBuyHp.className = 'btn-green';
-          btnBuyHp.disabled = !canUnlock || diamonds < upg.cost;
-          btnBuyHp.textContent = diamonds >= upg.cost ? `🛒 Kup wzmocnienie (${upg.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${upg.cost})`;
-          btnBuyHp.onclick = () => {
-            if (!canUnlock || diamonds < upg.cost) return;
-            diamonds -= upg.cost;
-            if (!ownedUpgrades.includes(upg.id)) ownedUpgrades.push(upg.id);
-            player.maxHp = getStartingMaxHp();
-            player.hp = Math.min(player.maxHp, player.hp + (upg.bonusHp || 5));
-            saveProgress();
-            updateHud();
-            renderShopWeapons();
-          };
-          btnWrap.appendChild(btnBuyHp);
-        }
-        return node;
-      }
-    });
-  });
+  const hpCurrentNode = document.createElement('div');
+  hpCurrentNode.className = 'tree-node owned last-owned';
+  hpCurrentNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN</div>
+      <div class="lvl-title" style="font-size:15px;">${lastOwnedHpUpg ? lastOwnedHpUpg.name : hpTrackConfig.baseName}</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${lastOwnedHpUpg ? lastOwnedHpUpg.desc : hpTrackConfig.baseDesc}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Aktualny start: ${getStartingMaxHp()} HP</div>
+    </div>
+  `;
+
+  const hpNextNode = document.createElement('div');
+  if (nextHpUpg) {
+    const isFirstHpUnlock = !lastOwnedHpUpg;
+    hpNextNode.className = 'tree-node next-unlock';
+    hpNextNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#facc15;">${isFirstHpUnlock ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
+        <div class="lvl-title" style="font-size:15px;">${nextHpUpg.name}</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${nextHpUpg.desc}</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${nextHpUpg.effectLabel}</div>
+      </div>
+      <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+    `;
+    const btnWrap = hpNextNode.querySelector('.custom-card-btns');
+    const btnBuyHp = document.createElement('button');
+    btnBuyHp.className = 'btn-green';
+    btnBuyHp.disabled = diamonds < nextHpUpg.cost;
+    btnBuyHp.textContent = diamonds >= nextHpUpg.cost
+      ? `🛒 ${isFirstHpUnlock ? 'Odblokuj tor' : 'Kup wzmocnienie'} (${nextHpUpg.cost} 💎)`
+      : `🔒 Brak 💎 (${diamonds}/${nextHpUpg.cost})`;
+    btnBuyHp.onclick = () => {
+      if (diamonds < nextHpUpg.cost) return;
+      diamonds -= nextHpUpg.cost;
+      if (!ownedUpgrades.includes(nextHpUpg.id)) ownedUpgrades.push(nextHpUpg.id);
+      player.maxHp = getStartingMaxHp();
+      player.hp = Math.min(player.maxHp, player.hp + (nextHpUpg.bonusHp || 5));
+      saveProgress();
+      updateHud();
+      renderShopWeapons();
+    };
+    btnWrap.appendChild(btnBuyHp);
+  } else {
+    hpNextNode.className = 'tree-node owned';
+    hpNextNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">🏆 MAKSYMALNY POZIOM</div>
+        <div class="lvl-title" style="font-size:15px;">Wszystkie wzmocnienia HP kupione!</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Twoje startowe zdrowie wynosi maksymalne ${getStartingMaxHp()} HP.</div>
+      </div>
+    `;
+  }
 
   shopWeaponsGrid.appendChild(
     renderHorizontalTrack(
       hpTrackConfig.title,
       `<span style="font-size:12px;color:#4ade80;">❤️ Aktualnie na start: ${getStartingMaxHp()} HP</span>`,
-      hpSteps
+      hpCurrentNode,
+      hpNextNode
     )
   );
 }
@@ -572,6 +573,7 @@ function openCustomMapsScreen(editIdx = null) {
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   customOverlay.classList.remove('hidden');
+  resizeGameLayout();
 
   if (editIdx !== null) {
     renderCustomMapEditor(editIdx);
@@ -770,6 +772,7 @@ function openResultPopup(mode) {
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
   resultPopupOverlay.classList.remove('hidden');
+  resizeGameLayout();
 
   const isWin = mode === 'level_clear';
   const stageName = activeCustomMapIndex !== null
@@ -884,6 +887,7 @@ function openMenu(mode = 'select') {
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   menuOverlay.classList.remove('hidden');
+  resizeGameLayout();
 
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
   menuTitle.textContent = '📋 MENU WYBORU POZIOMÓW';
@@ -893,7 +897,7 @@ function openMenu(mode = 'select') {
   levelsGrid.innerHTML = '';
   levelsGrid.style.display = 'grid';
 
-  const totalCards = Math.max(8, Math.ceil((unlockedLevel + 2) / 4) * 4);
+  const totalCards = Math.max(12, Math.ceil((unlockedLevel + 4) / 4) * 4);
   for (let i = 1; i <= totalCards; i++) {
     const isUnlocked = i <= unlockedLevel;
     const isCompleted = Boolean(bestTimes[i]);
@@ -947,6 +951,7 @@ function openMenu(mode = 'select') {
       startLevel(level);
     } else {
       menuOverlay.classList.add('hidden');
+      resizeGameLayout();
       startTime = performance.now() - survivalSeconds * 1000;
       gameState = 'playing';
       updatePauseButtonUI();

@@ -433,6 +433,7 @@ function startLevel(targetLevel) {
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
+  resizeGameLayout();
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -500,6 +501,7 @@ function startCustomMap(idx) {
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
+  resizeGameLayout();
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -861,6 +863,7 @@ if (btnCloseSettings) {
 btnOpenMenu.addEventListener('click', () => {
   if (gameState === 'menu') {
     menuOverlay.classList.add('hidden');
+    resizeGameLayout();
     startTime = performance.now() - survivalSeconds * 1000;
     gameState = 'playing';
     updatePauseButtonUI();
@@ -951,6 +954,7 @@ window.addEventListener('keydown', e => {
       customOverlay.classList.add('hidden');
       if (shopOverlay) shopOverlay.classList.add('hidden');
       if (settingsOverlay) settingsOverlay.classList.add('hidden');
+      resizeGameLayout();
       startTime = performance.now() - survivalSeconds * 1000;
       gameState = 'playing';
       updatePauseButtonUI();
