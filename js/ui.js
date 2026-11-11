@@ -381,12 +381,18 @@ function openMenu(mode = 'select') {
   } else {
     const btnCont = document.createElement('button');
     btnCont.className = 'btn-big btn-green';
-    btnCont.dataset.label = `▶️ Wróć do gry`;
+    btnCont.dataset.label = hasStartedAnyGame ? `▶️ Wróć do gry` : `▶️ Zagraj (Poziom ${level})`;
     btnCont.onclick = () => {
       if (!canActivateMenuAction()) return;
-      menuOverlay.classList.add('hidden');
-      gameState = 'playing';
-      canvas.focus();
+      if (!hasStartedAnyGame) {
+        startLevel(level);
+      } else {
+        menuOverlay.classList.add('hidden');
+        startTime = performance.now() - survivalSeconds * 1000;
+        gameState = 'playing';
+        updatePauseButtonUI();
+        canvas.focus();
+      }
     };
     menuActions.appendChild(btnCont);
     actionButtons.push(btnCont);

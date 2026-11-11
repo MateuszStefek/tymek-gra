@@ -59,7 +59,8 @@ let player = {
   splatColor: null
 };
 
-let gameState = 'playing'; // 'playing' | 'menu' | 'custom_maps' | 'dead' | 'level_clear' | 'paused'
+let gameState = 'menu'; // 'playing' | 'menu' | 'custom_maps' | 'dead' | 'level_clear' | 'paused'
+let hasStartedAnyGame = false;
 let startTime = performance.now();
 let survivalSeconds = 0;
 let level = 1;

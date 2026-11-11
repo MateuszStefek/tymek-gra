@@ -1,3 +1,4 @@
+- [DONE] pierwszy ekran po zaladowaniu gry nie powinen byc grą która trwa ale, wyborem poziomów
 - odradzanie hp - 1 hp na sekunde
 - inne motywy graficzne - do wyboru
 - stawianie min prawym przciskiem (ale zostaw tez spacje)

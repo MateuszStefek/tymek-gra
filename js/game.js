@@ -216,6 +216,7 @@ function startLevel(targetLevel) {
   }
 
   activeCustomMapIndex = null;
+  hasStartedAnyGame = true;
   level = targetLevel;
   const cfg = getLevelConfig(level);
   currentArena = cfg.arena;
@@ -266,6 +267,7 @@ function startCustomMap(idx) {
   }
 
   activeCustomMapIndex = idx;
+  hasStartedAnyGame = true;
   const cm = customMaps[idx];
   currentArena = arenaLayouts[cm.arenaIndex % arenaLayouts.length];
   obstacles = currentArena.obstacles;
@@ -757,4 +759,6 @@ function gameLoop() {
 }
 
 startLevel(level);
+hasStartedAnyGame = false;
+openMenu('select');
 requestAnimationFrame(gameLoop);
