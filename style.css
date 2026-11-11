@@ -189,6 +189,13 @@ canvas {
   background: #38bdf8;
   border-radius: 6px;
 }
+.shop-tree {
+  scrollbar-width: none; /* Firefox: ukryj brzydki pasek przewijania (przewijanie kółkiem nadal działa) */
+  -ms-overflow-style: none;
+}
+.shop-tree::-webkit-scrollbar {
+  display: none;
+}
 .level-card {
   background: #1e293b;
   border: 2px solid #38bdf8;

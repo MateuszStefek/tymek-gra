@@ -277,7 +277,8 @@ function renderEnemiesCatalog() {
     }
   ];
 
-  catalog.forEach(item => {
+  const unlockedKinds = getUnlockedEnemyKinds();
+  catalog.filter(item => item.kind === 'civilian' || unlockedKinds.has(item.kind)).forEach(item => {
     const card = document.createElement('div');
     card.className = 'level-card';
     card.style.cursor = 'default';
@@ -421,7 +422,8 @@ function renderShopWeapons() {
   if (!shopWeaponsGrid) return;
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
   if (shopSubtitle) {
-    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b> | Leczenie: <b style="color:#4ade80;">+${getHealingPer5Sec()} HP / 5s 💚</b><br><span style="font-size:12px;color:#94a3b8;">Każdy tor pokazuje po lewej <b>aktualny stan</b>, a po prawej <b>następną rzecz do kupienia</b> (pierwszy zakup odblokowuje tor).</span>`;
+    const avgHeal = getAverageHealingPerSecond(healingLevel);
+    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b> | Leczenie śr.: <b style="color:#4ade80;">${avgHeal.toFixed(2)} HP/s 💚</b><br><span style="font-size:12px;color:#94a3b8;">Każdy tor pokazuje po lewej <b>aktualny stan</b>, a po prawej <b>następną rzecz do kupienia</b> (pierwszy zakup odblokowuje tor).</span>`;
   }
   shopWeaponsGrid.innerHTML = '';
 
@@ -650,10 +652,13 @@ function renderShopWeapons() {
     )
   );
 
-  // Tor Leczenia (Regeneracji HP co 5 sekund) — zaczynamy od 0, pierwszy poziom (1 HP co 5s) też się kupuje, ceny rosną Fibonaccim
-  const curHeal = getHealingPer5Sec();
+  // Tor Leczenia — każdy kolejny poziom dodaje dyskretny impuls +1 HP co (4 + poziom) sekund (5s, 6s, 7s, 8s...), a ceny rosną Fibonaccim (1, 2, 3, 5, 8...)
+  const curHeal = healingLevel;
   const nextHealLvl = curHeal + 1;
+  const nextHealSec = getHealingIntervalSeconds(nextHealLvl);
   const nextHealCost = getHealingUpgradeCost(nextHealLvl);
+  const curAvgHpSec = getAverageHealingPerSecond(curHeal);
+  const nextAvgHpSec = getAverageHealingPerSecond(nextHealLvl);
 
   const healCurrentNode = document.createElement('div');
   if (curHeal <= 0) {
@@ -663,17 +668,21 @@ function renderShopWeapons() {
         <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
         <div class="lvl-title" style="font-size:15px;color:#94a3b8;">${healingTrackConfig.lockedName}</div>
         <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${healingTrackConfig.lockedDesc}</div>
-        <div class="lvl-enemies" style="color:#64748b;font-size:11px;">💚 Aktualne leczenie: 0 HP co 5 sekund</div>
+        <div class="lvl-enemies" style="color:#64748b;font-size:11px;">💚 Uśrednione leczenie: 0.00 HP / s</div>
       </div>
     `;
   } else {
+    const activePulses = [];
+    for (let k = 1; k <= curHeal; k++) {
+      activePulses.push(`1 HP/${getHealingIntervalSeconds(k)}s`);
+    }
     healCurrentNode.className = 'tree-node owned last-owned';
     healCurrentNode.innerHTML = `
       <div>
-        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN</div>
-        <div class="lvl-title" style="font-size:15px;">💚 Leczenie Poziom ${curHeal} (+${curHeal} HP / 5s)</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Twoja postać automatycznie odzyskuje zdrowie co 5 sekund podczas walki.</div>
-        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">💚 Regeneracja: +${curHeal} HP co 5 sekund</div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN (POZIOM ${curHeal})</div>
+        <div class="lvl-title" style="font-size:15px;">💚 Średnio: ${curAvgHpSec.toFixed(2)} HP / s</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Aktywne dyskretne impulsy leczenia (${curHeal}):</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">⏱️ ${activePulses.join(' + ')}</div>
       </div>
     `;
   }
@@ -684,9 +693,9 @@ function renderShopWeapons() {
   healNextNode.innerHTML = `
     <div>
       <div style="font-size:10px;font-weight:900;color:#facc15;">${isFirstHealUnlock ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
-      <div class="lvl-title" style="font-size:15px;">💚 Leczenie Poziom ${nextHealLvl} (+${nextHealLvl} HP / 5s)</div>
-      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${isFirstHealUnlock ? 'Odblokowuje automatyczne leczenie: +1 HP co każde 5 sekund!' : `Zwiększa automatyczne leczenie o kolejne +1 HP co 5 sekund!`}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">💚 Regeneracja: ${curHeal} ➡️ +${nextHealLvl} HP co 5 sekund</div>
+      <div class="lvl-title" style="font-size:15px;">💚 +1 HP co ${nextHealSec} sekund (${nextHealCost} 💎)</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${isFirstHealUnlock ? `Odblokowuje pierwszy dyskretny impuls leczenia: +1 HP co każde ${nextHealSec} sekund!` : `Dodaje kolejny niezależny impuls: +1 HP co każde ${nextHealSec} sekund!`}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">💚 Średnio: ${curAvgHpSec.toFixed(2)} ➡️ ${nextAvgHpSec.toFixed(2)} HP / s</div>
     </div>
     <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
   `;
@@ -695,7 +704,7 @@ function renderShopWeapons() {
   btnBuyHeal.className = 'btn-green';
   btnBuyHeal.disabled = diamonds < nextHealCost;
   btnBuyHeal.textContent = diamonds >= nextHealCost
-    ? `🛒 ${isFirstHealUnlock ? 'Odblokuj tor' : 'Kup wzmocnienie'} (${nextHealCost} 💎)`
+    ? `🛒 ${isFirstHealUnlock ? 'Odblokuj tor' : 'Kup wzmocnienie'}: 1 HP/${nextHealSec}s (${nextHealCost} 💎)`
     : `🔒 Brak 💎 (${diamonds}/${nextHealCost})`;
   btnBuyHeal.onclick = () => {
     if (diamonds < nextHealCost) return;
@@ -711,8 +720,8 @@ function renderShopWeapons() {
     renderHorizontalTrack(
       healingTrackConfig.title,
       curHeal > 0
-        ? `<span style="font-size:12px;color:#4ade80;">💚 Aktywne: +${curHeal} HP co 5s</span>`
-        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany (0 HP / 5s)</span>`,
+        ? `<span style="font-size:12px;color:#4ade80;">💚 Średnio: ${curAvgHpSec.toFixed(2)} HP/s (Poziom ${curHeal})</span>`
+        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany (0.00 HP/s)</span>`,
       healCurrentNode,
       healNextNode
     )
@@ -757,6 +766,7 @@ function renderCustomMapsList() {
     const arenaObj = arenaLayouts[cm.arenaIndex % arenaLayouts.length];
     const cloudsCnt = typeof cm.clouds === 'number' ? cm.clouds : 1;
     const civsCnt = typeof cm.civilians === 'number' ? cm.civilians : 1;
+    const lockedKinds = getLockedKindsInCustomMap(cm);
     const card = document.createElement('div');
     card.className = 'level-card completed' + (activeCustomMapIndex === idx ? ' current' : '');
     card.style.cursor = 'default';
@@ -764,9 +774,9 @@ function renderCustomMapsList() {
       <div class="lvl-title" style="color:#e9d5ff;">🛠️ ${cm.name}</div>
       <div class="lvl-enemies">🎯 ${formatCustomMapSummary(cm)}</div>
       <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🗺️ ${arenaObj.name} | ☁️ ${cloudsCnt} | 🏥 Cywile: ${civsCnt}</div>
-      <div class="lvl-status" style="color:#4ade80;">🔓 Zawsze odblokowana</div>
+      <div class="lvl-status" style="color:${lockedKinds.length ? '#ef4444' : '#4ade80'};">${lockedKinds.length ? `🔒 Zablokowani przeciwnicy: ${lockedKinds.join(', ')}` : '🔓 Zawsze odblokowana'}</div>
       <div class="custom-card-btns" style="margin-top:6px;">
-        <button class="btn-green" id="playCustom_${idx}">▶️ Graj</button>
+        <button class="btn-green" id="playCustom_${idx}" ${lockedKinds.length ? 'disabled' : ''}>${lockedKinds.length ? '🔒 Zablokowana' : '▶️ Graj'}</button>
         <button class="btn-purple" id="editCustom_${idx}">✏️ Edytuj</button>
       </div>
     `;
@@ -786,6 +796,10 @@ function renderCustomMapEditor(idx) {
   function refreshEditorDOM() {
     const arenaObj = arenaLayouts[draft.arenaIndex % arenaLayouts.length];
     const total = draft.normal + draft.tough + draft.rapid + draft.boss;
+    const unlockedKinds = getUnlockedEnemyKinds();
+    const isLocked = kind => !unlockedKinds.has(kind);
+    const lockedUsed = getLockedKindsInCustomMap(draft);
+    const cannotSave = total === 0 || lockedUsed.length > 0;
     customEditorView.innerHTML = `
       <div class="editor-row">
         <span>📝 Nazwa własnej mapy:</span>
@@ -812,7 +826,7 @@ function renderCustomMapEditor(idx) {
         <div class="editor-stepper">
           <button id="edNormDec">➖</button>
           <span>${draft.normal}</span>
-          <button id="edNormInc">➕</button>
+          <button id="edNormInc" ${isLocked('normal') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('normal') ? '🔒' : '➕'}</button>
         </div>
       </div>
       <div class="editor-row">
@@ -820,7 +834,7 @@ function renderCustomMapEditor(idx) {
         <div class="editor-stepper">
           <button id="edToughDec">➖</button>
           <span>${draft.tough}</span>
-          <button id="edToughInc">➕</button>
+          <button id="edToughInc" ${isLocked('tough') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('tough') ? '🔒' : '➕'}</button>
         </div>
       </div>
       <div class="editor-row">
@@ -828,7 +842,7 @@ function renderCustomMapEditor(idx) {
         <div class="editor-stepper">
           <button id="edRapidDec">➖</button>
           <span>${draft.rapid}</span>
-          <button id="edRapidInc">➕</button>
+          <button id="edRapidInc" ${isLocked('rapid') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('rapid') ? '🔒' : '➕'}</button>
         </div>
       </div>
       <div class="editor-row">
@@ -836,7 +850,7 @@ function renderCustomMapEditor(idx) {
         <div class="editor-stepper">
           <button id="edBossDec">➖</button>
           <span>${draft.boss}</span>
-          <button id="edBossInc">➕</button>
+          <button id="edBossInc" ${isLocked('boss') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('boss') ? '🔒' : '➕'}</button>
         </div>
       </div>
       <div class="editor-row">
@@ -847,12 +861,13 @@ function renderCustomMapEditor(idx) {
           <button id="edCivInc">➕</button>
         </div>
       </div>
-      <div style="text-align:center;font-size:13px;color:${total > 0 ? '#4ade80' : '#ef4444'};font-weight:800;">
+      <div style="text-align:center;font-size:13px;color:${!cannotSave ? '#4ade80' : '#ef4444'};font-weight:800;">
         Łącznie przeciwników na mapie: ${total} ${total === 0 ? '(ustaw przynajmniej 1 przeciwnika!)' : ''}
+        ${lockedUsed.length > 0 ? `<br>🔒 Zablokowani przeciwnicy w mapie: ${lockedUsed.join(', ')} — zmniejsz ich liczbę do 0, aby zapisać.` : ''}
       </div>
       <div class="action-row" style="margin-top:4px;">
-        <button id="edSaveAndPlay" class="btn-big btn-green" ${total === 0 ? 'disabled' : ''}>💾 Zapisz i ▶️ Zagraj teraz!</button>
-        <button id="edSaveOnly" class="btn-big btn-purple" ${total === 0 ? 'disabled' : ''}>💾 Zapisz i wróć do listy</button>
+        <button id="edSaveAndPlay" class="btn-big btn-green" ${cannotSave ? 'disabled' : ''}>💾 Zapisz i ▶️ Zagraj teraz!</button>
+        <button id="edSaveOnly" class="btn-big btn-purple" ${cannotSave ? 'disabled' : ''}>💾 Zapisz i wróć do listy</button>
         <button id="edCancel" class="btn-big btn-blue">↩️ Anuluj</button>
       </div>
     `;
@@ -894,13 +909,13 @@ function renderCustomMapEditor(idx) {
     customEditorView.querySelector('#edCivInc').onclick = () => { draft.civilians = Math.min(8, (draft.civilians || 0) + 1); refreshEditorDOM(); };
 
     customEditorView.querySelector('#edSaveAndPlay').onclick = () => {
-      if (draft.normal + draft.tough + draft.rapid + draft.boss <= 0) return;
+      if (draft.normal + draft.tough + draft.rapid + draft.boss <= 0 || getLockedKindsInCustomMap(draft).length > 0) return;
       customMaps[idx] = { ...draft };
       saveProgress();
       startCustomMap(idx);
     };
     customEditorView.querySelector('#edSaveOnly').onclick = () => {
-      if (draft.normal + draft.tough + draft.rapid + draft.boss <= 0) return;
+      if (draft.normal + draft.tough + draft.rapid + draft.boss <= 0 || getLockedKindsInCustomMap(draft).length > 0) return;
       customMaps[idx] = { ...draft };
       saveProgress();
       openCustomMapsScreen(null);

@@ -93,12 +93,26 @@ const hpTrackConfig = {
 };
 
 const healingTrackConfig = {
-  title: '💚 Tor Leczenia (Regeneracja co 5s)',
-  lockedName: '💚 Leczenie Wyłączone (0 HP / 5s)',
+  title: '💚 Tor Leczenia (Dyskretne Impulsy HP)',
+  lockedName: '💚 Leczenie Wyłączone (0.00 HP/s)',
   lockedDesc: 'Brak automatycznej regeneracji zdrowia. Odblokuj tor po prawej stronie!'
 };
 
-// Ceny kolejnych poziomów leczenia (+1 HP co 5s na każdy poziom) rosną ciągiem Fibonacciego: 1, 2, 3, 5, 8, 13, 21...
+// Dla poziomu k (1, 2, 3, 4...) okres impulsu wynosi (4 + k) sekund: 5s, 6s, 7s, 8s...
+function getHealingIntervalSeconds(targetLevel) {
+  return 4 + targetLevel;
+}
+
+// Uśredniona wartość leczenia w HP na sekundę dla odblokowanych poziomów 1..maxLevel
+function getAverageHealingPerSecond(maxLevel) {
+  let sum = 0;
+  for (let k = 1; k <= maxLevel; k++) {
+    sum += 1 / getHealingIntervalSeconds(k);
+  }
+  return sum;
+}
+
+// Ceny kolejnych poziomów leczenia rosną ciągiem Fibonacciego: 1, 2, 3, 5, 8, 13, 21...
 function getHealingUpgradeCost(targetLevel) {
   let a = 1;
   let b = 2;

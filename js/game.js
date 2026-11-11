@@ -444,6 +444,7 @@ function startLevel(targetLevel) {
   player.maxHp = getStartingMaxHp();
   player.hp = player.maxHp;
   player.hpRegenTimer = 0;
+  player.healTimers = [];
   player.ammo = getStartingAmmo(); // Zaczynamy poziom od 30 nabojów (lub 40 z ulepszeniem)
   player.rockets = getStartingRockets(); // Standardowa bazooka: 3 rakiety na starcie (5 po wzmocnieniu ze sklepu)
   player.emptyBazookaTries = 0;
@@ -483,6 +484,18 @@ function startLevel(targetLevel) {
 }
 
 function startCustomMap(idx) {
+  // Mapa z zablokowanymi (jeszcze nieodkrytymi) przeciwnikami nie może zostać uruchomiona
+  const lockedKinds = getLockedKindsInCustomMap(customMaps[idx]);
+  if (lockedKinds.length > 0) {
+    popups.push({
+      x: player.x,
+      y: player.y - 30,
+      text: `🔒 Zablokowani przeciwnicy: ${lockedKinds.join(', ')}`,
+      color: '#ef4444',
+      alpha: 1
+    });
+    return;
+  }
   if (menuCountdownInterval) {
     clearInterval(menuCountdownInterval);
     menuCountdownInterval = null;
@@ -514,6 +527,7 @@ function startCustomMap(idx) {
   player.maxHp = getStartingMaxHp();
   player.hp = player.maxHp;
   player.hpRegenTimer = 0;
+  player.healTimers = [];
   player.ammo = getStartingAmmo();
   player.rockets = getStartingRockets();
   player.emptyBazookaTries = 0;
@@ -964,8 +978,8 @@ btnAddCustomMap.addEventListener('click', () => {
     clouds: 1,
     civilians: 1,
     normal: 1,
-    tough: 1,
-    rapid: 1,
+    tough: getUnlockedEnemyKinds().has('tough') ? 1 : 0,
+    rapid: getUnlockedEnemyKinds().has('rapid') ? 1 : 0,
     boss: 0
   });
   saveProgress();
@@ -1089,19 +1103,27 @@ function update() {
 
   survivalSeconds = (performance.now() - startTime) / 1000;
 
-  // Tor leczenia: zaczynamy od 0 HP/5s; każdy kupiony poziom daje +1 HP co 5 sekund (300 klatek przy 60 FPS)
-  const healPer5s = getHealingPer5Sec();
-  if (healPer5s > 0 && player.hp > 0 && player.hp < player.maxHp) {
-    player.hpRegenTimer = (player.hpRegenTimer || 0) + 1;
-    if (player.hpRegenTimer >= 300) {
-      player.hpRegenTimer = 0;
-      const healed = Math.min(player.maxHp - player.hp, healPer5s);
-      player.hp = Math.min(player.maxHp, player.hp + healPer5s);
-      if (healed > 0) {
+  // Tor leczenia: dyskretne impulsy (+1 HP co 5s, +1 HP co 6s, +1 HP co 7s, +1 HP co 8s...)
+  if (healingLevel > 0 && player.hp > 0 && player.hp < player.maxHp) {
+    if (!Array.isArray(player.healTimers)) player.healTimers = [];
+    let totalHealedThisFrame = 0;
+    for (let k = 1; k <= healingLevel; k++) {
+      const idx = k - 1;
+      player.healTimers[idx] = (player.healTimers[idx] || 0) + 1;
+      const requiredFrames = getHealingIntervalSeconds(k) * 60; // 5s=300, 6s=360, 7s=420, 8s=480...
+      if (player.healTimers[idx] >= requiredFrames) {
+        player.healTimers[idx] = 0;
+        totalHealedThisFrame += 1;
+      }
+    }
+    if (totalHealedThisFrame > 0) {
+      const actualHealed = Math.min(player.maxHp - player.hp, totalHealedThisFrame);
+      player.hp = Math.min(player.maxHp, player.hp + totalHealedThisFrame);
+      if (actualHealed > 0) {
         popups.push({
           x: player.x,
           y: player.y - 26,
-          text: `💚 +${healed} HP`,
+          text: `💚 +${actualHealed} HP`,
           color: '#4ade80',
           alpha: 1
         });
@@ -1109,7 +1131,7 @@ function update() {
       updateHud();
     }
   } else {
-    player.hpRegenTimer = 0;
+    player.healTimers = [];
   }
 
   if (player.hitFlash > 0) player.hitFlash--;

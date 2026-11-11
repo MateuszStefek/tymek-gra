@@ -1,7 +1,7 @@
 // Stan gry, referencje DOM oraz zapis postępów w localStorage
 
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d'); // let: podgląd NPC w przeglądzie wrogów tymczasowo podmienia kontekst rysowania
 
 const paintCanvas = document.createElement('canvas');
 paintCanvas.width = canvas.width;
@@ -87,6 +87,7 @@ let player = {
   hp: 200,
   maxHp: 200,
   hpRegenTimer: 0,
+  healTimers: [],
   ammo: 30,
   rockets: 3,
   emptyBazookaTries: 0,
@@ -174,6 +175,27 @@ try {
 
 function getHealingPer5Sec() {
   return healingLevel;
+}
+
+// Typy przeciwników, które występują na którymkolwiek z odblokowanych poziomów kampanii (1..unlockedLevel)
+function getUnlockedEnemyKinds() {
+  const kinds = new Set();
+  for (let i = 1; i <= unlockedLevel; i++) {
+    for (const kind of getLevelConfig(i).roster) kinds.add(kind);
+    if (kinds.size >= 4) break;
+  }
+  return kinds;
+}
+
+// Zwraca listę nazw zablokowanych typów przeciwników użytych w mapie własnej (pusta lista = mapę można uruchomić)
+function getLockedKindsInCustomMap(cm) {
+  const unlocked = getUnlockedEnemyKinds();
+  const names = { normal: 'Zwykły', tough: 'Pancerny', rapid: 'Szybkostrzelny', boss: 'Boss' };
+  const locked = [];
+  for (const kind of ['normal', 'tough', 'rapid', 'boss']) {
+    if ((cm[kind] || 0) > 0 && !unlocked.has(kind)) locked.push(names[kind]);
+  }
+  return locked;
 }
 
 function getStartingMaxHp() {
