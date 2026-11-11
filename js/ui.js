@@ -77,7 +77,7 @@ function updateHud() {
   ammoText.textContent = player.ammo;
   ammoText.style.color = player.ammo > 5 ? '#facc15' : '#ef4444';
   minesText.textContent = minesCount;
-  btnPlaceMine.textContent = `💣 Postaw minę: ${minesCount} [SPACJA / E]`;
+  btnPlaceMine.textContent = `💣 Postaw minę: ${minesCount} [PPM / SPACJA]`;
   btnPlaceMine.disabled = minesCount <= 0;
   hpText.textContent = `${hp}/${player.maxHp}`;
   hpFill.style.width = pct + '%';

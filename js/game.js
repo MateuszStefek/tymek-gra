@@ -457,6 +457,13 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mousedown', e => {
   window.focus();
   canvas.focus();
+  if (e.button === 2) {
+    e.preventDefault();
+    if (gameState === 'playing') {
+      placeMine();
+    }
+    return;
+  }
   if (e.button !== 0) {
     e.preventDefault();
     return;
