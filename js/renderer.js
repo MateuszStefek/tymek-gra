@@ -403,6 +403,44 @@ function renderScene() {
     ctx.restore();
   }
 
+  // Chmury zasłaniające fragment mapy (ok. 20% x 20% = ~188x112 px)
+  for (const cl of clouds) {
+    ctx.save();
+    ctx.translate(cl.x, cl.y);
+
+    // Cień chmury na ziemi
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.32)';
+    ctx.beginPath();
+    ctx.ellipse(6, 12, cl.w * 0.52, cl.h * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Gęste kłęby chmury całkowicie zasłaniające obszar ~20% x 20% mapy
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.97)';
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.85)';
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, cl.w * 0.44, cl.h * 0.44, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (const puff of cl.puffs) {
+      const wobbleX = Math.sin(cl.phase + puff.phaseOffset) * 3;
+      const wobbleY = Math.cos(cl.phase + puff.phaseOffset) * 2;
+      ctx.beginPath();
+      ctx.ellipse(puff.ox + wobbleX, puff.oy + wobbleY, puff.rx, puff.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Jasny środek chmury zapewniający 100% zasłonięcia tego, co pod nią
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.ellipse(0, -2, cl.w * 0.4, cl.h * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
   for (const pop of popups) {
     ctx.save();
     ctx.globalAlpha = Math.max(0, pop.alpha);

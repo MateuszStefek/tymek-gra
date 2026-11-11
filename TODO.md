@@ -13,4 +13,4 @@
   - [DONE] pomiedzy etapami mozna zmienic domyslna bron
   - [DONE] nowe rodzaje broni:
     - [DONE] bazooka ktora namierza cel i goni go probujac ominac przeszkody. Bazooka ma osobne liczniki nabojow. Startujemy z 5oma. Bardzo rzadko dostajemy nowa rakiete. Ale licznik sie resetuje miedzy rundami.
- - funkcjonalnosc chmury, ktora zaslania fragment mapy (okolo 20% x 20%). Mapy maja opcje posiadania 1-3 chmur.
+ - [DONE] funkcjonalnosc chmury, ktora zaslania fragment mapy (okolo 20% x 20%). Mapy maja opcje posiadania 1-3 chmur.

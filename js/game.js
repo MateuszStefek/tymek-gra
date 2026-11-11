@@ -181,6 +181,40 @@ function handleLevelVictory() {
   openMenu('level_clear');
 }
 
+function spawnClouds(count) {
+  clouds = [];
+  const w = Math.round(canvas.width * 0.20);  // ok. 20% szerokości mapy (~188 px)
+  const h = Math.round(canvas.height * 0.20); // ok. 20% wysokości mapy (~112 px)
+  const presetCenters = [
+    { x: canvas.width * 0.34, y: canvas.height * 0.38 },
+    { x: canvas.width * 0.68, y: canvas.height * 0.56 },
+    { x: canvas.width * 0.48, y: canvas.height * 0.26 }
+  ];
+  for (let i = 0; i < count; i++) {
+    const base = presetCenters[i % presetCenters.length];
+    const cx = base.x + (Math.random() - 0.5) * 60;
+    const cy = base.y + (Math.random() - 0.5) * 45;
+    const puffs = [
+      { ox: -w * 0.28, oy: -h * 0.12, rx: w * 0.26, ry: h * 0.32, phaseOffset: 0 },
+      { ox: w * 0.28,  oy: -h * 0.10, rx: w * 0.27, ry: h * 0.32, phaseOffset: 1.5 },
+      { ox: -w * 0.20, oy: h * 0.18,  rx: w * 0.28, ry: h * 0.28, phaseOffset: 3.0 },
+      { ox: w * 0.22,  oy: h * 0.16,  rx: w * 0.28, ry: h * 0.29, phaseOffset: 4.5 },
+      { ox: 0,         oy: -h * 0.22, rx: w * 0.31, ry: h * 0.30, phaseOffset: 2.2 }
+    ];
+    const driftAngle = Math.random() * Math.PI * 2;
+    clouds.push({
+      x: cx,
+      y: cy,
+      w,
+      h,
+      vx: Math.cos(driftAngle) * 0.28,
+      vy: Math.sin(driftAngle) * 0.22,
+      phase: Math.random() * Math.PI * 2,
+      puffs
+    });
+  }
+}
+
 function spawnEnemy(index, kind = 'normal') {
   const spots = [
     { x: 470, y: 65 },
@@ -286,6 +320,7 @@ function startLevel(targetLevel) {
   for (let i = 0; i < cfg.roster.length; i++) {
     spawnEnemy(i, cfg.roster[i]);
   }
+  spawnClouds(cfg.clouds || 0);
   saveProgress();
   updateHud();
   canvas.focus();
@@ -351,6 +386,7 @@ function startCustomMap(idx) {
   for (let i = 0; i < roster.length; i++) {
     spawnEnemy(i, roster[i]);
   }
+  spawnClouds(typeof cm.clouds === 'number' ? cm.clouds : 1);
   saveProgress();
   updateHud();
   canvas.focus();
@@ -547,6 +583,7 @@ btnAddCustomMap.addEventListener('click', () => {
   customMaps.push({
     name: `Własna Mapa ${customMaps.length + 1}`,
     arenaIndex: customMaps.length % arenaLayouts.length,
+    clouds: 1,
     normal: 1,
     tough: 1,
     rapid: 1,
@@ -1115,6 +1152,20 @@ function update() {
       splats.splice(i, 1);
       paintCanvasDirty = true;
     }
+  }
+
+  for (const cl of clouds) {
+    cl.phase += 0.03;
+    cl.x += cl.vx;
+    cl.y += cl.vy;
+    const minX = cl.w * 0.55;
+    const maxX = canvas.width - cl.w * 0.55;
+    const minY = cl.h * 0.6;
+    const maxY = canvas.height - cl.h * 0.6;
+    if (cl.x < minX) { cl.x = minX; cl.vx *= -1; }
+    if (cl.x > maxX) { cl.x = maxX; cl.vx *= -1; }
+    if (cl.y < minY) { cl.y = minY; cl.vy *= -1; }
+    if (cl.y > maxY) { cl.y = maxY; cl.vy *= -1; }
   }
 
   for (let i = eliminatedHumans.length - 1; i >= 0; i--) {

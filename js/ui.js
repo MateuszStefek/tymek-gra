@@ -274,13 +274,14 @@ function renderCustomMapsList() {
   customMapsGrid.innerHTML = '';
   customMaps.forEach((cm, idx) => {
     const arenaObj = arenaLayouts[cm.arenaIndex % arenaLayouts.length];
+    const cloudsCnt = typeof cm.clouds === 'number' ? cm.clouds : 1;
     const card = document.createElement('div');
     card.className = 'level-card completed' + (activeCustomMapIndex === idx ? ' current' : '');
     card.style.cursor = 'default';
     card.innerHTML = `
       <div class="lvl-title" style="color:#e9d5ff;">🛠️ ${cm.name}</div>
       <div class="lvl-enemies">🎯 ${formatCustomMapSummary(cm)}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🗺️ ${arenaObj.name}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🗺️ ${arenaObj.name} | ☁️ Chmury: ${cloudsCnt}</div>
       <div class="lvl-status" style="color:#4ade80;">🔓 Zawsze odblokowana</div>
       <div class="custom-card-btns" style="margin-top:6px;">
         <button class="btn-green" id="playCustom_${idx}">▶️ Graj</button>
@@ -296,7 +297,7 @@ function renderCustomMapsList() {
 function renderCustomMapEditor(idx) {
   customListView.style.display = 'none';
   customEditorView.style.display = 'flex';
-  const draft = { ...customMaps[idx] };
+  const draft = { clouds: 1, ...customMaps[idx] };
   customOverlayTitle.textContent = `✏️ EDYTOR WŁASNEJ MAPY: ${draft.name}`;
   customOverlaySub.textContent = 'Ustaw układ przeszkód oraz dokładną liczbę przeciwników każdego rodzaju:';
 
@@ -314,6 +315,14 @@ function renderCustomMapEditor(idx) {
           <button id="edPrevArena">⬅️</button>
           <span style="min-width:170px;font-size:14px;color:#38bdf8;">${arenaObj.name}</span>
           <button id="edNextArena">➡️</button>
+        </div>
+      </div>
+      <div class="editor-row">
+        <span>☁️ Liczba chmur zasłaniających mapę (0–3):</span>
+        <div class="editor-stepper">
+          <button id="edCloudsDec">➖</button>
+          <span>${draft.clouds}</span>
+          <button id="edCloudsInc">➕</button>
         </div>
       </div>
       <div class="editor-row">
@@ -367,6 +376,15 @@ function renderCustomMapEditor(idx) {
     };
     customEditorView.querySelector('#edNextArena').onclick = () => {
       draft.arenaIndex = (draft.arenaIndex + 1) % arenaLayouts.length;
+      refreshEditorDOM();
+    };
+
+    customEditorView.querySelector('#edCloudsDec').onclick = () => {
+      draft.clouds = Math.max(0, (draft.clouds || 0) - 1);
+      refreshEditorDOM();
+    };
+    customEditorView.querySelector('#edCloudsInc').onclick = () => {
+      draft.clouds = Math.min(3, (draft.clouds || 0) + 1);
       refreshEditorDOM();
     };
 
@@ -467,7 +485,8 @@ function openMenu(mode = 'select') {
 
     const cfg = getLevelConfig(i);
     const enemyLabel = cfg.label;
-    const mapLabel = `🗺️ ${cfg.arena.name}`;
+    const cloudsInfo = cfg.clouds > 0 ? ` | ☁️ ${cfg.clouds}` : '';
+    const mapLabel = `🗺️ ${cfg.arena.name}${cloudsInfo}`;
     let statusLabel = '🔒 Zablokowany';
     if (isCompleted) {
       statusLabel = `⭐ Ukończono (${bestTimes[i]}s)`;
