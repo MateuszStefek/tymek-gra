@@ -405,6 +405,7 @@ btnNextLevel.addEventListener('click', () => {
 
 btnPlaceMine.addEventListener('click', placeMine);
 btnFollowMouse.addEventListener('click', toggleFollowMouse);
+if (btnTheme) btnTheme.addEventListener('click', cycleGraphicTheme);
 
 btnRetry.addEventListener('click', () => {
   if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);
@@ -421,6 +422,8 @@ window.addEventListener('keydown', e => {
     togglePause();
   } else if (e.code === 'KeyF') {
     toggleFollowMouse();
+  } else if (e.code === 'KeyT') {
+    cycleGraphicTheme();
   } else if (e.code === 'KeyE' || (e.code === 'Space' && gameState === 'playing')) {
     placeMine();
   } else if (e.code === 'Escape' || e.code === 'KeyM') {

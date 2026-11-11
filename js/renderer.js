@@ -170,10 +170,11 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
 }
 
 function renderScene() {
-  ctx.fillStyle = currentArena.bgColor;
+  const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
+  ctx.fillStyle = theme.arenaBgOverride || currentArena.bgColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = currentArena.gridColor;
+  ctx.strokeStyle = theme.gridColor || currentArena.gridColor;
   ctx.lineWidth = 2;
   for (let x = 0; x < canvas.width; x += 60) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -183,8 +184,8 @@ function renderScene() {
   }
 
   for (const ob of obstacles) {
-    ctx.fillStyle = ob.type === 'crate' ? '#b45309' : (ob.type === 'bunker' ? '#334155' : '#475569');
-    ctx.strokeStyle = '#1e293b';
+    ctx.fillStyle = ob.type === 'crate' ? theme.crateFill : (ob.type === 'bunker' ? theme.bunkerFill : theme.wallFill);
+    ctx.strokeStyle = theme.obstacleStroke;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(ob.x, ob.y, ob.w, ob.h, 8);

@@ -2,6 +2,74 @@
 
 const colors = ['#f43f5e', '#38bdf8', '#facc15', '#4ade80', '#a855f7', '#fb923c', '#ec4899'];
 
+const graphicThemes = [
+  {
+    id: 'classic',
+    name: '🌿 Klasyczny',
+    bodyBg: '#0f172a',
+    panelBg: '#1e293b',
+    accentColor: '#38bdf8',
+    arenaBgOverride: null,
+    gridColor: null,
+    crateFill: '#b45309',
+    bunkerFill: '#334155',
+    wallFill: '#475569',
+    obstacleStroke: '#1e293b'
+  },
+  {
+    id: 'neon',
+    name: '⚡ Cyber-Neon',
+    bodyBg: '#05050f',
+    panelBg: '#11132b',
+    accentColor: '#22d3ee',
+    arenaBgOverride: '#090a1a',
+    gridColor: 'rgba(34, 211, 238, 0.14)',
+    crateFill: '#5b21b6',
+    bunkerFill: '#1e1b4b',
+    wallFill: '#3b0764',
+    obstacleStroke: '#f43f5e'
+  },
+  {
+    id: 'desert',
+    name: '🏜️ Pustynia',
+    bodyBg: '#1c1917',
+    panelBg: '#292524',
+    accentColor: '#f59e0b',
+    arenaBgOverride: '#855a2c',
+    gridColor: 'rgba(254, 243, 199, 0.09)',
+    crateFill: '#b45309',
+    bunkerFill: '#57534e',
+    wallFill: '#a16207',
+    obstacleStroke: '#451a03'
+  },
+  {
+    id: 'ice',
+    name: '❄️ Arktyka',
+    bodyBg: '#082f49',
+    panelBg: '#0c4a6e',
+    accentColor: '#7dd3fc',
+    arenaBgOverride: '#155e75',
+    gridColor: 'rgba(186, 230, 253, 0.14)',
+    crateFill: '#0284c7',
+    bunkerFill: '#1e3a8a',
+    wallFill: '#0369a1',
+    obstacleStroke: '#bae6fd'
+  },
+  {
+    id: 'lava',
+    name: '🌋 Wulkan',
+    bodyBg: '#180909',
+    panelBg: '#2a1212',
+    accentColor: '#f97316',
+    arenaBgOverride: '#3b0d0d',
+    gridColor: 'rgba(251, 146, 60, 0.13)',
+    crateFill: '#9a3412',
+    bunkerFill: '#27272a',
+    wallFill: '#451a03',
+    obstacleStroke: '#f97316'
+  }
+];
+
 let obstacles = [];
 let currentArena = { name: 'Klasyczna Arena', bgColor: '#15803d', gridColor: 'rgba(255,255,255,0.05)' };
 

@@ -23,6 +23,8 @@ const btnNextLevel = document.getElementById('btnNextLevel');
 const btnPlaceMine = document.getElementById('btnPlaceMine');
 const btnRetry = document.getElementById('btnRetry');
 const btnFollowMouse = document.getElementById('btnFollowMouse');
+const btnTheme = document.getElementById('btnTheme');
+const topbarEl = document.querySelector('.topbar');
 
 const menuOverlay = document.getElementById('menuOverlay');
 const menuTitle = document.getElementById('menuTitle');
@@ -70,6 +72,7 @@ let minesCount = 2; // Na starcie mamy 2 miny!
 let bestTimes = {};
 let activeCustomMapIndex = null;
 let totalEnemiesInLevel = 1;
+let currentThemeIndex = 0;
 
 let customMaps = [
   { name: 'Moja Mapa 1', arenaIndex: 0, normal: 2, tough: 0, rapid: 1, boss: 0 },
@@ -94,6 +97,10 @@ try {
   if (savedFollow !== null) followMouse = savedFollow === '1';
   const savedCustom = JSON.parse(localStorage.getItem('tymek_paintball_custom_maps') || 'null');
   if (Array.isArray(savedCustom) && savedCustom.length > 0) customMaps = savedCustom;
+  const savedTheme = parseInt(localStorage.getItem('tymek_paintball_theme') || '0', 10);
+  if (!isNaN(savedTheme) && savedTheme >= 0 && savedTheme < graphicThemes.length) {
+    currentThemeIndex = savedTheme;
+  }
 } catch (e) {}
 
 let levelBannerTimer = 0;
@@ -119,5 +126,6 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_times', JSON.stringify(bestTimes));
     localStorage.setItem('tymek_paintball_follow_mouse', followMouse ? '1' : '0');
     localStorage.setItem('tymek_paintball_custom_maps', JSON.stringify(customMaps));
+    localStorage.setItem('tymek_paintball_theme', String(currentThemeIndex));
   } catch (e) {}
 }

@@ -20,6 +20,29 @@ function updateFollowButtonUI() {
 }
 updateFollowButtonUI();
 
+function applyGraphicTheme() {
+  const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
+  document.body.style.backgroundColor = theme.bodyBg;
+  if (topbarEl) {
+    topbarEl.style.backgroundColor = theme.panelBg;
+    topbarEl.style.borderColor = theme.accentColor;
+  }
+  canvas.style.borderColor = theme.accentColor;
+  menuOverlay.style.borderColor = theme.accentColor;
+  customOverlay.style.borderColor = theme.accentColor;
+  if (btnTheme) {
+    btnTheme.textContent = `🎨 Motyw: ${theme.name} [T]`;
+  }
+}
+applyGraphicTheme();
+
+function cycleGraphicTheme() {
+  currentThemeIndex = (currentThemeIndex + 1) % graphicThemes.length;
+  applyGraphicTheme();
+  saveProgress();
+  canvas.focus();
+}
+
 function toggleFollowMouse() {
   followMouse = !followMouse;
   updateFollowButtonUI();
