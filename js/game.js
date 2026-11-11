@@ -445,6 +445,7 @@ function startLevel(targetLevel) {
   player.hpRegenTimer = 0;
   player.ammo = getStartingAmmo(); // Zaczynamy poziom od 30 nabojów (lub 40 z ulepszeniem)
   player.rockets = getStartingRockets(); // Standardowa bazooka: 3 rakiety na starcie (5 po wzmocnieniu ze sklepu)
+  player.emptyBazookaTries = 0;
   player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
   player.splatColor = null;
@@ -513,6 +514,7 @@ function startCustomMap(idx) {
   player.hpRegenTimer = 0;
   player.ammo = getStartingAmmo();
   player.rockets = getStartingRockets();
+  player.emptyBazookaTries = 0;
   player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
   player.splatColor = null;
@@ -730,13 +732,42 @@ function computeEnemyPathAngle(en, targetX, targetY) {
   return desiredAngle;
 }
 
+function getBestFallbackWeapon() {
+  // Zwraca najlepszą posiadaną broń bez limitu rakiet (np. Marker Paintballowy)
+  let best = weaponsCatalog[0];
+  for (const w of weaponsCatalog) {
+    if (w.id !== 'bazooka' && ownedWeapons.includes(w.id) && w.cost >= best.cost) {
+      best = w;
+    }
+  }
+  return best;
+}
+
 function firePlayerWeapon(fromX, fromY, angle) {
   if (player.weapon === 'bazooka') {
     if (player.rockets <= 0) {
-      playEmptyAmmoSound();
-      popups.push({ x: player.x, y: player.y - 28, text: 'BRAK RAKIET! 🚀', color: '#ef4444', alpha: 1 });
+      player.emptyBazookaTries = (player.emptyBazookaTries || 0) + 1;
+      player.cooldown = 18;
+      if (player.emptyBazookaTries >= 2) {
+        player.emptyBazookaTries = 0;
+        const fallback = getBestFallbackWeapon();
+        player.weapon = fallback.id;
+        playReloadSound();
+        popups.push({
+          x: player.x,
+          y: player.y - 30,
+          text: `🔄 PRZEŁADOWANIE: ${fallback.shortName}!`,
+          color: '#fde047',
+          alpha: 1
+        });
+        updateHud();
+      } else {
+        playEmptyAmmoSound();
+        popups.push({ x: player.x, y: player.y - 28, text: 'BRAK RAKIET! 🚀 (1/2)', color: '#ef4444', alpha: 1 });
+      }
       return;
     }
+    player.emptyBazookaTries = 0;
     player.rockets--;
     updateHud();
     playRocketLaunchSound();

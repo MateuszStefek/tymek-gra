@@ -83,6 +83,7 @@ let player = {
   hpRegenTimer: 0,
   ammo: 30,
   rockets: 3,
+  emptyBazookaTries: 0,
   weapon: 'pistol',
   hitFlash: 0,
   splatColor: null

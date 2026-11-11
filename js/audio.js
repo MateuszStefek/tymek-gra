@@ -124,3 +124,37 @@ function playRocketLaunchSound() {
     osc.stop(now + 0.32);
   } catch (e) {}
 }
+
+function playReloadSound() {
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    // Pierwszy klik (wyjęcie / odbezpieczenie)
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(260, now);
+    osc1.frequency.exponentialRampToValueAtTime(420, now + 0.06);
+    gain1.gain.setValueAtTime(0.2, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.07);
+
+    // Drugi szczęk przeładowania (zatrzaśnięcie zamka)
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(520, now + 0.10);
+    osc2.frequency.exponentialRampToValueAtTime(780, now + 0.18);
+    gain2.gain.setValueAtTime(0.18, now + 0.10);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.10);
+    osc2.stop(now + 0.19);
+  } catch (e) {}
+}

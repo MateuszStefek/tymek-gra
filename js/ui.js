@@ -181,6 +181,8 @@ function switchWeaponInStage() {
   }
   const idx = ownedWeapons.indexOf(player.weapon);
   player.weapon = ownedWeapons[(idx + 1) % ownedWeapons.length];
+  player.emptyBazookaTries = 0;
+  playReloadSound();
   const wObj = weaponsCatalog.find(w => w.id === player.weapon) || weaponsCatalog[0];
   popups.push({
     x: player.x,
