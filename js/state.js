@@ -89,6 +89,7 @@ let diamonds = 0;
 let ownedWeapons = ['pistol'];
 let defaultWeapon = 'pistol';
 let bazookaUpgraded = false;
+let ownedUpgrades = [];
 let lastDiamondsEarned = 0;
 
 let customMaps = [
@@ -132,9 +133,38 @@ try {
   const savedBazookaUpg = localStorage.getItem('tymek_paintball_bazooka_upgraded');
   if (savedBazookaUpg === '1') {
     bazookaUpgraded = true;
-    player.rockets = 5;
+  }
+  const savedUpgrades = JSON.parse(localStorage.getItem('tymek_paintball_upgrades') || '[]');
+  if (Array.isArray(savedUpgrades)) {
+    ownedUpgrades = savedUpgrades;
+  }
+  if (bazookaUpgraded && !ownedUpgrades.includes('bazooka_rockets_5')) {
+    ownedUpgrades.push('bazooka_rockets_5');
+  }
+  if (ownedUpgrades.includes('bazooka_rockets_5')) {
+    bazookaUpgraded = true;
   }
 } catch (e) {}
+
+function getStartingMaxHp() {
+  let hp = 200;
+  if (ownedUpgrades.includes('hp_boost_1')) hp += 5;
+  if (ownedUpgrades.includes('hp_boost_2')) hp += 10;
+  return hp;
+}
+
+function getStartingAmmo() {
+  return ownedUpgrades.includes('pistol_ammo_1') ? 40 : 30;
+}
+
+function getStartingRockets() {
+  return (bazookaUpgraded || ownedUpgrades.includes('bazooka_rockets_5')) ? 5 : 3;
+}
+
+player.maxHp = getStartingMaxHp();
+player.hp = player.maxHp;
+player.ammo = getStartingAmmo();
+player.rockets = getStartingRockets();
 
 let levelBannerTimer = 0;
 let menuReadyAt = 0;
@@ -170,5 +200,6 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_owned_weapons', JSON.stringify(ownedWeapons));
     localStorage.setItem('tymek_paintball_default_weapon', defaultWeapon);
     localStorage.setItem('tymek_paintball_bazooka_upgraded', bazookaUpgraded ? '1' : '0');
+    localStorage.setItem('tymek_paintball_upgrades', JSON.stringify(ownedUpgrades));
   } catch (e) {}
 }

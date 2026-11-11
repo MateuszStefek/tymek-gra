@@ -187,35 +187,41 @@ function renderShopWeapons() {
   if (!shopWeaponsGrid) return;
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
   if (shopSubtitle) {
-    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń na start rundy: <b style="color:#fde047;">${defObj.name}</b><br><span style="font-size:13px;color:#94a3b8;">Za przejście poziomu &gt; 10 otrzymujesz floor(poziom / 10) 💎 diamentów! W trakcie gry zmieniasz broń przyciskiem u góry lub klawiszem [Q].</span>`;
+    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b><br><span style="font-size:13px;color:#94a3b8;">Dopóki nie kupisz danej broni lub poprzedniego szczebla, nie możesz kupić przypisanego do niej wzmocnienia!</span>`;
   }
   shopWeaponsGrid.innerHTML = '';
+
+  // 1 & 2: Tory broni wraz z ich drzewkiem wzmocnień
   weaponsCatalog.forEach(w => {
+    const trackEl = document.createElement('div');
+    trackEl.className = 'tree-track';
+    trackEl.innerHTML = `<div class="tree-track-header">🌳 Tor: ${w.shortName}</div>`;
+
     const isOwned = ownedWeapons.includes(w.id);
     const isDefault = defaultWeapon === w.id;
     const ammoTextInfo = w.id === 'bazooka'
-      ? `🚀 Rakiety (${bazookaUpgraded ? '5' : '3'} na start rundy)`
-      : w.ammoLabel;
-    const card = document.createElement('div');
-    card.className = 'level-card' + (isOwned ? ' completed' : '') + (isDefault ? ' current' : '');
-    card.style.cursor = 'default';
-    card.innerHTML = `
-      <div class="lvl-title">${w.name}</div>
-      <div class="lvl-enemies" style="margin:6px 0;">${w.desc}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:12px;">${ammoTextInfo}</div>
+      ? `🚀 Rakiety (${getStartingRockets()} na start rundy)`
+      : `🎨 Naboje (${getStartingAmmo()} na start rundy)`;
+
+    const baseNode = document.createElement('div');
+    baseNode.className = 'tree-node' + (isOwned ? ' owned' : '') + (isDefault ? ' default-weapon' : '');
+    baseNode.innerHTML = `
+      <div class="lvl-title" style="font-size:16px;">${w.name}</div>
+      <div class="lvl-enemies" style="font-size:12px;margin:4px 0;">${w.desc}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${ammoTextInfo}</div>
       <div class="lvl-status" style="color:${isOwned ? '#4ade80' : '#38bdf8'};">
-        ${isOwned ? (isDefault ? '⭐ Domyślna broń na start' : '✅ Posiadana w arsenale') : `💰 Cena: ${w.cost} 💎`}
+        ${isOwned ? (isDefault ? '⭐ Domyślna broń na start' : '✅ Broń odblokowana') : `💰 Cena broni: ${w.cost} 💎`}
       </div>
-      <div class="custom-card-btns" style="margin-top:8px;gap:8px;"></div>
+      <div class="custom-card-btns" style="margin-top:6px;"></div>
     `;
-    const btnWrap = card.querySelector('.custom-card-btns');
+    const btnWrap = baseNode.querySelector('.custom-card-btns');
     if (!isOwned) {
       const btnBuy = document.createElement('button');
       btnBuy.className = 'btn-green';
-      btnBuy.style.padding = '7px 14px';
-      btnBuy.style.fontSize = '13px';
+      btnBuy.style.padding = '6px 12px';
+      btnBuy.style.fontSize = '12px';
       btnBuy.disabled = diamonds < w.cost;
-      btnBuy.textContent = diamonds >= w.cost ? `🛒 Kup za ${w.cost} 💎` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
+      btnBuy.textContent = diamonds >= w.cost ? `🛒 Kup broń (${w.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
       btnBuy.onclick = () => {
         if (diamonds < w.cost) return;
         diamonds -= w.cost;
@@ -230,8 +236,8 @@ function renderShopWeapons() {
     } else {
       const btnDef = document.createElement('button');
       btnDef.className = isDefault ? 'btn-blue' : 'btn-purple';
-      btnDef.style.padding = '7px 14px';
-      btnDef.style.fontSize = '13px';
+      btnDef.style.padding = '6px 12px';
+      btnDef.style.fontSize = '12px';
       btnDef.textContent = isDefault ? '⭐ Ustawiona jako domyślna' : '⭐ Ustaw jako domyślną';
       btnDef.onclick = () => {
         defaultWeapon = w.id;
@@ -242,46 +248,129 @@ function renderShopWeapons() {
       };
       btnWrap.appendChild(btnDef);
     }
-    shopWeaponsGrid.appendChild(card);
+    trackEl.appendChild(baseNode);
+
+    // Wzmocnienia przypisane do tej broni
+    (w.upgrades || []).forEach(upg => {
+      const hasParentWeapon = isOwned;
+      const hasPrevUpg = !upg.requiresUpgrade || ownedUpgrades.includes(upg.requiresUpgrade);
+      const canUnlockBranch = hasParentWeapon && hasPrevUpg;
+      const isUpgOwned = ownedUpgrades.includes(upg.id);
+
+      const conn = document.createElement('div');
+      conn.className = 'tree-connector' + (canUnlockBranch ? ' active' : '');
+      conn.innerHTML = '│<br>▼';
+      trackEl.appendChild(conn);
+
+      const upgNode = document.createElement('div');
+      upgNode.className = 'tree-node' + (isUpgOwned ? ' owned' : (!canUnlockBranch ? ' locked' : ''));
+      upgNode.innerHTML = `
+        <div class="lvl-title" style="font-size:15px;">${upg.name}</div>
+        <div class="lvl-enemies" style="font-size:12px;margin:4px 0;">${upg.desc}</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${upg.effectLabel}</div>
+        <div class="lvl-status" style="color:${isUpgOwned ? '#4ade80' : (canUnlockBranch ? '#facc15' : '#64748b')};">
+          ${isUpgOwned
+            ? '✅ Wzmocnienie kupione!'
+            : (canUnlockBranch ? `💰 Cena: ${upg.cost} 💎` : `🔒 Wymaga zakupu: ${w.shortName}`)}
+        </div>
+        <div class="custom-card-btns" style="margin-top:6px;"></div>
+      `;
+      if (!isUpgOwned) {
+        const upgBtns = upgNode.querySelector('.custom-card-btns');
+        const btnBuyUpg = document.createElement('button');
+        btnBuyUpg.className = 'btn-green';
+        btnBuyUpg.style.padding = '6px 12px';
+        btnBuyUpg.style.fontSize = '12px';
+        btnBuyUpg.disabled = !canUnlockBranch || diamonds < upg.cost;
+        btnBuyUpg.textContent = !canUnlockBranch
+          ? `🔒 Kup najpierw ${w.shortName}`
+          : (diamonds >= upg.cost ? `🛒 Kup wzmocnienie (${upg.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${upg.cost})`);
+        btnBuyUpg.onclick = () => {
+          if (!canUnlockBranch || diamonds < upg.cost) return;
+          diamonds -= upg.cost;
+          if (!ownedUpgrades.includes(upg.id)) ownedUpgrades.push(upg.id);
+          if (upg.id === 'bazooka_rockets_5') {
+            bazookaUpgraded = true;
+            player.rockets = Math.max(player.rockets, 5);
+          }
+          if (upg.id === 'pistol_ammo_1') {
+            player.ammo = Math.max(player.ammo, getStartingAmmo());
+          }
+          saveProgress();
+          updateHud();
+          renderShopWeapons();
+        };
+        upgBtns.appendChild(btnBuyUpg);
+      }
+      trackEl.appendChild(upgNode);
+    });
+
+    shopWeaponsGrid.appendChild(trackEl);
   });
 
-  // Wzmocnienie Bazooki w sklepie: 5 rakiet na starcie (zamiast standardowych 3)
-  const hasBazooka = ownedWeapons.includes('bazooka');
-  const upgCost = 1;
-  const upgCard = document.createElement('div');
-  upgCard.className = 'level-card' + (bazookaUpgraded ? ' completed' : (!hasBazooka ? ' locked' : ''));
-  upgCard.style.cursor = 'default';
-  upgCard.innerHTML = `
-    <div class="lvl-title">⚡ Wzmocnienie Bazooki</div>
-    <div class="lvl-enemies" style="margin:6px 0;">Zwiększa zapas startowy Bazooki z <b>3 do 5 rakiet</b> na początku każdej rundy!</div>
-    <div class="lvl-enemies" style="color:#93c5fd;font-size:12px;">🚀 Startowe rakiety: 3 ➡️ 5</div>
-    <div class="lvl-status" style="color:${bazookaUpgraded ? '#4ade80' : '#facc15'};">
-      ${bazookaUpgraded ? '✅ Wzmocnienie aktywne (5 rakiet na start)' : (hasBazooka ? `💰 Cena wzmocnienia: ${upgCost} 💎` : '🔒 Wymaga posiadania Bazooki')}
-    </div>
-    <div class="custom-card-btns" style="margin-top:8px;gap:8px;"></div>
+  // 3: Tor Wzmocnienia Życia (HP)
+  const hpTrackEl = document.createElement('div');
+  hpTrackEl.className = 'tree-track';
+  hpTrackEl.innerHTML = `<div class="tree-track-header">${hpTrackConfig.title}</div>`;
+
+  const hpBaseNode = document.createElement('div');
+  hpBaseNode.className = 'tree-node owned';
+  hpBaseNode.innerHTML = `
+    <div class="lvl-title" style="font-size:16px;">${hpTrackConfig.baseName}</div>
+    <div class="lvl-enemies" style="font-size:12px;margin:4px 0;">${hpTrackConfig.baseDesc}</div>
+    <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Aktualny start: ${getStartingMaxHp()} HP</div>
+    <div class="lvl-status" style="color:#4ade80;">✅ Aktywne od startu</div>
   `;
-  const upgBtnWrap = upgCard.querySelector('.custom-card-btns');
-  if (!bazookaUpgraded) {
-    const btnBuyUpg = document.createElement('button');
-    btnBuyUpg.className = 'btn-green';
-    btnBuyUpg.style.padding = '7px 14px';
-    btnBuyUpg.style.fontSize = '13px';
-    btnBuyUpg.disabled = !hasBazooka || diamonds < upgCost;
-    btnBuyUpg.textContent = !hasBazooka
-      ? '🔒 Najpierw kup Bazookę'
-      : (diamonds >= upgCost ? `🛒 Kup wzmocnienie za ${upgCost} 💎` : `🔒 Brak 💎 (${diamonds}/${upgCost})`);
-    btnBuyUpg.onclick = () => {
-      if (!hasBazooka || diamonds < upgCost) return;
-      diamonds -= upgCost;
-      bazookaUpgraded = true;
-      player.rockets = Math.max(player.rockets, 5);
-      saveProgress();
-      updateHud();
-      renderShopWeapons();
-    };
-    upgBtnWrap.appendChild(btnBuyUpg);
-  }
-  shopWeaponsGrid.appendChild(upgCard);
+  hpTrackEl.appendChild(hpBaseNode);
+
+  hpTrackConfig.upgrades.forEach(upg => {
+    const canUnlock = !upg.requiresUpgrade || ownedUpgrades.includes(upg.requiresUpgrade);
+    const isUpgOwned = ownedUpgrades.includes(upg.id);
+
+    const conn = document.createElement('div');
+    conn.className = 'tree-connector' + (canUnlock ? ' active' : '');
+    conn.innerHTML = '│<br>▼';
+    hpTrackEl.appendChild(conn);
+
+    const upgNode = document.createElement('div');
+    upgNode.className = 'tree-node' + (isUpgOwned ? ' owned' : (!canUnlock ? ' locked' : ''));
+    upgNode.innerHTML = `
+      <div class="lvl-title" style="font-size:15px;">${upg.name}</div>
+      <div class="lvl-enemies" style="font-size:12px;margin:4px 0;">${upg.desc}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${upg.effectLabel}</div>
+      <div class="lvl-status" style="color:${isUpgOwned ? '#4ade80' : (canUnlock ? '#facc15' : '#64748b')};">
+        ${isUpgOwned
+          ? '✅ Wzmocnienie kupione!'
+          : (canUnlock ? `💰 Cena: ${upg.cost} 💎` : '🔒 Wymaga poprzedniego wzmocnienia HP')}
+      </div>
+      <div class="custom-card-btns" style="margin-top:6px;"></div>
+    `;
+    if (!isUpgOwned) {
+      const upgBtns = upgNode.querySelector('.custom-card-btns');
+      const btnBuyHp = document.createElement('button');
+      btnBuyHp.className = 'btn-green';
+      btnBuyHp.style.padding = '6px 12px';
+      btnBuyHp.style.fontSize = '12px';
+      btnBuyHp.disabled = !canUnlock || diamonds < upg.cost;
+      btnBuyHp.textContent = !canUnlock
+        ? '🔒 Kup najpierw Wzmocnienie I'
+        : (diamonds >= upg.cost ? `🛒 Kup wzmocnienie (${upg.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${upg.cost})`);
+      btnBuyHp.onclick = () => {
+        if (!canUnlock || diamonds < upg.cost) return;
+        diamonds -= upg.cost;
+        if (!ownedUpgrades.includes(upg.id)) ownedUpgrades.push(upg.id);
+        player.maxHp = getStartingMaxHp();
+        player.hp = Math.min(player.maxHp, player.hp + (upg.bonusHp || 5));
+        saveProgress();
+        updateHud();
+        renderShopWeapons();
+      };
+      upgBtns.appendChild(btnBuyHp);
+    }
+    hpTrackEl.appendChild(upgNode);
+  });
+
+  shopWeaponsGrid.appendChild(hpTrackEl);
 }
 
 function openCustomMapsScreen(editIdx = null) {

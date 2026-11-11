@@ -8,18 +8,64 @@ const weaponsCatalog = [
     name: '🔫 Marker Paintballowy',
     shortName: '🔫 Marker',
     cost: 0,
-    desc: 'Klasyczny szybkostrzelny marker paintballowy. Korzysta ze zwykłych nabojów farby (start: 30 szt.).',
-    ammoLabel: '🎨 Naboje (30 na start)'
+    desc: 'Klasyczny szybkostrzelny marker paintballowy. Korzysta ze zwykłych nabojów farby.',
+    ammoLabel: '🎨 Naboje (30 na start)',
+    upgrades: [
+      {
+        id: 'pistol_ammo_1',
+        name: '📦 Powiększony Magazynek',
+        cost: 1,
+        desc: 'Zwiększa liczbę nabojów na starcie rundy z 30 do 40 sztuk!',
+        effectLabel: '🎨 Startowe naboje: 30 ➡️ 40',
+        requiresUpgrade: null
+      }
+    ]
   },
   {
     id: 'bazooka',
     name: '🚀 Bazooka Samonaprowadzająca',
     shortName: '🚀 Bazooka',
     cost: 1,
-    desc: 'Wystrzeliwuje rakietę, która sama namierza najbliższego wroga i omija przeszkody! Osobny licznik: standardowo 3 rakiety na start rundy (5 po wzmocnieniu).',
-    ammoLabel: '🚀 Rakiety (3 na start rundy)'
+    desc: 'Wystrzeliwuje rakietę, która sama namierza najbliższego wroga i omija przeszkody! Start: 3 rakiety.',
+    ammoLabel: '🚀 Rakiety (3 na start rundy)',
+    upgrades: [
+      {
+        id: 'bazooka_rockets_5',
+        name: '⚡ Wzmocnienie Bazooki (5 rakiet)',
+        cost: 1,
+        desc: 'Zwiększa zapas startowy Bazooki z 3 do 5 rakiet na początku każdej rundy!',
+        effectLabel: '🚀 Startowe rakiety: 3 ➡️ 5',
+        requiresUpgrade: null
+      }
+    ]
   }
 ];
+
+const hpTrackConfig = {
+  title: '❤️ Tor Wzmocnienia Życia',
+  baseName: '❤️ Zdrowie Bazowe',
+  baseDesc: 'Podstawowa wytrzymałość zawodnika: 200 HP na start oraz regeneracja +1 HP/s.',
+  upgrades: [
+    {
+      id: 'hp_boost_1',
+      name: '🛡️ Wzmocnienie Życia I (+5 HP)',
+      cost: 1,
+      bonusHp: 5,
+      desc: 'Pierwsze wzmocnienie pancerza: +5 HP na start każdej rundy (łącznie 205 HP)!',
+      effectLabel: '❤️ Startowe HP: 200 ➡️ 205 HP',
+      requiresUpgrade: null
+    },
+    {
+      id: 'hp_boost_2',
+      name: '🛡️ Wzmocnienie Życia II (+10 HP)',
+      cost: 2,
+      bonusHp: 10,
+      desc: 'Drugie wzmocnienie pancerza: kolejne +10 HP na start (łącznie 215 HP)!',
+      effectLabel: '❤️ Startowe HP: 205 ➡️ 215 HP',
+      requiresUpgrade: 'hp_boost_1'
+    }
+  ]
+};
 
 const graphicThemes = [
   {
