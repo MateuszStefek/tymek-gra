@@ -100,10 +100,40 @@ function drawMine(mine) {
   ctx.restore();
 }
 
+function drawEnemyMine(mine) {
+  ctx.save();
+  ctx.translate(mine.x, mine.y);
+
+  // Pierścień czujnika miny przeciwnika (fioletowy podczas uzbrajania, czerwony gdy uzbrojona)
+  ctx.beginPath();
+  ctx.arc(0, 0, mine.triggerRadius, 0, Math.PI * 2);
+  ctx.strokeStyle = mine.armed ? 'rgba(239, 68, 68, 0.7)' : 'rgba(192, 132, 252, 0.5)';
+  ctx.lineWidth = mine.armed ? 2.5 : 2;
+  ctx.setLineDash([5, 5]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 11, 0, Math.PI * 2);
+  ctx.fillStyle = '#3b0764';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = mine.armed ? '#ef4444' : '#c084fc';
+  ctx.stroke();
+
+  const blink = Math.sin(mine.pulse * (mine.armed ? 3 : 2)) > 0;
+  ctx.beginPath();
+  ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = mine.armed ? (blink ? '#ef4444' : '#7f1d1d') : (blink ? '#e9d5ff' : '#6b21a8');
+  ctx.fill();
+
+  ctx.restore();
+}
+
 function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, label, enemyObj = null) {
   ctx.save();
   ctx.translate(x, y);
-  const scale = enemyObj ? (enemyObj.kind === 'boss' ? 1.24 : (enemyObj.kind === 'tough' ? 1.12 : 1)) : 1;
+  const scale = enemyObj ? (enemyObj.kind === 'boss' ? 1.24 : (enemyObj.kind === 'miner' ? 1.15 : (enemyObj.kind === 'tough' ? 1.12 : 1))) : 1;
   if (scale !== 1) ctx.scale(scale, scale);
 
   ctx.beginPath();
@@ -139,6 +169,23 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.beginPath();
     ctx.arc(2, 0, 7, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // Podkładacz min: ikonka miny na piersi oraz plecak z minami
+  if (enemyObj && enemyObj.kind === 'miner') {
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(-1, 1, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(-1, 1, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(-15, -4, 5, 13);
   }
 
   ctx.beginPath();
@@ -358,8 +405,8 @@ function drawNpcPreviewOnCanvas(previewCanvas, kind) {
     } else {
       const shirtColor = kind === 'boss'
         ? '#9333ea'
-        : (kind === 'tough' ? '#d97706' : (kind === 'rapid' ? '#eab308' : '#ef4444'));
-      const maxHp = kind === 'boss' ? 5 : (kind === 'tough' ? 3 : 1);
+        : (kind === 'tough' ? '#d97706' : (kind === 'rapid' ? '#eab308' : (kind === 'miner' ? '#15803d' : '#ef4444')));
+      const maxHp = kind === 'boss' ? 5 : (kind === 'tough' ? 3 : (kind === 'miner' ? 8 : 1));
       drawHuman(cx, cy, 0.15, 0.5, shirtColor, false, null, '', {
         kind,
         hp: maxHp,
@@ -448,6 +495,9 @@ function renderScene() {
   // Placed mines
   for (const mine of placedMines) {
     drawMine(mine);
+  }
+  for (const em of enemyMines) {
+    drawEnemyMine(em);
   }
 
   // Mine explosions

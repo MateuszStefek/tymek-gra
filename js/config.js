@@ -288,11 +288,14 @@ function getLevelConfig(lvl) {
   for (let i = 0; i < rapidCnt; i++) roster.push('rapid');
   for (let i = 0; i < toughCnt; i++) roster.push('tough');
   for (let i = 0; i < bossCnt; i++) roster.push('boss');
+  // Podkładacz min pojawia się od poziomu 15 (1 na poziomach 15-19, 2 na 20-24 itd.)
+  const minerCnt = lvl >= 15 ? 1 + Math.floor((lvl - 15) / 5) : 0;
+  for (let i = 0; i < minerCnt; i++) roster.push('miner');
   const clouds = 1 + (lvl % 3); // 1-3 chmury
   const civilians = 1 + (lvl % 3); // 1-3 cywili
   return {
     roster,
-    label: `${normCnt ? normCnt + 'x Zwykły + ' : ''}${rapidCnt}x ⚡ + ${toughCnt}x 🛡️ + ${bossCnt}x 👑`,
+    label: `${normCnt ? normCnt + 'x Zwykły + ' : ''}${rapidCnt}x ⚡ + ${toughCnt}x 🛡️ + ${bossCnt}x 👑${minerCnt ? ' + ' + minerCnt + 'x 💣' : ''}`,
     clouds,
     civilians,
     arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
@@ -305,5 +308,6 @@ function formatCustomMapSummary(cm) {
   if (cm.tough > 0) parts.push(`${cm.tough}x 🛡️ Pancerny`);
   if (cm.rapid > 0) parts.push(`${cm.rapid}x ⚡ Szybki`);
   if (cm.boss > 0) parts.push(`${cm.boss}x 👑 Boss`);
+  if (cm.miner > 0) parts.push(`${cm.miner}x 💣 Podkładacz`);
   return parts.length > 0 ? parts.join(' + ') : '1x 🎯 Zwykły';
 }

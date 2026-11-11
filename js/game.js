@@ -146,6 +146,7 @@ function triggerMineExplosion(mine) {
         splatColor: blastColor,
         timer: 50
       });
+      dropEnemyLoot(en);
       enemies.splice(j, 1);
     }
   }
@@ -185,6 +186,7 @@ function handleLevelVictory() {
   // Niewykorzystane miny (także te postawione na ziemi, które nie wybuchły) przechodzą dalej + 1 nowa mina za przejście etapu!
   minesCount += placedMines.length + 1;
   placedMines = [];
+  enemyMines = [];
   saveProgress();
   updateHud();
   openMenu('level_clear');
@@ -239,11 +241,13 @@ function spawnEnemy(index, kind = 'normal') {
   const spot = spots[index % spots.length];
   const shirtColors = ['#ef4444', '#f97316', '#eab308', '#ec4899'];
 
-  const maxHits = kind === 'boss' ? 5 : (kind === 'tough' ? 3 : 1);
-  const radius = kind === 'boss' ? 21 : (kind === 'tough' ? 18 : 16);
+  const maxHits = kind === 'boss' ? 5 : (kind === 'miner' ? 8 : (kind === 'tough' ? 3 : 1));
+  const radius = kind === 'boss' ? 21 : (kind === 'miner' ? 18 : (kind === 'tough' ? 18 : 16));
   const shirtColor = kind === 'boss'
     ? '#9333ea'
-    : (kind === 'tough'
+    : (kind === 'miner'
+      ? '#15803d'
+      : kind === 'tough'
         ? '#d97706'
         : (kind === 'rapid' ? '#eab308' : shirtColors[index % shirtColors.length]));
 
@@ -263,7 +267,7 @@ function spawnEnemy(index, kind = 'normal') {
     hp: maxHits,
     maxHp: maxHits,
     mineImmune: kind === 'boss',
-    speed: Math.min(2.8, (kind === 'boss' ? 1.45 : (kind === 'tough' ? 1.6 : (kind === 'rapid' ? 1.95 : 1.7))) + Math.random() * 0.4 + Math.min(level, 8) * 0.06),
+    speed: kind === 'miner' ? 0.7 + Math.random() * 0.15 : Math.min(2.8, (kind === 'boss' ? 1.45 : (kind === 'tough' ? 1.6 : (kind === 'rapid' ? 1.95 : 1.7))) + Math.random() * 0.4 + Math.min(level, 8) * 0.06),
     radius,
     angle: Math.PI / 2,
     walkCycle: Math.random() * 10,
@@ -280,7 +284,8 @@ function spawnEnemy(index, kind = 'normal') {
     repositionCooldown: 0, // Gotowy od startu; po zmianie pozycji odlicza 30s (1800 klatek)
     repositionTarget: null,
     orbitSign: Math.random() < 0.5 ? 1 : -1,
-    shootTimer: kind === 'rapid' ? (16 + Math.random() * 14) : (50 + Math.random() * 65)
+    shootTimer: kind === 'miner' ? (180 + Math.random() * 120) : (kind === 'rapid' ? (16 + Math.random() * 14) : (50 + Math.random() * 65)),
+    mineTimer: 15 * 60 // Podkładacz min: pierwsza mina po 15s, potem co 30s
   });
 }
 
@@ -342,6 +347,109 @@ function spawnCivilian(index = 0) {
     splatColor: null,
     changeDirTimer: 35 + Math.random() * 55
   });
+}
+
+// Podkładacz min po zabiciu dropuje nową minę dla gracza
+function dropEnemyLoot(en) {
+  if (en.kind !== 'miner') return;
+  minesCount += 1;
+  saveProgress();
+  playPickupSound();
+  popups.push({ x: en.x, y: en.y - 28, text: '💣 +1 MINA!', color: '#facc15', alpha: 1 });
+  updateHud();
+}
+
+// Podkładacz min kładzie nową minę dokładnie w swojej pozycji (maks. 12 min naraz)
+function plantEnemyMine(en) {
+  if (enemyMines.length >= 12) enemyMines.shift();
+  enemyMines.push({
+    x: en.x,
+    y: en.y,
+    triggerRadius: 42,
+    blastRadius: 85,
+    pulse: 0,
+    armFrames: 180, // 3 sekundy uzbrajania
+    armed: false
+  });
+  playMineBeep(false);
+}
+
+// Omijanie min przez przeciwników: wszyscy widzą miny podkładacza, a podkładacz widzi także miny gracza
+function steerAwayFromMines(en) {
+  let nearest = null;
+  let nearestDist = Infinity;
+  const consider = (m) => {
+    const d = Math.hypot(en.x - m.x, en.y - m.y);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearest = m;
+    }
+  };
+  for (const m of enemyMines) consider(m);
+  if (en.kind === 'miner') {
+    for (const m of placedMines) consider(m);
+  }
+  if (!nearest) return;
+  const safeDist = nearest.triggerRadius + en.radius + 30;
+  if (nearestDist >= safeDist) return;
+
+  let away = Math.atan2(en.y - nearest.y, en.x - nearest.x);
+  // Jeśli kierunek ucieczki prowadzi w ścianę, szukaj wolnego kierunku obok
+  for (let step = 0; step <= 8; step++) {
+    const delta = (step * Math.PI) / 10;
+    const c1 = away + delta;
+    if (canMoveTo(en.x + Math.cos(c1) * 20, en.y + Math.sin(c1) * 20, en.radius)) { away = c1; break; }
+    const c2 = away - delta;
+    if (canMoveTo(en.x + Math.cos(c2) * 20, en.y + Math.sin(c2) * 20, en.radius)) { away = c2; break; }
+  }
+  const spd = Math.max(en.speed, 0.9);
+  en.vx = Math.cos(away) * spd;
+  en.vy = Math.sin(away) * spd;
+  en.changeDirTimer = Math.min(en.changeDirTimer, 12);
+}
+
+// Aktualizacja min podkładacza; zwraca true, jeśli gracz zginął (przerwij dalszą aktualizację klatki)
+function updateEnemyMines() {
+  for (let m = enemyMines.length - 1; m >= 0; m--) {
+    const mine = enemyMines[m];
+    mine.pulse += 0.14;
+    if (!mine.armed) {
+      mine.armFrames--;
+      if (mine.armFrames <= 0) {
+        mine.armed = true;
+        playMineBeep(true);
+      }
+      continue;
+    }
+    if (Math.hypot(player.x - mine.x, player.y - mine.y) <= mine.triggerRadius) {
+      enemyMines.splice(m, 1);
+      playExplosionSound();
+      const blastColor = '#a855f7';
+      addPaintSplat(mine.x, mine.y, blastColor, 50);
+      explosions.push({ x: mine.x, y: mine.y, radius: 10, maxRadius: mine.blastRadius, color: blastColor, alpha: 1 });
+      for (let k = 0; k < 36; k++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 2 + Math.random() * 6;
+        particles.push({
+          x: mine.x, y: mine.y,
+          vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+          r: 4 + Math.random() * 4,
+          color: blastColor,
+          alpha: 1
+        });
+      }
+      player.hp = Math.max(0, player.hp - 60);
+      player.hitFlash = 24;
+      player.splatColor = blastColor;
+      popups.push({ x: player.x, y: player.y - 30, text: '💥 MINA PODKŁADACZA! -60 HP', color: '#c084fc', alpha: 1 });
+      updateHud();
+      if (player.hp <= 0) {
+        openMenu('dead');
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function damageCivilian(civIdx, dmg, splatColor) {
@@ -453,6 +561,7 @@ function startLevel(targetLevel) {
   player.splatColor = null;
 
   enemies = [];
+  enemyMines = [];
   civilians = [];
   civilianRespawnQueue = [];
   bullets = [];
@@ -536,6 +645,7 @@ function startCustomMap(idx) {
   player.splatColor = null;
 
   enemies = [];
+  enemyMines = [];
   civilians = [];
   civilianRespawnQueue = [];
   bullets = [];
@@ -557,6 +667,7 @@ function startCustomMap(idx) {
   for (let i = 0; i < cm.tough; i++) roster.push('tough');
   for (let i = 0; i < cm.rapid; i++) roster.push('rapid');
   for (let i = 0; i < cm.boss; i++) roster.push('boss');
+  for (let i = 0; i < (cm.miner || 0); i++) roster.push('miner');
   if (roster.length === 0) roster.push('normal');
 
   totalEnemiesInLevel = roster.length;
@@ -1283,6 +1394,8 @@ function update() {
       }
     }
 
+    steerAwayFromMines(en); // Przeciwnicy widzą miny (podkładacza oraz — w jego przypadku — także Twoje) i je omijają
+
     const nx = en.x + en.vx;
     const ny = en.y + en.vy;
     if (canMoveTo(nx, en.y, en.radius)) {
@@ -1301,18 +1414,31 @@ function update() {
     en.walkCycle += 0.22;
     en.angle = Math.atan2(player.y - en.y, player.x - en.x);
 
+    if (en.kind === 'miner') {
+      en.mineTimer--;
+      if (en.mineTimer <= 0) {
+        plantEnemyMine(en);
+        en.mineTimer = 30 * 60; // Nowa mina raz na 30 sekund
+      }
+    }
+
     en.shootTimer--;
     if (en.shootTimer <= 0 && distToPlayer < 480) {
-      const spread = en.kind === 'rapid' ? 0.16 : 0.25;
+      const spread = en.kind === 'rapid' ? 0.16 : (en.kind === 'miner' ? 0.4 : 0.25);
       const aimAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * spread;
       firePaintball(en.x, en.y, aimAngle, false);
       if (en.kind === 'rapid') {
         en.shootTimer = 14 + Math.random() * 10; // Strzela około 4 razy częściej!
+      } else if (en.kind === 'miner') {
+        en.shootTimer = 200 + Math.random() * 150; // Mały pistolecik — strzela całkiem rzadko
       } else {
         en.shootTimer = Math.max(35, 85 - level * 4) + Math.random() * 55;
       }
     }
   }
+
+  // Miny podkładacza: uzbrajanie i wybuch przy wejściu gracza
+  if (updateEnemyMines()) return;
 
   // Odradzanie zabitych cywili po 5 sekundach (300 klatek)
   for (let q = civilianRespawnQueue.length - 1; q >= 0; q--) {
@@ -1343,6 +1469,14 @@ function update() {
     let closestMineDist = Infinity;
     for (const m of placedMines) {
       if (!m.armed) continue; // Cywil NIE widzi min w trakcie uzbrajania!
+      const d = Math.hypot(civ.x - m.x, civ.y - m.y);
+      if (d < closestMineDist) {
+        closestMineDist = d;
+        closestArmedMine = m;
+      }
+    }
+
+    for (const m of enemyMines) {
       const d = Math.hypot(civ.x - m.x, civ.y - m.y);
       if (d < closestMineDist) {
         closestMineDist = d;
@@ -1530,7 +1664,8 @@ function update() {
             splatColor: b.color,
             timer: 45
           });
-          enemies.splice(j, 1);
+          dropEnemyLoot(en);
+      enemies.splice(j, 1);
           if (enemies.length === 0) {
             handleLevelVictory();
           } else {
@@ -1714,7 +1849,8 @@ function update() {
               splatColor: blastColor,
               timer: 45
             });
-            enemies.splice(j, 1);
+            dropEnemyLoot(en);
+      enemies.splice(j, 1);
           }
         }
       }

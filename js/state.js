@@ -182,7 +182,7 @@ function getUnlockedEnemyKinds() {
   const kinds = new Set();
   for (let i = 1; i <= unlockedLevel; i++) {
     for (const kind of getLevelConfig(i).roster) kinds.add(kind);
-    if (kinds.size >= 4) break;
+    if (kinds.size >= 5) break;
   }
   return kinds;
 }
@@ -190,9 +190,9 @@ function getUnlockedEnemyKinds() {
 // Zwraca listę nazw zablokowanych typów przeciwników użytych w mapie własnej (pusta lista = mapę można uruchomić)
 function getLockedKindsInCustomMap(cm) {
   const unlocked = getUnlockedEnemyKinds();
-  const names = { normal: 'Zwykły', tough: 'Pancerny', rapid: 'Szybkostrzelny', boss: 'Boss' };
+  const names = { normal: 'Zwykły', tough: 'Pancerny', rapid: 'Szybkostrzelny', boss: 'Boss', miner: 'Podkładacz min' };
   const locked = [];
-  for (const kind of ['normal', 'tough', 'rapid', 'boss']) {
+  for (const kind of ['normal', 'tough', 'rapid', 'boss', 'miner']) {
     if ((cm[kind] || 0) > 0 && !unlocked.has(kind)) locked.push(names[kind]);
   }
   return locked;
@@ -237,6 +237,7 @@ let bullets = [];
 let homingRockets = [];
 let rocketPickups = [];
 let placedMines = [];
+let enemyMines = []; // Miny podkładane przez przeciwników typu 'miner' (widoczne dla innych wrogów i cywili)
 let ammoPickups = [];
 let popups = [];
 let explosions = [];
