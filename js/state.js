@@ -59,6 +59,12 @@ const settingsBox = document.getElementById('settingsBox');
 const btnSettingsToLevels = document.getElementById('btnSettingsToLevels');
 const btnCloseSettings = document.getElementById('btnCloseSettings');
 
+const enemiesOverlay = document.getElementById('enemiesOverlay');
+const enemiesCatalogGrid = document.getElementById('enemiesCatalogGrid');
+const btnOpenEnemies = document.getElementById('btnOpenEnemies');
+const btnEnemiesToLevels = document.getElementById('btnEnemiesToLevels');
+const btnCloseEnemies = document.getElementById('btnCloseEnemies');
+
 const resultPopupOverlay = document.getElementById('resultPopupOverlay');
 const resultPopupCard = document.getElementById('resultPopupCard');
 const resultPopupTitle = document.getElementById('resultPopupTitle');

@@ -432,6 +432,7 @@ function startLevel(targetLevel) {
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   resizeGameLayout();
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
@@ -501,6 +502,7 @@ function startCustomMap(idx) {
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   resizeGameLayout();
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
@@ -891,6 +893,43 @@ if (btnCloseSettings) {
   });
 }
 
+if (btnOpenEnemies) {
+  btnOpenEnemies.addEventListener('click', () => {
+    if (gameState === 'enemies') {
+      enemiesOverlay.classList.add('hidden');
+      if (!hasStartedAnyGame) {
+        openMenu('select');
+      } else {
+        startTime = performance.now() - survivalSeconds * 1000;
+        gameState = 'playing';
+        updatePauseButtonUI();
+        canvas.focus();
+      }
+    } else {
+      openEnemiesScreen();
+      updatePauseButtonUI();
+    }
+  });
+}
+
+if (btnEnemiesToLevels) {
+  btnEnemiesToLevels.addEventListener('click', () => openMenu('select'));
+}
+
+if (btnCloseEnemies) {
+  btnCloseEnemies.addEventListener('click', () => {
+    enemiesOverlay.classList.add('hidden');
+    if (!hasStartedAnyGame) {
+      startLevel(level);
+    } else {
+      startTime = performance.now() - survivalSeconds * 1000;
+      gameState = 'playing';
+      updatePauseButtonUI();
+      canvas.focus();
+    }
+  });
+}
+
 btnOpenMenu.addEventListener('click', () => {
   if (gameState === 'menu') {
     menuOverlay.classList.add('hidden');
@@ -980,11 +1019,12 @@ window.addEventListener('keydown', e => {
     placeMine();
   } else if (e.code === 'Escape' || e.code === 'KeyM') {
     if (gameState === 'playing' || gameState === 'paused') openMenu('select');
-    else if (gameState === 'menu' || gameState === 'custom_maps' || gameState === 'shop' || gameState === 'settings') {
+    else if (gameState === 'menu' || gameState === 'custom_maps' || gameState === 'shop' || gameState === 'settings' || gameState === 'enemies') {
       menuOverlay.classList.add('hidden');
       customOverlay.classList.add('hidden');
       if (shopOverlay) shopOverlay.classList.add('hidden');
       if (settingsOverlay) settingsOverlay.classList.add('hidden');
+      if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
       resizeGameLayout();
       startTime = performance.now() - survivalSeconds * 1000;
       gameState = 'playing';

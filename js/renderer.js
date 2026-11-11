@@ -198,33 +198,24 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.fillRect(-22, -38, 44, 7);
     ctx.fillStyle = pct > 0.5 ? '#22c55e' : (pct > 0.25 ? '#facc15' : '#ef4444');
     ctx.fillRect(-21, -37, 42 * pct, 5);
+    if (label) {
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(label, 0, -42);
+    }
   } else if (enemyObj && enemyObj.maxHp > 1) {
     const pct = Math.max(0, enemyObj.hp) / enemyObj.maxHp;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     ctx.fillRect(-20, -37, 40, 6);
     ctx.fillStyle = enemyObj.kind === 'boss' ? '#c084fc' : '#f59e0b';
     ctx.fillRect(-19, -36, 38 * pct, 4);
-    ctx.font = 'bold 10px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fde047';
-    const tag = enemyObj.kind === 'boss' ? `👑 ODPORNY NA MINY (${enemyObj.hp}/${enemyObj.maxHp})` : `🛡️ ${enemyObj.hp}/${enemyObj.maxHp}`;
-    ctx.fillText(tag, 0, -41);
-  } else if (enemyObj && enemyObj.kind === 'rapid') {
-    ctx.font = 'bold 11px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fde047';
-    ctx.fillText('⚡ SZYBKOSTRZELNY', 0, -32);
-  } else if (label) {
-    ctx.font = 'bold 12px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, 0, -32);
   }
 
   // Ikonka stanu AI nad wrogiem: ❓ (zagubiony przez 2s) lub 🧠 (zmiana na lepszą pozycję)
   if (!isPlayer && enemyObj && (enemyObj.aiState === 'confused' || enemyObj.aiState === 'repositioning')) {
     const isConfused = enemyObj.aiState === 'confused';
-    const iconY = enemyObj.maxHp > 1 ? -60 : -50;
+    const iconY = enemyObj.maxHp > 1 ? -50 : -42;
     ctx.save();
     ctx.beginPath();
     ctx.arc(0, iconY, 13, 0, Math.PI * 2);
@@ -334,19 +325,51 @@ function drawCivilian(civ) {
   ctx.fillRect(-1.5, -25, 3, 6);
   ctx.fillRect(-3.5, -23, 7, 2.5);
 
-  // Pasek HP cywila (2 HP — przeżywa 1 strzał)
+  // Pasek HP cywila (2 HP — przeżywa 1 strzał), bez napisu nad głową podczas gry
   const pct = Math.max(0, civ.hp) / civ.maxHp;
   ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
   ctx.fillRect(-18, -36, 36, 6);
   ctx.fillStyle = pct > 0.5 ? '#38bdf8' : '#facc15';
   ctx.fillRect(-17, -35, 34 * pct, 4);
 
-  ctx.font = 'bold 10px system-ui';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#e0f2fe';
-  ctx.fillText(`🏥 CYWIL (${civ.hp}/${civ.maxHp})`, 0, -40);
-
   ctx.restore();
+}
+
+// Renderuje podgląd wybranego typu NPC na małym canvasie w ekranie Przeglądu Wrogów
+function drawNpcPreviewOnCanvas(previewCanvas, kind) {
+  if (!previewCanvas) return;
+  const pCtx = previewCanvas.getContext('2d');
+  const prevCtx = ctx;
+  ctx = pCtx;
+  try {
+    pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    const cx = previewCanvas.width / 2;
+    const cy = previewCanvas.height / 2 + 8;
+    if (kind === 'civilian') {
+      drawCivilian({
+        x: cx,
+        y: cy,
+        angle: 0.2,
+        walkCycle: 0.5,
+        hp: 2,
+        maxHp: 2,
+        splatColor: null
+      });
+    } else {
+      const shirtColor = kind === 'boss'
+        ? '#9333ea'
+        : (kind === 'tough' ? '#d97706' : (kind === 'rapid' ? '#eab308' : '#ef4444'));
+      const maxHp = kind === 'boss' ? 5 : (kind === 'tough' ? 3 : 1);
+      drawHuman(cx, cy, 0.15, 0.5, shirtColor, false, null, '', {
+        kind,
+        hp: maxHp,
+        maxHp,
+        aiState: 'normal'
+      });
+    }
+  } finally {
+    ctx = prevCtx;
+  }
 }
 
 function renderScene() {

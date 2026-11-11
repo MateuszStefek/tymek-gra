@@ -42,6 +42,7 @@ function applyGraphicTheme() {
   customOverlay.style.borderColor = theme.accentColor;
   if (shopOverlay) shopOverlay.style.borderColor = theme.accentColor;
   if (settingsOverlay) settingsOverlay.style.borderColor = theme.accentColor;
+  if (enemiesOverlay) enemiesOverlay.style.borderColor = theme.accentColor;
   if (btnTheme) {
     btnTheme.textContent = `🎨 Motyw: ${theme.name} [T]`;
   }
@@ -205,10 +206,102 @@ function openShopScreen() {
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.remove('hidden');
   resizeGameLayout();
   renderShopWeapons();
+}
+
+function openEnemiesScreen() {
+  if (menuCountdownInterval) {
+    clearInterval(menuCountdownInterval);
+    menuCountdownInterval = null;
+  }
+  mouse.down = false;
+  gameState = 'enemies';
+  menuOverlay.classList.add('hidden');
+  customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.remove('hidden');
+  resizeGameLayout();
+  renderEnemiesCatalog();
+}
+
+function renderEnemiesCatalog() {
+  if (!enemiesCatalogGrid) return;
+  enemiesCatalogGrid.innerHTML = '';
+
+  const catalog = [
+    {
+      kind: 'normal',
+      title: '🎯 Zwykły Przeciwnik',
+      badge: '❤️ 1 HP | 💣 Wrażliwy na miny',
+      badgeColor: '#f87171',
+      desc: 'Podstawowy zawodnik na arenie w czerwonej lub pomarańczowej koszulce z ciemnym wizjerem.',
+      details: 'Ginie po 1 trafieniu z markera, miny lub bazooki. Po wyeliminowaniu zostawia paczkę +5 nabojów.'
+    },
+    {
+      kind: 'rapid',
+      title: '⚡ Szybkostrzelny',
+      badge: '❤️ 1 HP | ⚡ Strzela 4x częściej',
+      badgeColor: '#facc15',
+      desc: 'Rozpoznasz go po żółtej koszulce. Porusza się szybciej i zasypuje arenę gęstymi seriami kulek farby!',
+      details: 'Wymaga tylko 1 trafienia, ale przez wysoką szybkostrzelność warto wyeliminować go w pierwszej kolejności.'
+    },
+    {
+      kind: 'tough',
+      title: '🛡️ Pancerny Przeciwnik',
+      badge: '❤️ 3 HP | 🛡️ Pasek zdrowia',
+      badgeColor: '#fb923c',
+      desc: 'Większy zawodnik w brązowo-złotym pancerzu z widocznym paskiem wytrzymałości nad głową.',
+      details: 'Wytrzymuje aż 3 trafienia ze zwykłego markera (lub ginie od razu po bezpośrednim trafieniu rakietą z Bazooki albo wybuchu miny).'
+    },
+    {
+      kind: 'boss',
+      title: '👑 Bardzo Mocny Boss',
+      badge: '❤️ 5 HP | 👑 Odporny na miny!',
+      badgeColor: '#c084fc',
+      desc: 'Największy przeciwnik w fioletowym pancerzu ze złotym hełmem i czerwonym wizjerem.',
+      details: 'Całkowicie odporny na wybuchy min farbowych! Aby go pokonać, musisz trafić go 5 razy z markera lub użyć rakiet z Bazooki.'
+    },
+    {
+      kind: 'civilian',
+      title: '🏥 Cywil — Lekarz',
+      badge: '❤️ 2 HP | ⚠️ Kara: -50 HP i -50 Max HP!',
+      badgeColor: '#38bdf8',
+      desc: 'Postać w białym fartuchu lekarskim z czerwonym krzyżem, czepkiem medycznym i apteczką w dłoni.',
+      details: 'Chodzi losowo po mapie i omija uzbrojone miny (nie widzi min w trakcie uzbrajania). Pociski wrogów go nie ranią, ale Twoje strzały, miny oraz Bazooka (jeśli jest najbliżej kursora) tak! Przetrwa 1 postrzał — zabicie go odejmuje 50 HP i 50 Max HP do końca poziomu (odradza się po 5s).'
+    }
+  ];
+
+  catalog.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'level-card';
+    card.style.cursor = 'default';
+    card.style.textAlign = 'left';
+    card.style.gap = '6px';
+    card.style.borderColor = item.badgeColor;
+
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <canvas width="76" height="84" style="width:76px;height:84px;background:#0f172a;border:2px solid ${item.badgeColor};border-radius:10px;flex-shrink:0;"></canvas>
+        <div>
+          <div class="lvl-title" style="font-size:16px;color:${item.badgeColor};">${item.title}</div>
+          <div style="font-size:11px;font-weight:900;color:#fde047;margin-top:2px;">${item.badge}</div>
+          <div class="lvl-enemies" style="font-size:12px;margin-top:4px;color:#e2e8f0;">${item.desc}</div>
+        </div>
+      </div>
+      <div class="lvl-enemies" style="font-size:11px;color:#93c5fd;background:#0f172a;padding:7px 9px;border-radius:8px;border:1px solid #334155;">
+        ${item.details}
+      </div>
+    `;
+    enemiesCatalogGrid.appendChild(card);
+    const previewCanvas = card.querySelector('canvas');
+    drawNpcPreviewOnCanvas(previewCanvas, item.kind);
+  });
 }
 
 let confirmResetPending = false;
@@ -226,6 +319,7 @@ function openSettingsScreen() {
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.remove('hidden');
   resizeGameLayout();
@@ -641,6 +735,7 @@ function openCustomMapsScreen(editIdx = null) {
   menuOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   customOverlay.classList.remove('hidden');
   resizeGameLayout();
@@ -841,6 +936,7 @@ function openResultPopup(mode) {
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   resultPopupOverlay.classList.remove('hidden');
   resizeGameLayout();
 
@@ -955,6 +1051,7 @@ function openMenu(mode = 'select') {
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
   if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   menuOverlay.classList.remove('hidden');
   resizeGameLayout();
@@ -1048,6 +1145,15 @@ function openMenu(mode = 'select') {
     openShopScreen();
   };
   menuActions.appendChild(btnGoShop);
+
+  const btnGoEnemies = document.createElement('button');
+  btnGoEnemies.className = 'btn-big btn-purple';
+  btnGoEnemies.textContent = '📖 Przegląd Wrogów i Postaci';
+  btnGoEnemies.onclick = () => {
+    if (!canActivateMenuAction()) return;
+    openEnemiesScreen();
+  };
+  menuActions.appendChild(btnGoEnemies);
 
   const btnGoSettings = document.createElement('button');
   btnGoSettings.className = 'btn-big';

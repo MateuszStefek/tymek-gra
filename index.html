@@ -12,6 +12,7 @@
       <button id="btnOpenMenu" class="menu-btn">📋 MENU POZIOMÓW [M]</button>
       <button id="btnOpenCustom" class="btn-purple">🛠️ WŁASNE MAPY</button>
       <button id="btnOpenShop" class="btn-blue">🛒 SKLEP BRONI</button>
+      <button id="btnOpenEnemies" class="btn-purple" title="Zobacz przegląd wszystkich przeciwników i cywila">📖 WROGOWIE</button>
       <button id="btnSwitchWeapon" class="active" title="Zmień aktualną broń w trakcie etapu [Klawisz Q]">🔫 Broń: Marker [Q]</button>
       <button id="btnPause">⏸️ Pauza [P]</button>
       <button id="btnPrevLevel" title="Poprzedni poziom">⬅️</button>
@@ -77,6 +78,16 @@
       <div class="action-row">
         <button id="btnSettingsToLevels" class="btn-big btn-blue">📋 Menu Poziomów</button>
         <button id="btnCloseSettings" class="btn-big btn-green">▶️ Wróć do gry</button>
+      </div>
+    </div>
+
+    <div id="enemiesOverlay" class="overlay hidden">
+      <h1 style="color:#c084fc;">📖 PRZEGLĄD WROGÓW I POSTACI</h1>
+      <p class="sub">Poznaj wygląd, wytrzymałość i zachowanie wszystkich postaci na arenie (podczas gry napisy nad nimi są ukryte).</p>
+      <div id="enemiesCatalogGrid" class="levels-grid" style="grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));"></div>
+      <div class="action-row">
+        <button id="btnEnemiesToLevels" class="btn-big btn-blue">📋 Menu Poziomów</button>
+        <button id="btnCloseEnemies" class="btn-big btn-green">▶️ Wróć do gry</button>
       </div>
     </div>
 
