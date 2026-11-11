@@ -221,6 +221,26 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.fillText(label, 0, -32);
   }
 
+  // Ikonka stanu AI nad wrogiem: ❓ (zagubiony przez 2s) lub 🧠 (zmiana na lepszą pozycję)
+  if (!isPlayer && enemyObj && (enemyObj.aiState === 'confused' || enemyObj.aiState === 'repositioning')) {
+    const isConfused = enemyObj.aiState === 'confused';
+    const iconY = enemyObj.maxHp > 1 ? -60 : -50;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, iconY, 13, 0, Math.PI * 2);
+    ctx.fillStyle = isConfused ? 'rgba(250, 204, 21, 0.95)' : 'rgba(56, 189, 248, 0.95)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#0f172a';
+    ctx.stroke();
+
+    ctx.font = '16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isConfused ? '❓' : '🧠', 0, iconY + 1);
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 

@@ -266,8 +266,11 @@ function spawnEnemy(index, kind = 'normal') {
     boxMinY: ey,
     boxMaxY: ey,
     stuckFrames: 0,
-    repositionCooldown: Math.floor(Math.random() * 300), // Losowy startowy offset
+    aiState: 'normal', // 'normal' | 'confused' | 'repositioning'
+    aiStateTimer: 0,
+    repositionCooldown: 0, // Gotowy od startu; po zmianie pozycji odlicza 30s (1800 klatek)
     repositionTarget: null,
+    orbitSign: Math.random() < 0.5 ? 1 : -1,
     shootTimer: kind === 'rapid' ? (16 + Math.random() * 14) : (50 + Math.random() * 65)
   });
 }
@@ -494,6 +497,78 @@ function computeObstacleAvoidingAngle(rx, ry, currentAngle, targetX, targetY) {
     }
   }
   return bestAngle;
+}
+
+// Wyznacza kąt ruchu dla wroga idącego do punktu docelowego z omijaniem przeszkód (przez rogi przeszkód)
+function computeEnemyPathAngle(en, targetX, targetY) {
+  const pad = en.radius + 16;
+  const distToTarget = Math.hypot(targetX - en.x, targetY - en.y);
+  const directAngle = Math.atan2(targetY - en.y, targetX - en.x);
+
+  // Sprawdź pierwszą przeszkodę na linii do celu
+  let blockingOb = null;
+  const steps = Math.max(4, Math.ceil(distToTarget / 14));
+  for (let s = 1; s <= steps; s++) {
+    const d = Math.min(distToTarget, s * 14);
+    const tx = en.x + Math.cos(directAngle) * d;
+    const ty = en.y + Math.sin(directAngle) * d;
+    for (const ob of obstacles) {
+      if (rectCircleColliding(tx, ty, en.radius + 4, ob)) {
+        blockingOb = ob;
+        break;
+      }
+    }
+    if (blockingOb) break;
+  }
+
+  let aimX = targetX;
+  let aimY = targetY;
+
+  if (blockingOb) {
+    // Wybierz najlepszy róg przeszkody, przez który można ją ominąć
+    const corners = [
+      { x: blockingOb.x - pad, y: blockingOb.y - pad },
+      { x: blockingOb.x + blockingOb.w + pad, y: blockingOb.y - pad },
+      { x: blockingOb.x - pad, y: blockingOb.y + blockingOb.h + pad },
+      { x: blockingOb.x + blockingOb.w + pad, y: blockingOb.y + blockingOb.h + pad }
+    ];
+    let bestCorner = null;
+    let bestCost = Infinity;
+    for (const c of corners) {
+      if (!canMoveTo(c.x, c.y, en.radius)) continue;
+      const d1 = Math.hypot(c.x - en.x, c.y - en.y);
+      const d2 = Math.hypot(targetX - c.x, targetY - c.y);
+      if (d1 < 12) continue;
+      const cost = d1 + d2;
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestCorner = c;
+      }
+    }
+    if (bestCorner) {
+      aimX = bestCorner.x;
+      aimY = bestCorner.y;
+    }
+  }
+
+  const desiredAngle = Math.atan2(aimY - en.y, aimX - en.x);
+  if (canMoveTo(en.x + Math.cos(desiredAngle) * 18, en.y + Math.sin(desiredAngle) * 18, en.radius)) {
+    return desiredAngle;
+  }
+
+  // Jeśli bezpośrednio przed wrogiem jest ściana, szukaj wolnego kierunku z preferencją orbitSign
+  for (let step = 1; step <= 16; step++) {
+    const delta = (step * Math.PI) / 16;
+    const cand1 = desiredAngle + delta * en.orbitSign;
+    if (canMoveTo(en.x + Math.cos(cand1) * 20, en.y + Math.sin(cand1) * 20, en.radius)) {
+      return cand1;
+    }
+    const cand2 = desiredAngle - delta * en.orbitSign;
+    if (canMoveTo(en.x + Math.cos(cand2) * 20, en.y + Math.sin(cand2) * 20, en.radius)) {
+      return cand2;
+    }
+  }
+  return desiredAngle;
 }
 
 function firePlayerWeapon(fromX, fromY, angle) {
@@ -827,99 +902,130 @@ function update() {
   }
 
   // Update enemies
-  const maxStuckW = canvas.width * 0.20;
-  const maxStuckH = canvas.height * 0.20;
+  // Lekko powiększony prostokąt wykrywania utknięcia (~26% szerokości i wysokości mapy: ok. 244x145 px)
+  const maxStuckW = canvas.width * 0.26;
+  const maxStuckH = canvas.height * 0.26;
+  const STUCK_TRIGGER_FRAMES = 180; // 3 sekundy (180 klatek) przebywania w małym prostokącie uruchamia stan zagubienia
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     const en = enemies[i];
     en.changeDirTimer--;
     if (en.repositionCooldown > 0) en.repositionCooldown--;
 
-    // Śledzenie prostokąta przebywania przeciwnika (czy utknął w obszarze < 20% rozmiaru ekranu)
-    en.boxMinX = Math.min(en.boxMinX, en.x);
-    en.boxMaxX = Math.max(en.boxMaxX, en.x);
-    en.boxMinY = Math.min(en.boxMinY, en.y);
-    en.boxMaxY = Math.max(en.boxMaxY, en.y);
-
-    if ((en.boxMaxX - en.boxMinX) <= maxStuckW && (en.boxMaxY - en.boxMinY) <= maxStuckH) {
-      en.stuckFrames++;
-    } else {
-      en.boxMinX = en.x;
-      en.boxMaxX = en.x;
-      en.boxMinY = en.y;
-      en.boxMaxY = en.y;
-      en.stuckFrames = 0;
-    }
-
-    // Jeśli jest w tym samym małym prostokącie (< 20% ekranu) zbyt długo, raz na 30 sekund (1800 klatek)
-    // podejmuje losową decyzję o zmianie pozycji (nigdy blisko gracza!)
-    if (en.stuckFrames >= 180 && en.repositionCooldown <= 0) {
-      for (let tries = 0; tries < 30; tries++) {
-        const gx = 55 + Math.random() * (canvas.width - 110);
-        const gy = 55 + Math.random() * (canvas.height - 110);
-        const distFromPlayer = Math.hypot(gx - player.x, gy - player.y);
-        const distFromSelf = Math.hypot(gx - en.x, gy - en.y);
-        if (distFromPlayer >= 250 && distFromSelf >= 180 && canMoveTo(gx, gy, en.radius + 4)) {
-          en.repositionTarget = { x: gx, y: gy, timer: 240 };
-          en.repositionCooldown = 30 * 60; // Raz na 30 sekund (1800 klatek)
-          en.stuckFrames = 0;
-          en.boxMinX = en.x;
-          en.boxMaxX = en.x;
-          en.boxMinY = en.y;
-          en.boxMaxY = en.y;
-          en.changeDirTimer = 0;
-          break;
-        }
-      }
-    }
-
     const distToPlayer = Math.hypot(player.x - en.x, player.y - en.y);
 
-    if (en.repositionTarget) {
-      en.repositionTarget.timer--;
+    if (en.aiState === 'confused') {
+      // Przez 2 sekundy (120 klatek) ma nad sobą ikonkę pytajnika ❓ (zagubiony)
+      en.aiStateTimer--;
+      en.vx *= 0.85;
+      en.vy *= 0.85;
+
+      if (en.aiStateTimer <= 0) {
+        // Po 2 sekundach: ikonka mózgu 🧠 i wybór nowej pozycji daleko od gracza
+        let chosenTarget = null;
+        for (let tries = 0; tries < 45; tries++) {
+          const gx = 55 + Math.random() * (canvas.width - 110);
+          const gy = 55 + Math.random() * (canvas.height - 110);
+          const distFromPlayer = Math.hypot(gx - player.x, gy - player.y);
+          const distFromSelf = Math.hypot(gx - en.x, gy - en.y);
+          if (distFromPlayer >= 250 && distFromSelf >= 170 && canMoveTo(gx, gy, en.radius + 6)) {
+            chosenTarget = { x: gx, y: gy };
+            break;
+          }
+        }
+        // Fallback jeśli gracz stoi na środku i trudno o 250px: wybierz najdalszy bezpieczny punkt od gracza
+        if (!chosenTarget) {
+          let bestDist = -1;
+          for (let tries = 0; tries < 30; tries++) {
+            const gx = 55 + Math.random() * (canvas.width - 110);
+            const gy = 55 + Math.random() * (canvas.height - 110);
+            const distFromPlayer = Math.hypot(gx - player.x, gy - player.y);
+            const distFromSelf = Math.hypot(gx - en.x, gy - en.y);
+            if (distFromSelf >= 130 && canMoveTo(gx, gy, en.radius + 6) && distFromPlayer > bestDist) {
+              bestDist = distFromPlayer;
+              chosenTarget = { x: gx, y: gy };
+            }
+          }
+        }
+
+        if (chosenTarget) {
+          en.aiState = 'repositioning';
+          en.repositionTarget = chosenTarget;
+          en.aiStateTimer = 600; // Maksymalnie 10s na dojście, gdyby trasa była bardzo długa
+          en.orbitSign = Math.random() < 0.5 ? 1 : -1;
+        } else {
+          en.aiState = 'normal';
+        }
+      }
+    } else if (en.aiState === 'repositioning' && en.repositionTarget) {
+      // Stan 🧠: idzie prosto do nowej pozycji (komenda ruchu w stronę gracza NIE nadpisuje tego stanu!)
+      en.aiStateTimer--;
       const distToGoal = Math.hypot(en.repositionTarget.x - en.x, en.repositionTarget.y - en.y);
-      if (distToGoal < 28 || en.repositionTarget.timer <= 0) {
+      if (distToGoal <= 32 || en.aiStateTimer <= 0) {
+        // Doszedł na pozycję — wraca do normalnego stanu!
+        en.aiState = 'normal';
         en.repositionTarget = null;
+        en.repositionCooldown = 30 * 60; // Kolejna decyzja najwcześniej za 30 sekund (1800 klatek)
+        en.boxMinX = en.x;
+        en.boxMaxX = en.x;
+        en.boxMinY = en.y;
+        en.boxMaxY = en.y;
+        en.stuckFrames = 0;
         en.changeDirTimer = 0;
-      } else if (en.changeDirTimer <= 0) {
-        const moveAngle = computeObstacleAvoidingAngle(
-          en.x,
-          en.y,
-          Math.atan2(en.vy, en.vx),
-          en.repositionTarget.x,
-          en.repositionTarget.y
-        ) + (Math.random() - 0.5) * 0.35;
-        en.vx = Math.cos(moveAngle) * en.speed * 1.15;
-        en.vy = Math.sin(moveAngle) * en.speed * 1.15;
-        en.changeDirTimer = 15 + Math.random() * 15;
-      }
-    } else if (en.changeDirTimer <= 0) {
-      let targetAngle;
-      const roll = Math.random();
-      if (roll < 0.35) {
-        // Bardziej losowe zachowanie: flankowanie lub losowy kierunek
-        targetAngle = Math.random() * Math.PI * 2;
-      } else if (distToPlayer < 140) {
-        targetAngle = Math.atan2(en.y - player.y, en.x - player.x) + (Math.random() - 0.5) * 1.4;
       } else {
-        targetAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * 1.8;
+        const moveAngle = computeEnemyPathAngle(en, en.repositionTarget.x, en.repositionTarget.y);
+        en.vx = Math.cos(moveAngle) * (en.speed * 1.25);
+        en.vy = Math.sin(moveAngle) * (en.speed * 1.25);
       }
-      en.vx = Math.cos(targetAngle) * en.speed;
-      en.vy = Math.sin(targetAngle) * en.speed;
-      en.changeDirTimer = 25 + Math.random() * 45;
+    } else {
+      // Stan normalny: śledź prostokąt przebywania
+      en.boxMinX = Math.min(en.boxMinX, en.x);
+      en.boxMaxX = Math.max(en.boxMaxX, en.x);
+      en.boxMinY = Math.min(en.boxMinY, en.y);
+      en.boxMaxY = Math.max(en.boxMaxY, en.y);
+
+      if ((en.boxMaxX - en.boxMinX) <= maxStuckW && (en.boxMaxY - en.boxMinY) <= maxStuckH) {
+        en.stuckFrames++;
+      } else {
+        en.boxMinX = en.x;
+        en.boxMaxX = en.x;
+        en.boxMinY = en.y;
+        en.boxMaxY = en.y;
+        en.stuckFrames = 0;
+      }
+
+      if (en.stuckFrames >= STUCK_TRIGGER_FRAMES && en.repositionCooldown <= 0) {
+        // Wykryto utknięcie w prostokącie -> przejdź w stan ❓ (zagubiony) na 2 sekundy (120 klatek)
+        en.aiState = 'confused';
+        en.aiStateTimer = 120;
+        en.stuckFrames = 0;
+      } else if (en.changeDirTimer <= 0) {
+        let targetAngle;
+        const roll = Math.random();
+        if (roll < 0.35) {
+          targetAngle = Math.random() * Math.PI * 2;
+        } else if (distToPlayer < 140) {
+          targetAngle = Math.atan2(en.y - player.y, en.x - player.x) + (Math.random() - 0.5) * 1.4;
+        } else {
+          targetAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * 1.8;
+        }
+        en.vx = Math.cos(targetAngle) * en.speed;
+        en.vy = Math.sin(targetAngle) * en.speed;
+        en.changeDirTimer = 25 + Math.random() * 45;
+      }
     }
 
     const nx = en.x + en.vx;
     const ny = en.y + en.vy;
     if (canMoveTo(nx, en.y, en.radius)) {
       en.x = nx;
-    } else {
+    } else if (en.aiState !== 'repositioning') {
       en.vx *= -1;
       en.vy += (Math.random() - 0.5) * en.speed;
     }
     if (canMoveTo(en.x, ny, en.radius)) {
       en.y = ny;
-    } else {
+    } else if (en.aiState !== 'repositioning') {
       en.vy *= -1;
       en.vx += (Math.random() - 0.5) * en.speed;
     }
