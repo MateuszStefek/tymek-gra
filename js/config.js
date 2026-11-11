@@ -34,7 +34,7 @@ const weaponsCatalog = [
     name: '🚀 Bazooka Samonaprowadzająca',
     shortName: '🚀 Bazooka',
     cost: 1,
-    desc: 'Wystrzeliwuje rakietę, która sama namierza najbliższego wroga i omija przeszkody! Start: 3 rakiety.',
+    desc: 'Wystrzeliwuje rakietę, która namierza wroga najbliższego wskaźnikowi myszy i omija przeszkody! Start: 3 rakiety.',
     ammoLabel: '🚀 Rakiety (3 na start rundy)',
     upgrades: [
       {

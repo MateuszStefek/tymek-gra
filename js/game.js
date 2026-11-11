@@ -583,7 +583,8 @@ function firePlayerWeapon(fromX, fromY, angle) {
     player.rockets--;
     updateHud();
     playRocketLaunchSound();
-    const target = findNearestEnemy(fromX, fromY);
+    // Celuj w przeciwnika najbliższego do wskaźnika myszy (mouse.x, mouse.y)
+    const target = findNearestEnemy(mouse.x, mouse.y);
     homingRockets.push({
       x: fromX + Math.cos(angle) * 26,
       y: fromY + Math.sin(angle) * 26,
@@ -1206,7 +1207,9 @@ function update() {
       continue;
     }
 
-    r.target = findNearestEnemy(r.x, r.y);
+    if (!r.target || !enemies.includes(r.target)) {
+      r.target = findNearestEnemy(mouse.x, mouse.y);
+    }
     if (r.target) {
       const steerAngle = computeObstacleAvoidingAngle(r.x, r.y, r.angle, r.target.x, r.target.y);
       const diff = normalizeAngleDiff(steerAngle - r.angle);
