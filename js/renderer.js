@@ -347,21 +347,6 @@ function renderScene() {
     drawHuman(en.x, en.y, en.angle, en.walkCycle, en.shirtColor, false, en.splatColor, '', en);
   }
 
-  // Podświetlenie celu najbliższego wskaźnikowi myszy, gdy wybrana jest Bazooka
-  if (gameState === 'playing' && player.weapon === 'bazooka' && enemies.length > 0) {
-    const aimedEnemy = findNearestEnemy(mouse.x, mouse.y);
-    if (aimedEnemy) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.arc(aimedEnemy.x, aimedEnemy.y, aimedEnemy.radius + 11, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
   if (gameState !== 'dead') {
     drawHuman(player.x, player.y, player.angle, player.walkCycle, '#2563eb', true, player.splatColor, 'TY');
   }
