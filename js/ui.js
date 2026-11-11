@@ -43,6 +43,51 @@ function cycleGraphicTheme() {
   canvas.focus();
 }
 
+function resizeGameLayout() {
+  const wrapper = document.querySelector('.game-wrapper');
+  const hintEl = document.getElementById('hint');
+  if (!wrapper) return;
+
+  const aspect = canvas.width / canvas.height; // 940 / 560
+  const padX = 24;
+  const padY = 20;
+  const availW = Math.max(420, window.innerWidth - padX);
+
+  // Pierwszy przebieg: ustaw wstępną szerokość paska topbar, aby zmierzyć jego dokładną wysokość po zawinięciu wierszy
+  if (topbarEl) {
+    topbarEl.style.width = `${availW}px`;
+  }
+  const topbarH = topbarEl ? topbarEl.offsetHeight : 80;
+  const hintH = hintEl ? hintEl.offsetHeight + 8 : 26;
+  const availH = Math.max(260, window.innerHeight - topbarH - hintH - padY);
+
+  let targetW = availW;
+  let targetH = targetW / aspect;
+  if (targetH > availH) {
+    targetH = availH;
+    targetW = targetH * aspect;
+  }
+
+  if (topbarEl) {
+    topbarEl.style.width = `${Math.floor(targetW)}px`;
+    const newTopbarH = topbarEl.offsetHeight;
+    if (newTopbarH !== topbarH) {
+      const availH2 = Math.max(260, window.innerHeight - newTopbarH - hintH - padY);
+      if (targetH > availH2) {
+        targetH = availH2;
+        targetW = targetH * aspect;
+        topbarEl.style.width = `${Math.floor(targetW)}px`;
+      }
+    }
+  }
+
+  wrapper.style.width = `${Math.floor(targetW)}px`;
+  wrapper.style.height = `${Math.floor(targetH)}px`;
+}
+
+window.addEventListener('resize', resizeGameLayout);
+setTimeout(resizeGameLayout, 0);
+
 function toggleFollowMouse() {
   followMouse = !followMouse;
   updateFollowButtonUI();

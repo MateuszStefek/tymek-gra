@@ -459,6 +459,10 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mousedown', e => {
   window.focus();
   canvas.focus();
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+  mouse.active = true;
   if (e.button === 2) {
     e.preventDefault();
     if (gameState === 'playing') {
