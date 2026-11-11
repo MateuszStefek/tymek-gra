@@ -19,6 +19,7 @@
       <button id="btnPlaceMine" class="mine-btn">💣 Postaw minę: 2 [PPM / SPACJA]</button>
       <button id="btnFollowMouse" class="active">🏃 Ruch za myszką: WŁ [Klawisz F]</button>
       <button id="btnTheme" title="Zmień motyw graficzny [Klawisz T]">🎨 Motyw: 🌿 Klasyczny</button>
+      <button id="btnOpenSettings" title="Otwórz ekran ustawień">⚙️ Ustawienia</button>
       <button id="btnRetry">🔄 Powtórz</button>
     </div>
     <div class="stats">
@@ -66,6 +67,16 @@
       <div class="action-row">
         <button id="btnShopToLevels" class="btn-big btn-blue">📋 Menu Poziomów</button>
         <button id="btnCloseShop" class="btn-big btn-green">▶️ Wróć do gry</button>
+      </div>
+    </div>
+
+    <div id="settingsOverlay" class="overlay hidden">
+      <h1 style="color:#facc15;">⚙️ USTAWIENIA GRY</h1>
+      <p class="sub">Dostosuj opcje rozgrywki lub wykonaj pełny reset osiągnięć i postępów.</p>
+      <div id="settingsBox" class="editor-box" style="max-width:660px;"></div>
+      <div class="action-row">
+        <button id="btnSettingsToLevels" class="btn-big btn-blue">📋 Menu Poziomów</button>
+        <button id="btnCloseSettings" class="btn-big btn-green">▶️ Wróć do gry</button>
       </div>
     </div>
   </div>

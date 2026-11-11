@@ -31,6 +31,7 @@ function applyGraphicTheme() {
   menuOverlay.style.borderColor = theme.accentColor;
   customOverlay.style.borderColor = theme.accentColor;
   if (shopOverlay) shopOverlay.style.borderColor = theme.accentColor;
+  if (settingsOverlay) settingsOverlay.style.borderColor = theme.accentColor;
   if (btnTheme) {
     btnTheme.textContent = `🎨 Motyw: ${theme.name} [T]`;
   }
@@ -179,8 +180,92 @@ function openShopScreen() {
   gameState = 'shop';
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.remove('hidden');
   renderShopWeapons();
+}
+
+let confirmResetPending = false;
+let resetSuccessMessage = '';
+
+function openSettingsScreen() {
+  if (menuCountdownInterval) {
+    clearInterval(menuCountdownInterval);
+    menuCountdownInterval = null;
+  }
+  mouse.down = false;
+  confirmResetPending = false;
+  resetSuccessMessage = '';
+  gameState = 'settings';
+  menuOverlay.classList.add('hidden');
+  customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.remove('hidden');
+  renderSettingsScreen();
+}
+
+function renderSettingsScreen() {
+  if (!settingsBox) return;
+  const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
+  settingsBox.innerHTML = `
+    <div class="editor-row">
+      <span>🏃 Podążanie postaci za kursorem myszy [F]:</span>
+      <button id="setToggleFollow" class="${followMouse ? 'btn-green' : 'btn-blue'}">${followMouse ? '✅ WŁĄCZONE' : '❌ WYŁĄCZONE'}</button>
+    </div>
+    <div class="editor-row">
+      <span>🎨 Motyw graficzny areny [T]:</span>
+      <div class="editor-stepper">
+        <button id="setPrevTheme">⬅️</button>
+        <span style="min-width:155px;font-size:14px;color:#38bdf8;">${theme.name}</span>
+        <button id="setNextTheme">➡️</button>
+      </div>
+    </div>
+    <div class="editor-row" style="border-color:#ef4444;background:rgba(127, 29, 29, 0.22);flex-direction:column;align-items:stretch;gap:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="color:#fca5a5;font-size:15px;font-weight:900;">🗑️ Reset osiągnięć — Pełny Reset</div>
+          <div style="color:#cbd5e1;font-size:12px;font-weight:600;margin-top:2px;">Kasuje odblokowane poziomy (wraca do Poziomu 1), czasy, 💎 diamenty, kupione bronie, ulepszenia, miny oraz własne mapy.</div>
+        </div>
+        <button id="setBtnResetAll" class="mine-btn" style="background:${confirmResetPending ? '#dc2626' : '#991b1b'};border-color:#f87171;">
+          ${confirmResetPending ? '⚠️ POTWIERDŹ PEŁNY RESET!' : '🗑️ Reset osiągnięć (Pełny Reset)'}
+        </button>
+      </div>
+      ${confirmResetPending ? '<div style="font-size:12px;color:#fde047;text-align:right;">Kliknij przycisk ponownie, aby bezpowrotnie wyzerować cały postęp!</div>' : ''}
+      ${resetSuccessMessage ? `<div style="font-size:13px;color:#4ade80;font-weight:900;text-align:center;">${resetSuccessMessage}</div>` : ''}
+    </div>
+  `;
+
+  settingsBox.querySelector('#setToggleFollow').onclick = () => {
+    toggleFollowMouse();
+    renderSettingsScreen();
+  };
+  settingsBox.querySelector('#setPrevTheme').onclick = () => {
+    currentThemeIndex = (currentThemeIndex + graphicThemes.length - 1) % graphicThemes.length;
+    applyGraphicTheme();
+    saveProgress();
+    renderSettingsScreen();
+  };
+  settingsBox.querySelector('#setNextTheme').onclick = () => {
+    currentThemeIndex = (currentThemeIndex + 1) % graphicThemes.length;
+    applyGraphicTheme();
+    saveProgress();
+    renderSettingsScreen();
+  };
+  settingsBox.querySelector('#setBtnResetAll').onclick = () => {
+    if (!confirmResetPending) {
+      confirmResetPending = true;
+      renderSettingsScreen();
+      return;
+    }
+    resetAllProgress();
+    startLevel(1);
+    hasStartedAnyGame = false;
+    confirmResetPending = false;
+    resetSuccessMessage = '✅ Wykonano pełny reset osiągnięć! Wszystkie statystyki, bronie i poziomy wróciły do stanu początkowego.';
+    openSettingsScreen();
+    resetSuccessMessage = '✅ Wykonano pełny reset osiągnięć! Wszystkie statystyki, bronie i poziomy wróciły do stanu początkowego.';
+    renderSettingsScreen();
+  };
 }
 
 function renderHorizontalTrack(trackTitle, headerRightHtml, steps) {
@@ -471,6 +556,8 @@ function openCustomMapsScreen(editIdx = null) {
   mouse.down = false;
   gameState = 'custom_maps';
   menuOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
   customOverlay.classList.remove('hidden');
 
   if (editIdx !== null) {
@@ -657,6 +744,7 @@ function openMenu(mode = 'select') {
   gameState = mode === 'select' ? 'menu' : mode;
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
   menuOverlay.classList.remove('hidden');
 
   const stageName = activeCustomMapIndex !== null
@@ -832,6 +920,16 @@ function openMenu(mode = 'select') {
   };
   menuActions.appendChild(btnGoShop);
   actionButtons.push(btnGoShop);
+
+  const btnGoSettings = document.createElement('button');
+  btnGoSettings.className = 'btn-big';
+  btnGoSettings.dataset.label = '⚙️ Ustawienia / Reset';
+  btnGoSettings.onclick = () => {
+    if (!canActivateMenuAction()) return;
+    openSettingsScreen();
+  };
+  menuActions.appendChild(btnGoSettings);
+  actionButtons.push(btnGoSettings);
 
   if (isResultScreen && activeCustomMapIndex !== null) {
     const btnEditCurrentCustom = document.createElement('button');

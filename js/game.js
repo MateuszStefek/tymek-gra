@@ -286,6 +286,7 @@ function startLevel(targetLevel) {
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -345,6 +346,7 @@ function startCustomMap(idx) {
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -553,6 +555,43 @@ if (btnCloseShop) {
   });
 }
 
+if (btnOpenSettings) {
+  btnOpenSettings.addEventListener('click', () => {
+    if (gameState === 'settings') {
+      settingsOverlay.classList.add('hidden');
+      if (!hasStartedAnyGame) {
+        openMenu('select');
+      } else {
+        startTime = performance.now() - survivalSeconds * 1000;
+        gameState = 'playing';
+        updatePauseButtonUI();
+        canvas.focus();
+      }
+    } else {
+      openSettingsScreen();
+      updatePauseButtonUI();
+    }
+  });
+}
+
+if (btnSettingsToLevels) {
+  btnSettingsToLevels.addEventListener('click', () => openMenu('select'));
+}
+
+if (btnCloseSettings) {
+  btnCloseSettings.addEventListener('click', () => {
+    settingsOverlay.classList.add('hidden');
+    if (!hasStartedAnyGame) {
+      startLevel(level);
+    } else {
+      startTime = performance.now() - survivalSeconds * 1000;
+      gameState = 'playing';
+      updatePauseButtonUI();
+      canvas.focus();
+    }
+  });
+}
+
 btnOpenMenu.addEventListener('click', () => {
   if (gameState === 'menu') {
     menuOverlay.classList.add('hidden');
@@ -640,10 +679,11 @@ window.addEventListener('keydown', e => {
     placeMine();
   } else if (e.code === 'Escape' || e.code === 'KeyM') {
     if (gameState === 'playing' || gameState === 'paused') openMenu('select');
-    else if (gameState === 'menu' || gameState === 'custom_maps' || gameState === 'shop') {
+    else if (gameState === 'menu' || gameState === 'custom_maps' || gameState === 'shop' || gameState === 'settings') {
       menuOverlay.classList.add('hidden');
       customOverlay.classList.add('hidden');
       if (shopOverlay) shopOverlay.classList.add('hidden');
+      if (settingsOverlay) settingsOverlay.classList.add('hidden');
       startTime = performance.now() - survivalSeconds * 1000;
       gameState = 'playing';
       updatePauseButtonUI();

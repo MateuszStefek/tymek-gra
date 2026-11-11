@@ -28,6 +28,7 @@ const btnPlaceMine = document.getElementById('btnPlaceMine');
 const btnRetry = document.getElementById('btnRetry');
 const btnFollowMouse = document.getElementById('btnFollowMouse');
 const btnTheme = document.getElementById('btnTheme');
+const btnOpenSettings = document.getElementById('btnOpenSettings');
 const topbarEl = document.querySelector('.topbar');
 
 const menuOverlay = document.getElementById('menuOverlay');
@@ -51,6 +52,11 @@ const shopSubtitle = document.getElementById('shopSubtitle');
 const shopWeaponsGrid = document.getElementById('shopWeaponsGrid');
 const btnShopToLevels = document.getElementById('btnShopToLevels');
 const btnCloseShop = document.getElementById('btnCloseShop');
+
+const settingsOverlay = document.getElementById('settingsOverlay');
+const settingsBox = document.getElementById('settingsBox');
+const btnSettingsToLevels = document.getElementById('btnSettingsToLevels');
+const btnCloseSettings = document.getElementById('btnCloseSettings');
 
 const keys = {};
 let followMouse = true;
@@ -207,4 +213,47 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_bazooka_upgraded', bazookaUpgraded ? '1' : '0');
     localStorage.setItem('tymek_paintball_upgrades', JSON.stringify(ownedUpgrades));
   } catch (e) {}
+}
+
+function resetAllProgress() {
+  try {
+    localStorage.removeItem('tymek_paintball_unlocked');
+    localStorage.removeItem('tymek_paintball_last_level');
+    localStorage.removeItem('tymek_paintball_mines');
+    localStorage.removeItem('tymek_paintball_times');
+    localStorage.removeItem('tymek_paintball_custom_maps');
+    localStorage.removeItem('tymek_paintball_diamonds');
+    localStorage.removeItem('tymek_paintball_owned_weapons');
+    localStorage.removeItem('tymek_paintball_default_weapon');
+    localStorage.removeItem('tymek_paintball_bazooka_upgraded');
+    localStorage.removeItem('tymek_paintball_upgrades');
+  } catch (e) {}
+
+  level = 1;
+  unlockedLevel = 1;
+  minesCount = 2;
+  placedMines = [];
+  bestTimes = {};
+  activeCustomMapIndex = null;
+  diamonds = 0;
+  ownedWeapons = ['pistol'];
+  defaultWeapon = 'pistol';
+  bazookaUpgraded = false;
+  ownedUpgrades = [];
+  lastDiamondsEarned = 0;
+
+  customMaps = [
+    { name: 'Moja Mapa 1', arenaIndex: 0, clouds: 1, normal: 2, tough: 0, rapid: 1, boss: 0 },
+    { name: 'Twierdza Pancernych', arenaIndex: 2, clouds: 2, normal: 1, tough: 2, rapid: 0, boss: 0 },
+    { name: 'Szybkie Starcie', arenaIndex: 1, clouds: 1, normal: 0, tough: 1, rapid: 3, boss: 0 },
+    { name: 'Arena Bossów', arenaIndex: 3, clouds: 3, normal: 1, tough: 1, rapid: 1, boss: 2 }
+  ];
+
+  player.weapon = 'pistol';
+  player.maxHp = getStartingMaxHp();
+  player.hp = player.maxHp;
+  player.ammo = getStartingAmmo();
+  player.rockets = getStartingRockets();
+
+  saveProgress();
 }
