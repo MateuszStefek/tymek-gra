@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paintball Arena - Poziomy i Miny</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="controls">
+      <button id="btnOpenMenu" class="menu-btn">📋 MENU POZIOMÓW [M]</button>
+      <button id="btnOpenCustom" class="btn-purple">🛠️ WŁASNE MAPY</button>
+      <button id="btnPause">⏸️ Pauza [P]</button>
+      <button id="btnPrevLevel" title="Poprzedni poziom">⬅️</button>
+      <button id="btnNextLevel" title="Następny odblokowany poziom">➡️</button>
+      <button id="btnPlaceMine" class="mine-btn">💣 Postaw minę: 2 [SPACJA / E]</button>
+      <button id="btnFollowMouse" class="active">🏃 Ruch za myszką: WŁ [Klawisz F]</button>
+      <button id="btnRetry">🔄 Powtórz</button>
+    </div>
+    <div class="stats">
+      <div>🏆 Poziom: <span id="levelText">1</span></div>
+      <div>🎨 Naboje: <span id="ammoText">30</span></div>
+      <div>💣 Miny: <span id="minesText">2</span></div>
+      <div class="hp-box">
+        ❤️ HP: <span id="hpText">200</span>
+        <div class="hp-bar-bg"><div id="hpFill" class="hp-bar-fill"></div></div>
+      </div>
+      <div>🎯 Wrogowie: <span id="aliveText">1 / 1</span></div>
+    </div>
+  </div>
+
+  <div class="game-wrapper">
+    <canvas id="gameCanvas" width="940" height="560" tabindex="0"></canvas>
+
+    <div id="menuOverlay" class="overlay hidden">
+      <h1 id="menuTitle">📋 WYBIERZ POZIOM (ETAP)</h1>
+      <p id="menuSubtitle" class="sub">Kliknij dowolny odblokowany poziom, aby na nim zagrać lub wrócić do wcześniejszych etapów!</p>
+      <div id="levelsGrid" class="levels-grid"></div>
+      <div class="action-row" id="menuActions"></div>
+    </div>
+
+    <div id="customOverlay" class="overlay hidden">
+      <h1 id="customOverlayTitle" style="color:#c084fc;">🛠️ WŁASNE MAPY (ZAWSZE ODBLOKOWANE)</h1>
+      <p id="customOverlaySub" class="sub">Wybierz jedną z własnych map, aby od razu zagrać, lub kliknij ✏️ Edytuj, aby ustawić liczbę przeciwników każdego typu!</p>
+      <div id="customListView" style="width:100%;max-width:780px;display:flex;flex-direction:column;align-items:center;">
+        <div id="customMapsGrid" class="levels-grid" style="margin-bottom:18px;"></div>
+        <div class="action-row">
+          <button id="btnAddCustomMap" class="btn-big btn-purple">➕ Stwórz nową własną mapę</button>
+          <button id="btnCustomToLevels" class="btn-big btn-blue">📋 Przejdź do Menu Poziomów</button>
+          <button id="btnCloseCustom" class="btn-big btn-green">▶️ Wróć do gry</button>
+        </div>
+      </div>
+      <div id="customEditorView" class="editor-box" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="hint">💣 <b>Miny farbowe:</b> Naciśnij <b>SPACJĘ</b>, klawisz <b>E</b> lub przycisk <b>💣 Postaw minę</b> u góry, aby postawić minę! Niewykorzystane miny przechodzą dalej, a za ukończenie etapu dostajesz <b>+1 nową minę</b>.</div>
+
+  <script src="js/config.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

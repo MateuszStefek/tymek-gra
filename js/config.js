@@ -1,0 +1,111 @@
+// Konfiguracja kolorów, układów aren oraz fal przeciwników na poziomach
+
+const colors = ['#f43f5e', '#38bdf8', '#facc15', '#4ade80', '#a855f7', '#fb923c', '#ec4899'];
+
+let obstacles = [];
+let currentArena = { name: 'Klasyczna Arena', bgColor: '#15803d', gridColor: 'rgba(255,255,255,0.05)' };
+
+const arenaLayouts = [
+  {
+    name: 'Klasyczna Arena',
+    bgColor: '#15803d',
+    gridColor: 'rgba(255,255,255,0.05)',
+    obstacles: [
+      { x: 160, y: 115, w: 120, h: 48, type: 'wall' },
+      { x: 660, y: 115, w: 120, h: 48, type: 'wall' },
+      { x: 415, y: 235, w: 110, h: 90, type: 'bunker' },
+      { x: 160, y: 395, w: 120, h: 48, type: 'wall' },
+      { x: 660, y: 395, w: 120, h: 48, type: 'wall' },
+      { x: 310, y: 105, w: 48, h: 48, type: 'crate' },
+      { x: 585, y: 405, w: 48, h: 48, type: 'crate' }
+    ]
+  },
+  {
+    name: 'Dwa Bunkry i Korytarz',
+    bgColor: '#065f46',
+    gridColor: 'rgba(255,255,255,0.06)',
+    obstacles: [
+      { x: 210, y: 185, w: 115, h: 175, type: 'bunker' },
+      { x: 615, y: 185, w: 115, h: 175, type: 'bunker' },
+      { x: 430, y: 95, w: 80, h: 55, type: 'crate' },
+      { x: 430, y: 390, w: 80, h: 50, type: 'crate' },
+      { x: 75, y: 110, w: 70, h: 42, type: 'wall' },
+      { x: 795, y: 110, w: 70, h: 42, type: 'wall' }
+    ]
+  },
+  {
+    name: 'Twierdza Skrzyń',
+    bgColor: '#3f6212',
+    gridColor: 'rgba(255,255,255,0.06)',
+    obstacles: [
+      { x: 340, y: 135, w: 260, h: 42, type: 'wall' },
+      { x: 130, y: 255, w: 145, h: 46, type: 'wall' },
+      { x: 665, y: 255, w: 145, h: 46, type: 'wall' },
+      { x: 435, y: 245, w: 70, h: 70, type: 'bunker' },
+      { x: 225, y: 395, w: 60, h: 55, type: 'crate' },
+      { x: 655, y: 395, w: 60, h: 55, type: 'crate' },
+      { x: 140, y: 115, w: 55, h: 55, type: 'crate' },
+      { x: 745, y: 115, w: 55, h: 55, type: 'crate' }
+    ]
+  },
+  {
+    name: 'Labirynt Osłon',
+    bgColor: '#1e3a8a',
+    gridColor: 'rgba(255,255,255,0.07)',
+    obstacles: [
+      { x: 175, y: 130, w: 46, h: 190, type: 'wall' },
+      { x: 719, y: 130, w: 46, h: 190, type: 'wall' },
+      { x: 350, y: 190, w: 240, h: 48, type: 'bunker' },
+      { x: 350, y: 335, w: 95, h: 52, type: 'crate' },
+      { x: 495, y: 335, w: 95, h: 52, type: 'crate' },
+      { x: 75, y: 400, w: 95, h: 45, type: 'wall' },
+      { x: 770, y: 400, w: 95, h: 45, type: 'wall' }
+    ]
+  }
+];
+
+function getLevelConfig(lvl) {
+  const presets = {
+    1:  { roster: ['normal'], label: '1x Zwykły (1 HP)' },
+    2:  { roster: ['normal', 'normal'], label: '2x Zwykły' },
+    3:  { roster: ['tough'], label: '1x Pancerny 🛡️ (3 strzały)' },
+    4:  { roster: ['rapid'], label: '1x Szybkostrzelny ⚡ (Seria strzałów!)' },
+    5:  { roster: ['normal', 'tough', 'rapid'], label: '1x Zwykły + 1x 🛡️ + 1x ⚡ Szybki' },
+    6:  { roster: ['boss'], label: '1x BARDZO MOCNY 👑 (Odporny na miny!)' },
+    7:  { roster: ['rapid', 'rapid', 'tough'], label: '2x Szybkostrzelny ⚡ + 1x 🛡️' },
+    8:  { roster: ['normal', 'tough', 'rapid', 'boss'], label: '1x Zwykły + 🛡️ + ⚡ + 👑 Boss' },
+    9:  { roster: ['rapid', 'rapid', 'boss'], label: '2x Szybkostrzelny ⚡ + 1x 👑 Boss' },
+    10: { roster: ['tough', 'tough', 'rapid', 'boss', 'boss'], label: '2x 🛡️ + 1x ⚡ + 2x 👑 Boss' }
+  };
+  if (presets[lvl]) {
+    const p = presets[lvl];
+    return {
+      roster: p.roster,
+      label: p.label,
+      arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
+    };
+  }
+  const roster = [];
+  const bossCnt = 1 + Math.floor((lvl - 8) / 2);
+  const toughCnt = 1 + (lvl % 2);
+  const rapidCnt = 1 + ((lvl + 1) % 2);
+  const normCnt = lvl % 2;
+  for (let i = 0; i < normCnt; i++) roster.push('normal');
+  for (let i = 0; i < rapidCnt; i++) roster.push('rapid');
+  for (let i = 0; i < toughCnt; i++) roster.push('tough');
+  for (let i = 0; i < bossCnt; i++) roster.push('boss');
+  return {
+    roster,
+    label: `${normCnt ? normCnt + 'x Zwykły + ' : ''}${rapidCnt}x ⚡ + ${toughCnt}x 🛡️ + ${bossCnt}x 👑`,
+    arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
+  };
+}
+
+function formatCustomMapSummary(cm) {
+  const parts = [];
+  if (cm.normal > 0) parts.push(`${cm.normal}x 🎯 Zwykły`);
+  if (cm.tough > 0) parts.push(`${cm.tough}x 🛡️ Pancerny`);
+  if (cm.rapid > 0) parts.push(`${cm.rapid}x ⚡ Szybki`);
+  if (cm.boss > 0) parts.push(`${cm.boss}x 👑 Boss`);
+  return parts.length > 0 ? parts.join(' + ') : '1x 🎯 Zwykły';
+}

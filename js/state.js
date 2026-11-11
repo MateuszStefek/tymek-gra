@@ -1,0 +1,121 @@
+// Stan gry, referencje DOM oraz zapis postępów w localStorage
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const paintCanvas = document.createElement('canvas');
+paintCanvas.width = canvas.width;
+paintCanvas.height = canvas.height;
+const paintCtx = paintCanvas.getContext('2d');
+
+const levelText = document.getElementById('levelText');
+const ammoText = document.getElementById('ammoText');
+const minesText = document.getElementById('minesText');
+const hpText = document.getElementById('hpText');
+const hpFill = document.getElementById('hpFill');
+const aliveText = document.getElementById('aliveText');
+
+const btnOpenMenu = document.getElementById('btnOpenMenu');
+const btnOpenCustom = document.getElementById('btnOpenCustom');
+const btnPause = document.getElementById('btnPause');
+const btnPrevLevel = document.getElementById('btnPrevLevel');
+const btnNextLevel = document.getElementById('btnNextLevel');
+const btnPlaceMine = document.getElementById('btnPlaceMine');
+const btnRetry = document.getElementById('btnRetry');
+const btnFollowMouse = document.getElementById('btnFollowMouse');
+
+const menuOverlay = document.getElementById('menuOverlay');
+const menuTitle = document.getElementById('menuTitle');
+const menuSubtitle = document.getElementById('menuSubtitle');
+const levelsGrid = document.getElementById('levelsGrid');
+const menuActions = document.getElementById('menuActions');
+
+const customOverlay = document.getElementById('customOverlay');
+const customOverlayTitle = document.getElementById('customOverlayTitle');
+const customOverlaySub = document.getElementById('customOverlaySub');
+const customListView = document.getElementById('customListView');
+const customMapsGrid = document.getElementById('customMapsGrid');
+const customEditorView = document.getElementById('customEditorView');
+const btnAddCustomMap = document.getElementById('btnAddCustomMap');
+const btnCustomToLevels = document.getElementById('btnCustomToLevels');
+const btnCloseCustom = document.getElementById('btnCloseCustom');
+
+const keys = {};
+let followMouse = true;
+let mouse = { x: 470, y: 380, down: false, active: false };
+
+let player = {
+  x: 470,
+  y: 495,
+  speed: 4.0,
+  radius: 16,
+  angle: -Math.PI / 2,
+  walkCycle: 0,
+  cooldown: 0,
+  hp: 200,
+  maxHp: 200,
+  ammo: 30,
+  hitFlash: 0,
+  splatColor: null
+};
+
+let gameState = 'playing'; // 'playing' | 'menu' | 'custom_maps' | 'dead' | 'level_clear' | 'paused'
+let startTime = performance.now();
+let survivalSeconds = 0;
+let level = 1;
+let unlockedLevel = 1;
+let minesCount = 2; // Na starcie mamy 2 miny!
+let bestTimes = {};
+let activeCustomMapIndex = null;
+let totalEnemiesInLevel = 1;
+
+let customMaps = [
+  { name: 'Moja Mapa 1', arenaIndex: 0, normal: 2, tough: 0, rapid: 1, boss: 0 },
+  { name: 'Twierdza Pancernych', arenaIndex: 2, normal: 1, tough: 2, rapid: 0, boss: 0 },
+  { name: 'Szybkie Starcie', arenaIndex: 1, normal: 0, tough: 1, rapid: 3, boss: 0 },
+  { name: 'Arena Bossów', arenaIndex: 3, normal: 1, tough: 1, rapid: 1, boss: 2 }
+];
+
+try {
+  const savedUnlocked = parseInt(localStorage.getItem('tymek_paintball_unlocked') || '1', 10);
+  if (savedUnlocked >= 1) unlockedLevel = savedUnlocked;
+  const savedLast = parseInt(localStorage.getItem('tymek_paintball_last_level') || String(unlockedLevel), 10);
+  if (savedLast >= 1 && savedLast <= unlockedLevel) level = savedLast;
+  const savedMines = localStorage.getItem('tymek_paintball_mines');
+  if (savedMines !== null) {
+    const parsedMines = parseInt(savedMines, 10);
+    if (!isNaN(parsedMines) && parsedMines >= 0) minesCount = parsedMines;
+  }
+  const savedTimes = JSON.parse(localStorage.getItem('tymek_paintball_times') || '{}');
+  if (savedTimes && typeof savedTimes === 'object') bestTimes = savedTimes;
+  const savedFollow = localStorage.getItem('tymek_paintball_follow_mouse');
+  if (savedFollow !== null) followMouse = savedFollow === '1';
+  const savedCustom = JSON.parse(localStorage.getItem('tymek_paintball_custom_maps') || 'null');
+  if (Array.isArray(savedCustom) && savedCustom.length > 0) customMaps = savedCustom;
+} catch (e) {}
+
+let levelBannerTimer = 0;
+let menuReadyAt = 0;
+let menuPointerArmed = false;
+let pointerReleasedAfterMenuOpen = true;
+let menuCountdownInterval = null;
+let ammoSpawnTimer = 420; // Co ok. 7 sekund pojawia się paczka 10 nabojów na mapie
+let enemies = [];
+let bullets = [];
+let placedMines = [];
+let ammoPickups = [];
+let popups = [];
+let explosions = [];
+let particles = [];
+let eliminatedHumans = [];
+
+function saveProgress() {
+  try {
+    localStorage.setItem('tymek_paintball_unlocked', String(unlockedLevel));
+    localStorage.setItem('tymek_paintball_last_level', String(level));
+    localStorage.setItem('tymek_paintball_mines', String(minesCount));
+    localStorage.setItem('tymek_paintball_times', JSON.stringify(bestTimes));
+    localStorage.setItem('tymek_paintball_follow_mouse', followMouse ? '1' : '0');
+    localStorage.setItem('tymek_paintball_custom_maps', JSON.stringify(customMaps));
+  } catch (e) {}
+}

@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paintball Arena - Poziomy i Miny</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #0f172a;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 10px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      width: 940px;
+      max-width: 100%;
+      background: #1e293b;
+      padding: 10px 16px;
+      border-radius: 14px 14px 0 0;
+      border: 2px solid #38bdf8;
+      border-bottom: none;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      background: #334155;
+      color: #f8fafc;
+      border: 2px solid #475569;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    button:hover:not(:disabled) {
+      background: #475569;
+      transform: translateY(-1px);
+    }
+    button.menu-btn {
+      background: #eab308;
+      border-color: #fde047;
+      color: #0f172a;
+      font-size: 14px;
+    }
+    button.menu-btn:hover {
+      background: #facc15;
+    }
+    button.mine-btn {
+      background: #ea580c;
+      border-color: #fb923c;
+      color: #ffffff;
+      font-size: 14px;
+    }
+    button.mine-btn:hover:not(:disabled) {
+      background: #f97316;
+    }
+    button.mine-btn:disabled {
+      background: #1e293b;
+      border-color: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+    }
+    button.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+    }
+    .stats {
+      display: flex;
+      gap: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .stats span {
+      color: #facc15;
+      font-size: 17px;
+      margin-left: 3px;
+    }
+    .hp-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hp-bar-bg {
+      width: 95px;
+      height: 15px;
+      background: #0f172a;
+      border-radius: 8px;
+      border: 2px solid #475569;
+      overflow: hidden;
+    }
+    .hp-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: #22c55e;
+      transition: width 0.15s, background-color 0.15s;
+    }
+    .game-wrapper {
+      position: relative;
+      width: 940px;
+      max-width: 100%;
+    }
+    canvas {
+      display: block;
+      background-color: #14532d;
+      border: 3px solid #38bdf8;
+      border-radius: 0 0 14px 14px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.65);
+      cursor: crosshair;
+      width: 100%;
+      outline: none;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.92);
+      border: 3px solid #38bdf8;
+      border-radius: 0 0 14px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 20;
+    }
+    .overlay.hidden {
+      display: none;
+    }
+    .overlay h1 {
+      font-size: 32px;
+      font-weight: 900;
+      color: #38bdf8;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .overlay p.sub {
+      color: #e2e8f0;
+      font-size: 16px;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .levels-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 20px;
+    }
+    .level-card {
+      background: #1e293b;
+      border: 2px solid #38bdf8;
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .level-card:hover:not(.locked) {
+      background: #0284c7;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(2, 132, 199, 0.4);
+    }
+    .level-card.completed {
+      border-color: #4ade80;
+    }
+    .level-card.current {
+      border-color: #fde047;
+      box-shadow: 0 0 15px rgba(250, 204, 21, 0.35);
+    }
+    .level-card.locked {
+      background: #0f172a;
+      border-color: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+    .level-card .lvl-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+    .level-card.locked .lvl-title {
+      color: #64748b;
+    }
+    .level-card .lvl-enemies {
+      font-size: 13px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+    .level-card .lvl-status {
+      font-size: 12px;
+      font-weight: 800;
+      margin-top: 3px;
+      color: #facc15;
+    }
+    .action-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-big {
+      padding: 11px 22px;
+      font-size: 16px;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+    .btn-green {
+      background: #16a34a;
+      border-color: #4ade80;
+      color: #ffffff;
+    }
+    .btn-green:hover {
+      background: #22c55e;
+    }
+    .btn-blue {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+    #hint {
+      margin-top: 8px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="controls">
+      <button id="btnOpenMenu" class="menu-btn">📋 MENU POZIOMÓW [M]</button>
+      <button id="btnPause">⏸️ Pauza [P]</button>
+      <button id="btnPrevLevel" title="Poprzedni poziom">⬅️</button>
+      <button id="btnNextLevel" title="Następny odblokowany poziom">➡️</button>
+      <button id="btnPlaceMine" class="mine-btn">💣 Postaw minę: 2 [SPACJA / E]</button>
+      <button id="btnFollowMouse" class="active">🏃 Ruch za myszką: WŁ [Klawisz F]</button>
+      <button id="btnRetry">🔄 Powtórz</button>
+    </div>
+    <div class="stats">
+      <div>🏆 Poziom: <span id="levelText">1</span></div>
+      <div>🎨 Naboje: <span id="ammoText">30</span></div>
+      <div>💣 Miny: <span id="minesText">2</span></div>
+      <div class="hp-box">
+        ❤️ HP: <span id="hpText">200</span>
+        <div class="hp-bar-bg"><div id="hpFill" class="hp-bar-fill"></div></div>
+      </div>
+      <div>🎯 Wrogowie: <span id="aliveText">1 / 1</span></div>
+    </div>
+  </div>
+
+  <div class="game-wrapper">
+    <canvas id="gameCanvas" width="940" height="560" tabindex="0"></canvas>
+
+    <div id="menuOverlay" class="overlay hidden">
+      <h1 id="menuTitle">📋 WYBIERZ POZIOM (ETAP)</h1>
+      <p id="menuSubtitle" class="sub">Kliknij dowolny odblokowany poziom, aby na nim zagrać lub wrócić do wcześniejszych etapów!</p>
+      <div id="levelsGrid" class="levels-grid"></div>
+      <div class="action-row" id="menuActions"></div>
+    </div>
+  </div>
+
+  <div id="hint">💣 <b>Miny farbowe:</b> Naciśnij <b>SPACJĘ</b>, klawisz <b>E</b> lub przycisk <b>💣 Postaw minę</b> u góry, aby postawić minę! Niewykorzystane miny przechodzą dalej, a za ukończenie etapu dostajesz <b>+1 nową minę</b>.</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const paintCanvas = document.createElement('canvas');
+    paintCanvas.width = canvas.width;
+    paintCanvas.height = canvas.height;
+    const paintCtx = paintCanvas.getContext('2d');
+
+    const levelText = document.getElementById('levelText');
+    const ammoText = document.getElementById('ammoText');
+    const minesText = document.getElementById('minesText');
+    const hpText = document.getElementById('hpText');
+    const hpFill = document.getElementById('hpFill');
+    const aliveText = document.getElementById('aliveText');
+
+    const btnOpenMenu = document.getElementById('btnOpenMenu');
+    const btnPause = document.getElementById('btnPause');
+    const btnPrevLevel = document.getElementById('btnPrevLevel');
+    const btnNextLevel = document.getElementById('btnNextLevel');
+    const btnPlaceMine = document.getElementById('btnPlaceMine');
+    const btnRetry = document.getElementById('btnRetry');
+    const btnFollowMouse = document.getElementById('btnFollowMouse');
+
+    const menuOverlay = document.getElementById('menuOverlay');
+    const menuTitle = document.getElementById('menuTitle');
+    const menuSubtitle = document.getElementById('menuSubtitle');
+    const levelsGrid = document.getElementById('levelsGrid');
+    const menuActions = document.getElementById('menuActions');
+
+    const colors = ['#f43f5e', '#38bdf8', '#facc15', '#4ade80', '#a855f7', '#fb923c', '#ec4899'];
+
+    const keys = {};
+    let followMouse = true;
+    let mouse = { x: 470, y: 380, down: false, active: false };
+
+    let obstacles = [];
+    let currentArena = { name: 'Klasyczna Arena', bgColor: '#15803d', gridColor: 'rgba(255,255,255,0.05)' };
+
+    const arenaLayouts = [
+      {
+        name: 'Klasyczna Arena',
+        bgColor: '#15803d',
+        gridColor: 'rgba(255,255,255,0.05)',
+        obstacles: [
+          { x: 160, y: 115, w: 120, h: 48, type: 'wall' },
+          { x: 660, y: 115, w: 120, h: 48, type: 'wall' },
+          { x: 415, y: 235, w: 110, h: 90, type: 'bunker' },
+          { x: 160, y: 395, w: 120, h: 48, type: 'wall' },
+          { x: 660, y: 395, w: 120, h: 48, type: 'wall' },
+          { x: 310, y: 105, w: 48, h: 48, type: 'crate' },
+          { x: 585, y: 405, w: 48, h: 48, type: 'crate' }
+        ]
+      },
+      {
+        name: 'Dwa Bunkry i Korytarz',
+        bgColor: '#065f46',
+        gridColor: 'rgba(255,255,255,0.06)',
+        obstacles: [
+          { x: 210, y: 185, w: 115, h: 175, type: 'bunker' },
+          { x: 615, y: 185, w: 115, h: 175, type: 'bunker' },
+          { x: 430, y: 95, w: 80, h: 55, type: 'crate' },
+          { x: 430, y: 390, w: 80, h: 50, type: 'crate' },
+          { x: 75, y: 110, w: 70, h: 42, type: 'wall' },
+          { x: 795, y: 110, w: 70, h: 42, type: 'wall' }
+        ]
+      },
+      {
+        name: 'Twierdza Skrzyń',
+        bgColor: '#3f6212',
+        gridColor: 'rgba(255,255,255,0.06)',
+        obstacles: [
+          { x: 340, y: 135, w: 260, h: 42, type: 'wall' },
+          { x: 130, y: 255, w: 145, h: 46, type: 'wall' },
+          { x: 665, y: 255, w: 145, h: 46, type: 'wall' },
+          { x: 435, y: 245, w: 70, h: 70, type: 'bunker' },
+          { x: 225, y: 395, w: 60, h: 55, type: 'crate' },
+          { x: 655, y: 395, w: 60, h: 55, type: 'crate' },
+          { x: 140, y: 115, w: 55, h: 55, type: 'crate' },
+          { x: 745, y: 115, w: 55, h: 55, type: 'crate' }
+        ]
+      },
+      {
+        name: 'Labirynt Osłon',
+        bgColor: '#1e3a8a',
+        gridColor: 'rgba(255,255,255,0.07)',
+        obstacles: [
+          { x: 175, y: 130, w: 46, h: 190, type: 'wall' },
+          { x: 719, y: 130, w: 46, h: 190, type: 'wall' },
+          { x: 350, y: 190, w: 240, h: 48, type: 'bunker' },
+          { x: 350, y: 335, w: 95, h: 52, type: 'crate' },
+          { x: 495, y: 335, w: 95, h: 52, type: 'crate' },
+          { x: 75, y: 400, w: 95, h: 45, type: 'wall' },
+          { x: 770, y: 400, w: 95, h: 45, type: 'wall' }
+        ]
+      }
+    ];
+
+    function getLevelConfig(lvl) {
+      const presets = {
+        1:  { roster: ['normal'], label: '1x Zwykły (1 HP)' },
+        2:  { roster: ['normal', 'normal'], label: '2x Zwykły' },
+        3:  { roster: ['tough'], label: '1x Pancerny 🛡️ (3 strzały)' },
+        4:  { roster: ['rapid'], label: '1x Szybkostrzelny ⚡ (Seria strzałów!)' },
+        5:  { roster: ['normal', 'tough', 'rapid'], label: '1x Zwykły + 1x 🛡️ + 1x ⚡ Szybki' },
+        6:  { roster: ['boss'], label: '1x BARDZO MOCNY 👑 (Odporny na miny!)' },
+        7:  { roster: ['rapid', 'rapid', 'tough'], label: '2x Szybkostrzelny ⚡ + 1x 🛡️' },
+        8:  { roster: ['normal', 'tough', 'rapid', 'boss'], label: '1x Zwykły + 🛡️ + ⚡ + 👑 Boss' },
+        9:  { roster: ['rapid', 'rapid', 'boss'], label: '2x Szybkostrzelny ⚡ + 1x 👑 Boss' },
+        10: { roster: ['tough', 'tough', 'rapid', 'boss', 'boss'], label: '2x 🛡️ + 1x ⚡ + 2x 👑 Boss' }
+      };
+      if (presets[lvl]) {
+        const p = presets[lvl];
+        return {
+          roster: p.roster,
+          label: p.label,
+          arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
+        };
+      }
+      const roster = [];
+      const bossCnt = 1 + Math.floor((lvl - 8) / 2);
+      const toughCnt = 1 + (lvl % 2);
+      const rapidCnt = 1 + ((lvl + 1) % 2);
+      const normCnt = lvl % 2;
+      for (let i = 0; i < normCnt; i++) roster.push('normal');
+      for (let i = 0; i < rapidCnt; i++) roster.push('rapid');
+      for (let i = 0; i < toughCnt; i++) roster.push('tough');
+      for (let i = 0; i < bossCnt; i++) roster.push('boss');
+      return {
+        roster,
+        label: `${normCnt ? normCnt + 'x Zwykły + ' : ''}${rapidCnt}x ⚡ + ${toughCnt}x 🛡️ + ${bossCnt}x 👑`,
+        arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
+      };
+    }
+
+    let player = {
+      x: 470,
+      y: 495,
+      speed: 4.0,
+      radius: 16,
+      angle: -Math.PI / 2,
+      walkCycle: 0,
+      cooldown: 0,
+      hp: 200,
+      maxHp: 200,
+      ammo: 30,
+      hitFlash: 0,
+      splatColor: null
+    };
+
+    let gameState = 'playing'; // 'playing' | 'menu' | 'dead' | 'level_clear'
+    let startTime = performance.now();
+    let survivalSeconds = 0;
+    let level = 1;
+    let unlockedLevel = 1;
+    let minesCount = 2; // Na starcie mamy 2 miny!
+    let bestTimes = {};
+
+    try {
+      const savedUnlocked = parseInt(localStorage.getItem('tymek_paintball_unlocked') || '1', 10);
+      if (savedUnlocked >= 1) unlockedLevel = savedUnlocked;
+      const savedLast = parseInt(localStorage.getItem('tymek_paintball_last_level') || String(unlockedLevel), 10);
+      if (savedLast >= 1 && savedLast <= unlockedLevel) level = savedLast;
+      const savedMines = localStorage.getItem('tymek_paintball_mines');
+      if (savedMines !== null) {
+        const parsedMines = parseInt(savedMines, 10);
+        if (!isNaN(parsedMines) && parsedMines >= 0) minesCount = parsedMines;
+      }
+      const savedTimes = JSON.parse(localStorage.getItem('tymek_paintball_times') || '{}');
+      if (savedTimes && typeof savedTimes === 'object') bestTimes = savedTimes;
+      const savedFollow = localStorage.getItem('tymek_paintball_follow_mouse');
+      if (savedFollow !== null) followMouse = savedFollow === '1';
+    } catch (e) {}
+
+    let levelBannerTimer = 0;
+    let menuReadyAt = 0;
+    let menuPointerArmed = false;
+    let ammoSpawnTimer = 420; // Co ok. 7 sekund pojawia się paczka 10 nabojów na mapie
+    let enemies = [];
+    let bullets = [];
+    let placedMines = [];
+    let ammoPickups = [];
+    let popups = [];
+    let explosions = [];
+    let particles = [];
+    let eliminatedHumans = [];
+
+    menuOverlay.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && performance.now() >= menuReadyAt) {
+        menuPointerArmed = true;
+      } else {
+        menuPointerArmed = false;
+      }
+    });
+
+    function canActivateMenuAction() {
+      return performance.now() >= menuReadyAt && menuPointerArmed;
+    }
+
+    function updateFollowButtonUI() {
+      btnFollowMouse.classList.toggle('active', followMouse);
+      btnFollowMouse.textContent = followMouse
+        ? '🏃 Ruch za myszką: WŁ [Klawisz F]'
+        : '🏃 Ruch za myszką: WYŁ [Klawisz F]';
+    }
+    updateFollowButtonUI();
+
+    function toggleFollowMouse() {
+      followMouse = !followMouse;
+      updateFollowButtonUI();
+      saveProgress();
+      canvas.focus();
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem('tymek_paintball_unlocked', String(unlockedLevel));
+        localStorage.setItem('tymek_paintball_last_level', String(level));
+        localStorage.setItem('tymek_paintball_mines', String(minesCount));
+        localStorage.setItem('tymek_paintball_times', JSON.stringify(bestTimes));
+        localStorage.setItem('tymek_paintball_follow_mouse', followMouse ? '1' : '0');
+      } catch (e) {}
+    }
+
+    // Efekty dźwiękowe Web Audio API (pik-pik miny, wybuch, strzał, trafienie)
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playMineBeep(isArmedFinal = false) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(isArmedFinal ? 1320 : 880, now);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (isArmedFinal ? 0.22 : 0.09));
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + (isArmedFinal ? 0.22 : 0.09));
+      } catch (e) {}
+    }
+
+    function playExplosionSound() {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(28, now + 0.38);
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.38);
+      } catch (e) {}
+    }
+
+    function playShootSound() {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(340, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.06);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.06);
+      } catch (e) {}
+    }
+
+    function playPickupSound() {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(980, now + 0.14);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } catch (e) {}
+    }
+
+    function playEmptyAmmoSound() {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(140, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } catch (e) {}
+    }
+
+    function spawnAmmoPickup(x, y, amount) {
+      ammoPickups.push({
+        x: Math.max(30, Math.min(canvas.width - 30, x)),
+        y: Math.max(30, Math.min(canvas.height - 30, y)),
+        amount,
+        radius: 15,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+
+    function spawnRandomMapAmmo() {
+      for (let tries = 0; tries < 20; tries++) {
+        const rx = 60 + Math.random() * (canvas.width - 120);
+        const ry = 60 + Math.random() * (canvas.height - 120);
+        if (canMoveTo(rx, ry, 22) && Math.hypot(rx - player.x, ry - player.y) > 90) {
+          spawnAmmoPickup(rx, ry, 10);
+          popups.push({ x: rx, y: ry - 15, text: '📦 +10 NABOJÓW!', color: '#38bdf8', alpha: 1 });
+          return;
+        }
+      }
+    }
+
+    function placeMine() {
+      if (gameState !== 'playing' || minesCount <= 0) return;
+      minesCount--;
+      playMineBeep(false);
+      placedMines.push({
+        x: player.x,
+        y: player.y,
+        triggerRadius: 48,
+        blastRadius: 105,
+        pulse: 0,
+        armFrames: 300, // 5 sekund uzbrajania (60 fps * 5 = 300 klatek)
+        armed: false,
+        color: '#f97316'
+      });
+      saveProgress();
+      updateHud();
+      canvas.focus();
+    }
+
+    function triggerMineExplosion(mine) {
+      playExplosionSound();
+      const blastColor = colors[Math.floor(Math.random() * colors.length)];
+      addPaintSplat(mine.x, mine.y, blastColor, 52);
+      explosions.push({
+        x: mine.x,
+        y: mine.y,
+        radius: 10,
+        maxRadius: mine.blastRadius,
+        color: blastColor,
+        alpha: 1
+      });
+
+      for (let k = 0; k < 42; k++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 2 + Math.random() * 7;
+        particles.push({
+          x: mine.x,
+          y: mine.y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          r: 4 + Math.random() * 5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1
+        });
+      }
+
+      // Sprawdź, czy gracz jest w polu rażenia własnej miny!
+      if (Math.hypot(player.x - mine.x, player.y - mine.y) <= mine.blastRadius) {
+        player.hp = Math.max(0, player.hp - 80);
+        player.hitFlash = 24;
+        player.splatColor = blastColor;
+        addPaintSplat(player.x, player.y, blastColor, 34);
+        if (player.hp <= 0) {
+          updateHud();
+          openMenu('dead');
+          return;
+        }
+      }
+
+      // Eliminate enemies inside blastRadius (chyba że przeciwnik jest odporny na miny - 'boss'!)
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const en = enemies[j];
+        if (Math.hypot(en.x - mine.x, en.y - mine.y) <= mine.blastRadius) {
+          if (en.mineImmune) {
+            popups.push({
+              x: en.x,
+              y: en.y - 24,
+              text: '👑 ODPORNY NA MINY!',
+              color: '#facc15',
+              alpha: 1
+            });
+            continue;
+          }
+          addPaintSplat(en.x, en.y, blastColor, 34);
+          spawnAmmoPickup(en.x, en.y, 5);
+          eliminatedHumans.push({
+            x: en.x,
+            y: en.y,
+            shirtColor: blastColor,
+            splatColor: blastColor,
+            timer: 50
+          });
+          enemies.splice(j, 1);
+        }
+      }
+
+      if (enemies.length === 0 && gameState === 'playing') {
+        handleLevelVictory();
+      } else {
+        updateHud();
+      }
+    }
+
+    function handleLevelVictory() {
+      const tStr = survivalSeconds.toFixed(1);
+      if (!bestTimes[level] || parseFloat(tStr) < parseFloat(bestTimes[level])) {
+        bestTimes[level] = tStr;
+      }
+      if (level + 1 > unlockedLevel) {
+        unlockedLevel = level + 1;
+      }
+      // Niewykorzystane miny (także te postawione na ziemi, które nie wybuchły) przechodzą dalej + 1 nowa mina za przejście etapu!
+      minesCount += placedMines.length + 1;
+      placedMines = [];
+      saveProgress();
+      updateHud();
+      openMenu('level_clear');
+    }
+
+    function openMenu(mode = 'select') {
+      // Zatrzymaj wciśnięty przycisk myszy i uzbrój blokadę UX, aby ekran wyniku nie zniknął przypadkiem od strzelania
+      mouse.down = false;
+      menuPointerArmed = false;
+      menuReadyAt = performance.now() + (mode === 'select' ? 0 : 700);
+
+      // Jeśli gracz wychodzi do menu lub ginie, nieużyte miny postawione na mapie wracają do jego kieszeni, żeby nie przepadły
+      if (placedMines.length > 0) {
+        minesCount += placedMines.length;
+        placedMines = [];
+        saveProgress();
+        updateHud();
+      }
+
+      gameState = mode === 'select' ? 'menu' : mode;
+      menuOverlay.classList.remove('hidden');
+
+      if (mode === 'level_clear') {
+        menuTitle.textContent = `🏆 POZIOM ${level} UKOŃCZONY! (+1 💣 MINA)`;
+        menuTitle.style.color = '#4ade80';
+        menuSubtitle.textContent = `Czas: ${survivalSeconds.toFixed(1)}s | Twoje miny na kolejny etap: ${minesCount} 💣 — Wybierz poziom:`;
+      } else if (mode === 'dead') {
+        menuTitle.textContent = `💀 ODPADASZ NA POZIOMIE ${level}! (0 HP)`;
+        menuTitle.style.color = '#ef4444';
+        menuSubtitle.textContent = `Przetrwałeś ${survivalSeconds.toFixed(1)}s. Masz ${minesCount} 💣 min. Spróbuj ponownie lub wybierz wcześniejszy poziom:`;
+      } else {
+        menuTitle.textContent = '📋 MENU WYBORU POZIOMÓW';
+        menuTitle.style.color = '#38bdf8';
+        menuSubtitle.textContent = `Masz w zapasie ${minesCount} 💣 min (niewykorzystane miny przechodzą między etapami):`;
+      }
+
+      levelsGrid.innerHTML = '';
+      const totalCards = Math.max(8, Math.ceil((unlockedLevel + 2) / 4) * 4);
+      for (let i = 1; i <= totalCards; i++) {
+        const isUnlocked = i <= unlockedLevel;
+        const isCompleted = Boolean(bestTimes[i]);
+        const card = document.createElement('div');
+        card.className = 'level-card'
+          + (!isUnlocked ? ' locked' : '')
+          + (isCompleted ? ' completed' : '')
+          + (i === level ? ' current' : '');
+
+        const cfg = getLevelConfig(i);
+        const enemyLabel = cfg.label;
+        const mapLabel = `🗺️ ${cfg.arena.name}`;
+        let statusLabel = '🔒 Zablokowany';
+        if (isCompleted) {
+          statusLabel = `⭐ Ukończono (${bestTimes[i]}s)`;
+        } else if (isUnlocked) {
+          statusLabel = '🔓 Dostępny — Zagraj!';
+        }
+
+        card.innerHTML = `
+          <div class="lvl-title">Poziom ${i}</div>
+          <div class="lvl-enemies">🎯 ${enemyLabel}</div>
+          <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${mapLabel}</div>
+          <div class="lvl-status">${statusLabel}</div>
+        `;
+
+        if (isUnlocked) {
+          card.addEventListener('click', () => {
+            if (!canActivateMenuAction()) return;
+            startLevel(i);
+          });
+        }
+        levelsGrid.appendChild(card);
+      }
+
+      menuActions.innerHTML = '';
+      if (mode === 'level_clear') {
+        const nextCfg = getLevelConfig(level + 1);
+        const btnNext = document.createElement('button');
+        btnNext.className = 'btn-big btn-green';
+        btnNext.textContent = `▶️ Graj w Poziom ${level + 1} (${nextCfg.label}, masz ${minesCount} 💣)`;
+        btnNext.onclick = () => {
+          if (!canActivateMenuAction()) return;
+          startLevel(level + 1);
+        };
+        menuActions.appendChild(btnNext);
+
+        const btnReplay = document.createElement('button');
+        btnReplay.className = 'btn-big btn-blue';
+        btnReplay.textContent = `🔄 Powtórz Poziom ${level}`;
+        btnReplay.onclick = () => {
+          if (!canActivateMenuAction()) return;
+          startLevel(level);
+        };
+        menuActions.appendChild(btnReplay);
+      } else if (mode === 'dead') {
+        const btnAgain = document.createElement('button');
+        btnAgain.className = 'btn-big btn-green';
+        btnAgain.textContent = `🔄 Spróbuj ponownie (Poziom ${level})`;
+        btnAgain.onclick = () => {
+          if (!canActivateMenuAction()) return;
+          startLevel(level);
+        };
+        menuActions.appendChild(btnAgain);
+
+        if (level > 1) {
+          const btnPrev = document.createElement('button');
+          btnPrev.className = 'btn-big btn-blue';
+          btnPrev.textContent = `⬅️ Wróć do Poziomu ${level - 1}`;
+          btnPrev.onclick = () => {
+            if (!canActivateMenuAction()) return;
+            startLevel(level - 1);
+          };
+          menuActions.appendChild(btnPrev);
+        }
+      } else {
+        const btnCont = document.createElement('button');
+        btnCont.className = 'btn-big btn-green';
+        btnCont.textContent = `▶️ Wróć do gry (Poziom ${level})`;
+        btnCont.onclick = () => {
+          if (!canActivateMenuAction()) return;
+          menuOverlay.classList.add('hidden');
+          gameState = 'playing';
+          canvas.focus();
+        };
+        menuActions.appendChild(btnCont);
+      }
+    }
+
+    function updatePauseButtonUI() {
+      const isPaused = gameState === 'paused';
+      btnPause.classList.toggle('active', isPaused);
+      btnPause.textContent = isPaused ? '▶️ Wznów [P]' : '⏸️ Pauza [P]';
+    }
+
+    function togglePause() {
+      if (gameState === 'playing') {
+        gameState = 'paused';
+        updatePauseButtonUI();
+      } else if (gameState === 'paused') {
+        startTime = performance.now() - survivalSeconds * 1000;
+        gameState = 'playing';
+        updatePauseButtonUI();
+        canvas.focus();
+      }
+    }
+
+    btnPause.addEventListener('click', togglePause);
+
+    btnOpenMenu.addEventListener('click', () => {
+      if (gameState === 'menu') {
+        menuOverlay.classList.add('hidden');
+        startTime = performance.now() - survivalSeconds * 1000;
+        gameState = 'playing';
+        updatePauseButtonUI();
+        canvas.focus();
+      } else {
+        openMenu('select');
+        updatePauseButtonUI();
+      }
+    });
+
+    btnPrevLevel.addEventListener('click', () => {
+      if (level > 1) startLevel(level - 1);
+    });
+
+    btnNextLevel.addEventListener('click', () => {
+      if (level < unlockedLevel) startLevel(level + 1);
+    });
+
+    btnPlaceMine.addEventListener('click', placeMine);
+    btnFollowMouse.addEventListener('click', toggleFollowMouse);
+
+    function rectCircleColliding(circleX, circleY, radius, rect) {
+      const distX = Math.abs(circleX - rect.x - rect.w / 2);
+      const distY = Math.abs(circleY - rect.y - rect.h / 2);
+      if (distX > (rect.w / 2 + radius)) return false;
+      if (distY > (rect.h / 2 + radius)) return false;
+      if (distX <= (rect.w / 2)) return true;
+      if (distY <= (rect.h / 2)) return true;
+      const dx = distX - rect.w / 2;
+      const dy = distY - rect.h / 2;
+      return (dx * dx + dy * dy <= (radius * radius));
+    }
+
+    function canMoveTo(x, y, radius) {
+      if (x < radius + 12 || x > canvas.width - radius - 12) return false;
+      if (y < radius + 12 || y > canvas.height - radius - 12) return false;
+      for (const ob of obstacles) {
+        if (rectCircleColliding(x, y, radius, ob)) return false;
+      }
+      return true;
+    }
+
+    let totalEnemiesInLevel = 1;
+
+    function spawnEnemy(index, kind = 'normal') {
+      const spots = [
+        { x: 470, y: 65 },
+        { x: 95, y: 75 },
+        { x: 845, y: 75 },
+        { x: 80, y: 260 },
+        { x: 860, y: 260 },
+        { x: 260, y: 65 },
+        { x: 680, y: 65 },
+        { x: 95, y: 345 },
+        { x: 845, y: 345 }
+      ];
+      const spot = spots[index % spots.length];
+      const shirtColors = ['#ef4444', '#f97316', '#eab308', '#ec4899'];
+
+      const maxHits = kind === 'boss' ? 5 : (kind === 'tough' ? 3 : 1);
+      const radius = kind === 'boss' ? 21 : (kind === 'tough' ? 18 : 16);
+      const shirtColor = kind === 'boss'
+        ? '#9333ea'
+        : (kind === 'tough'
+            ? '#d97706'
+            : (kind === 'rapid' ? '#eab308' : shirtColors[index % shirtColors.length]));
+
+      let ex = spot.x + (Math.random() - 0.5) * 24;
+      let ey = spot.y + (Math.random() - 0.5) * 24;
+      if (!canMoveTo(ex, ey, radius)) {
+        ex = spot.x;
+        ey = spot.y;
+      }
+
+      enemies.push({
+        x: ex,
+        y: ey,
+        vx: 0,
+        vy: 0,
+        kind,
+        hp: maxHits,
+        maxHp: maxHits,
+        mineImmune: kind === 'boss',
+        speed: Math.min(2.8, (kind === 'boss' ? 1.45 : (kind === 'tough' ? 1.6 : (kind === 'rapid' ? 1.95 : 1.7))) + Math.random() * 0.4 + Math.min(level, 8) * 0.06),
+        radius,
+        angle: Math.PI / 2,
+        walkCycle: Math.random() * 10,
+        shirtColor,
+        splatColor: null,
+        changeDirTimer: 0,
+        shootTimer: kind === 'rapid' ? (16 + Math.random() * 14) : (50 + Math.random() * 65)
+      });
+    }
+
+    function startLevel(targetLevel) {
+      // Jeśli na planszy zostały niewykorzystane miny z poprzedniej próby, wracają do puli
+      if (placedMines.length > 0) {
+        minesCount += placedMines.length;
+        placedMines = [];
+      }
+
+      level = targetLevel;
+      const cfg = getLevelConfig(level);
+      currentArena = cfg.arena;
+      obstacles = cfg.arena.obstacles;
+
+      menuOverlay.classList.add('hidden');
+      paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+      startTime = performance.now();
+      survivalSeconds = 0;
+
+      player.x = 470;
+      player.y = 495;
+      player.maxHp = 200;
+      player.hp = 200;
+      player.ammo = 30; // Zaczynamy poziom od 30 nabojów!
+      player.hitFlash = 0;
+      player.splatColor = null;
+
+      enemies = [];
+      bullets = [];
+      ammoPickups = [];
+      popups = [];
+      ammoSpawnTimer = 360;
+      explosions = [];
+      particles = [];
+      eliminatedHumans = [];
+      gameState = 'playing';
+      levelBannerTimer = 85;
+
+      totalEnemiesInLevel = cfg.roster.length;
+      for (let i = 0; i < cfg.roster.length; i++) {
+        spawnEnemy(i, cfg.roster[i]);
+      }
+      saveProgress();
+      updateHud();
+      canvas.focus();
+    }
+
+    function addPaintSplat(x, y, color, radius = 22) {
+      paintCtx.save();
+      paintCtx.fillStyle = color;
+      paintCtx.beginPath();
+      paintCtx.arc(x, y, radius, 0, Math.PI * 2);
+      paintCtx.fill();
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = radius * (0.5 + Math.random() * 1.1);
+        const r = 2 + Math.random() * (radius * 0.35);
+        paintCtx.beginPath();
+        paintCtx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r, 0, Math.PI * 2);
+        paintCtx.fill();
+      }
+      paintCtx.restore();
+    }
+
+    function firePaintball(fromX, fromY, angle, fromPlayer) {
+      if (fromPlayer) {
+        if (player.ammo <= 0) {
+          playEmptyAmmoSound();
+          popups.push({ x: player.x, y: player.y - 28, text: 'BRAK NABOJÓW!', color: '#ef4444', alpha: 1 });
+          return;
+        }
+        player.ammo--;
+        updateHud();
+        playShootSound();
+      }
+      const color = fromPlayer
+        ? colors[Math.floor(Math.random() * colors.length)]
+        : '#ef4444';
+      const speed = fromPlayer ? 9.8 : 5.2;
+      bullets.push({
+        x: fromX + Math.cos(angle) * 24,
+        y: fromY + Math.sin(angle) * 24,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color,
+        fromPlayer,
+        life: 100
+      });
+    }
+
+    function updateHud() {
+      const hp = Math.max(0, player.hp);
+      const pct = (hp / player.maxHp) * 100;
+      levelText.textContent = `${level} (max: ${unlockedLevel})`;
+      ammoText.textContent = player.ammo;
+      ammoText.style.color = player.ammo > 5 ? '#facc15' : '#ef4444';
+      minesText.textContent = minesCount;
+      btnPlaceMine.textContent = `💣 Postaw minę: ${minesCount} [SPACJA / E]`;
+      btnPlaceMine.disabled = minesCount <= 0;
+      hpText.textContent = `${hp}/${player.maxHp}`;
+      hpFill.style.width = pct + '%';
+      hpFill.style.backgroundColor = pct > 50 ? '#22c55e' : (pct > 25 ? '#facc15' : '#ef4444');
+      aliveText.textContent = `${enemies.length} / ${totalEnemiesInLevel}`;
+      btnPrevLevel.disabled = level <= 1;
+      btnNextLevel.disabled = level >= unlockedLevel;
+      updatePauseButtonUI();
+    }
+
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+      if (e.code === 'KeyP' || e.code === 'Pause') {
+        togglePause();
+      } else if (e.code === 'KeyF') {
+        toggleFollowMouse();
+      } else if (e.code === 'KeyE' || (e.code === 'Space' && gameState === 'playing')) {
+        placeMine();
+      } else if (e.code === 'Escape' || e.code === 'KeyM') {
+        if (gameState === 'playing' || gameState === 'paused') openMenu('select');
+        else if (gameState === 'menu') {
+          menuOverlay.classList.add('hidden');
+          startTime = performance.now() - survivalSeconds * 1000;
+          gameState = 'playing';
+          updatePauseButtonUI();
+        }
+      }
+    });
+    window.addEventListener('keyup', e => {
+      keys[e.code] = false;
+    });
+
+    // Całkowita blokada menu kontekstowego pod prawym przyciskiem myszy (nic się nie dzieje)
+    window.addEventListener('contextmenu', e => {
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      mouse.active = true;
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      window.focus();
+      canvas.focus();
+      if (e.button !== 0) {
+        e.preventDefault();
+        return;
+      }
+      if (gameState === 'paused') {
+        togglePause();
+        return;
+      }
+      if (gameState !== 'playing') return;
+      mouse.down = true;
+      mouse.active = true;
+      const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      firePaintball(player.x, player.y, angle, true);
+      player.cooldown = 10;
+    });
+
+    window.addEventListener('mouseup', () => {
+      mouse.down = false;
+    });
+
+    btnRetry.addEventListener('click', () => startLevel(level));
+
+    function update() {
+      if (levelBannerTimer > 0) levelBannerTimer--;
+      if (gameState !== 'playing') return;
+
+      survivalSeconds = (performance.now() - startTime) / 1000;
+
+      if (player.hitFlash > 0) player.hitFlash--;
+
+      let dx = 0;
+      let dy = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+      if (dx === 0 && dy === 0 && followMouse && mouse.active) {
+        const distToMouse = Math.hypot(mouse.x - player.x, mouse.y - player.y);
+        if (distToMouse > 45) {
+          dx = (mouse.x - player.x) / distToMouse;
+          dy = (mouse.y - player.y) / distToMouse;
+        }
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        const len = Math.hypot(dx, dy);
+        const nx = player.x + (dx / len) * player.speed;
+        const ny = player.y + (dy / len) * player.speed;
+        if (canMoveTo(nx, player.y, player.radius)) player.x = nx;
+        if (canMoveTo(player.x, ny, player.radius)) player.y = ny;
+        player.walkCycle += 0.26;
+      }
+
+      player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+      if (player.cooldown > 0) player.cooldown--;
+      if (mouse.down && player.cooldown <= 0) {
+        firePaintball(player.x, player.y, player.angle + (Math.random() - 0.5) * 0.08, true);
+        player.cooldown = 9;
+      }
+
+      // Update enemies
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const en = enemies[i];
+        en.changeDirTimer--;
+        const distToPlayer = Math.hypot(player.x - en.x, player.y - en.y);
+
+        if (en.changeDirTimer <= 0) {
+          let targetAngle;
+          if (distToPlayer < 140) {
+            targetAngle = Math.atan2(en.y - player.y, en.x - player.x) + (Math.random() - 0.5) * 1.1;
+          } else {
+            targetAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * 1.5;
+          }
+          en.vx = Math.cos(targetAngle) * en.speed;
+          en.vy = Math.sin(targetAngle) * en.speed;
+          en.changeDirTimer = 30 + Math.random() * 40;
+        }
+
+        const nx = en.x + en.vx;
+        const ny = en.y + en.vy;
+        if (canMoveTo(nx, en.y, en.radius)) en.x = nx; else en.vx *= -1;
+        if (canMoveTo(en.x, ny, en.radius)) en.y = ny; else en.vy *= -1;
+
+        en.walkCycle += 0.22;
+        en.angle = Math.atan2(player.y - en.y, player.x - en.x);
+
+        en.shootTimer--;
+        if (en.shootTimer <= 0 && distToPlayer < 480) {
+          const spread = en.kind === 'rapid' ? 0.16 : 0.25;
+          const aimAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * spread;
+          firePaintball(en.x, en.y, aimAngle, false);
+          if (en.kind === 'rapid') {
+            en.shootTimer = 14 + Math.random() * 10; // Strzela około 4 razy częściej!
+          } else {
+            en.shootTimer = Math.max(35, 85 - level * 4) + Math.random() * 55;
+          }
+        }
+      }
+
+      // Uzbrajanie min (5 sekund pik-pik-pik) oraz detekcja wrogów i gracza!
+      for (let m = placedMines.length - 1; m >= 0; m--) {
+        const mine = placedMines[m];
+        mine.pulse += 0.14;
+
+        if (!mine.armed) {
+          mine.armFrames--;
+          if (mine.armFrames > 0 && mine.armFrames % 60 === 0) {
+            playMineBeep(false);
+          } else if (mine.armFrames <= 0) {
+            mine.armed = true;
+            playMineBeep(true);
+          }
+          continue;
+        }
+
+        let triggered = false;
+        // Sprawdź, czy gracz wpadł na własną uzbrojoną minę
+        if (Math.hypot(player.x - mine.x, player.y - mine.y) <= mine.triggerRadius) {
+          triggered = true;
+        } else {
+          for (const en of enemies) {
+            if (Math.hypot(en.x - mine.x, en.y - mine.y) <= mine.triggerRadius) {
+              triggered = true;
+              break;
+            }
+          }
+        }
+        if (triggered) {
+          placedMines.splice(m, 1);
+          triggerMineExplosion(mine);
+          if (gameState !== 'playing') return;
+        }
+      }
+
+      // Bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        b.life--;
+
+        let hitWall = false;
+        if (b.x < 10 || b.x > canvas.width - 10 || b.y < 10 || b.y > canvas.height - 10) {
+          hitWall = true;
+        } else {
+          for (const ob of obstacles) {
+            if (rectCircleColliding(b.x, b.y, 5, ob)) {
+              hitWall = true;
+              break;
+            }
+          }
+        }
+
+        if (hitWall || b.life <= 0) {
+          addPaintSplat(b.x, b.y, b.color, 13 + Math.random() * 7);
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        if (b.fromPlayer) {
+          let hitEnemy = false;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const en = enemies[j];
+            if (Math.hypot(b.x - en.x, b.y - en.y) < en.radius + 7) {
+              hitEnemy = true;
+              en.hp--;
+              en.splatColor = b.color;
+              addPaintSplat(en.x, en.y, b.color, en.hp <= 0 ? 28 : 16);
+              for (let k = 0; k < (en.hp <= 0 ? 22 : 10); k++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 1.5 + Math.random() * 5;
+                particles.push({
+                  x: en.x,
+                  y: en.y,
+                  vx: Math.cos(a) * s,
+                  vy: Math.sin(a) * s,
+                  r: 4 + Math.random() * 3,
+                  color: b.color,
+                  alpha: 1
+                });
+              }
+
+              if (en.hp > 0) {
+                popups.push({
+                  x: en.x,
+                  y: en.y - 24,
+                  text: `TRAFIONY! (${en.hp}/${en.maxHp} ❤️)`,
+                  color: '#fde047',
+                  alpha: 1
+                });
+                break;
+              }
+
+              spawnAmmoPickup(en.x, en.y, 5); // Każdy zabity przeciwnik dropuje 5 nabojów!
+              eliminatedHumans.push({
+                x: en.x,
+                y: en.y,
+                shirtColor: b.color,
+                splatColor: b.color,
+                timer: 45
+              });
+              enemies.splice(j, 1);
+              if (enemies.length === 0) {
+                handleLevelVictory();
+              } else {
+                updateHud();
+              }
+              break;
+            }
+          }
+          if (hitEnemy) {
+            bullets.splice(i, 1);
+            continue;
+          }
+        } else {
+          if (Math.hypot(b.x - player.x, b.y - player.y) < player.radius + 6) {
+            player.hp = Math.max(0, player.hp - 15);
+            player.hitFlash = 14;
+            player.splatColor = b.color;
+            addPaintSplat(player.x, player.y, b.color, 22);
+            for (let k = 0; k < 16; k++) {
+              const a = Math.random() * Math.PI * 2;
+              particles.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(a) * (2 + Math.random() * 4),
+                vy: Math.sin(a) * (2 + Math.random() * 4),
+                r: 4,
+                color: b.color,
+                alpha: 1
+              });
+            }
+            updateHud();
+            bullets.splice(i, 1);
+
+            if (player.hp <= 0) {
+              openMenu('dead');
+            }
+            continue;
+          }
+        }
+      }
+
+      // Co jakiś czas na mapie pojawia się paczka 10 nowych nabojów!
+      ammoSpawnTimer--;
+      if (ammoSpawnTimer <= 0) {
+        if (ammoPickups.length < 6) {
+          spawnRandomMapAmmo();
+        }
+        ammoSpawnTimer = 420; // Co 7 sekund
+      }
+
+      // Zbieranie nabojów po najechaniu / najściu na nie postacią
+      for (let i = ammoPickups.length - 1; i >= 0; i--) {
+        const pack = ammoPickups[i];
+        pack.pulse += 0.1;
+        if (Math.hypot(player.x - pack.x, player.y - pack.y) <= player.radius + pack.radius + 4) {
+          player.ammo += pack.amount;
+          playPickupSound();
+          popups.push({
+            x: pack.x,
+            y: pack.y - 12,
+            text: `+${pack.amount} NABOJÓW! 🎨`,
+            color: '#4ade80',
+            alpha: 1
+          });
+          ammoPickups.splice(i, 1);
+          updateHud();
+        }
+      }
+
+      for (let i = popups.length - 1; i >= 0; i--) {
+        const pop = popups[i];
+        pop.y -= 1.0;
+        pop.alpha -= 0.025;
+        if (pop.alpha <= 0) popups.splice(i, 1);
+      }
+
+      for (let i = explosions.length - 1; i >= 0; i--) {
+        const ex = explosions[i];
+        ex.radius += (ex.maxRadius - ex.radius) * 0.25;
+        ex.alpha -= 0.05;
+        if (ex.alpha <= 0) explosions.splice(i, 1);
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.03;
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+
+      for (let i = eliminatedHumans.length - 1; i >= 0; i--) {
+        eliminatedHumans[i].timer--;
+        if (eliminatedHumans[i].timer <= 0) eliminatedHumans.splice(i, 1);
+      }
+    }
+
+    function drawMine(mine) {
+      ctx.save();
+      ctx.translate(mine.x, mine.y);
+
+      // Trigger sensor ring (żółty podczas uzbrajania, czerwony gdy uzbrojona)
+      ctx.beginPath();
+      ctx.arc(0, 0, mine.triggerRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = mine.armed ? 'rgba(239, 68, 68, 0.65)' : 'rgba(250, 204, 21, 0.45)';
+      ctx.lineWidth = mine.armed ? 2.5 : 2;
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Mine body
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = mine.armed ? '#ef4444' : '#facc15';
+      ctx.stroke();
+
+      // Blinking LED
+      const blink = Math.sin(mine.pulse * (mine.armed ? 3 : 2)) > 0;
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fillStyle = mine.armed ? (blink ? '#ef4444' : '#7f1d1d') : (blink ? '#fde047' : '#854d0e');
+      ctx.fill();
+
+      // Napis odliczania 5s "PIK!" podczas uzbrajania
+      if (!mine.armed) {
+        const secs = Math.ceil(mine.armFrames / 60);
+        ctx.font = 'bold 13px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.fillText(`PIK! ${secs}s`, 0, -18);
+      }
+
+      ctx.restore();
+    }
+
+    function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, label, enemyObj = null) {
+      ctx.save();
+      ctx.translate(x, y);
+      const scale = enemyObj ? (enemyObj.kind === 'boss' ? 1.24 : (enemyObj.kind === 'tough' ? 1.12 : 1)) : 1;
+      if (scale !== 1) ctx.scale(scale, scale);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 18, 14, 6, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+
+      const legSwing = Math.sin(walkCycle) * 6;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(-5, 6);
+      ctx.lineTo(-6 - legSwing * 0.4, 17 + legSwing);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(5, 6);
+      ctx.lineTo(6 + legSwing * 0.4, 17 - legSwing);
+      ctx.stroke();
+
+      ctx.fillStyle = shirtColor;
+      ctx.strokeStyle = enemyObj && enemyObj.kind === 'boss' ? '#facc15' : '#0f172a';
+      ctx.lineWidth = enemyObj && enemyObj.kind !== 'normal' ? 3 : 2;
+      ctx.beginPath();
+      ctx.roundRect(-11, -8, 22, 18, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      if (splatColor) {
+        ctx.fillStyle = splatColor;
+        ctx.beginPath();
+        ctx.arc(2, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, -16, 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#fde68a';
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, -18, 10.5, Math.PI, Math.PI * 2);
+      ctx.fillStyle = isPlayer ? '#0284c7' : (enemyObj && enemyObj.kind === 'boss' ? '#eab308' : shirtColor);
+      ctx.fill();
+
+      ctx.fillStyle = isPlayer ? '#38bdf8' : (enemyObj && enemyObj.kind === 'boss' ? '#ef4444' : '#1e293b');
+      ctx.beginPath();
+      ctx.roundRect(-8, -19, 16, 6, 3);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(0, -2);
+      ctx.rotate(aimAngle);
+
+      ctx.strokeStyle = shirtColor;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(12, 3);
+      ctx.stroke();
+
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(10, -2, 18, 6);
+      ctx.fillStyle = isPlayer ? '#facc15' : '#cbd5e1';
+      ctx.beginPath();
+      ctx.arc(15, -5, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      if (isPlayer) {
+        const pct = Math.max(0, player.hp) / player.maxHp;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(-22, -38, 44, 7);
+        ctx.fillStyle = pct > 0.5 ? '#22c55e' : (pct > 0.25 ? '#facc15' : '#ef4444');
+        ctx.fillRect(-21, -37, 42 * pct, 5);
+      } else if (enemyObj && enemyObj.maxHp > 1) {
+        const pct = Math.max(0, enemyObj.hp) / enemyObj.maxHp;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(-20, -37, 40, 6);
+        ctx.fillStyle = enemyObj.kind === 'boss' ? '#c084fc' : '#f59e0b';
+        ctx.fillRect(-19, -36, 38 * pct, 4);
+        ctx.font = 'bold 10px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        const tag = enemyObj.kind === 'boss' ? `👑 ODPORNY NA MINY (${enemyObj.hp}/${enemyObj.maxHp})` : `🛡️ ${enemyObj.hp}/${enemyObj.maxHp}`;
+        ctx.fillText(tag, 0, -41);
+      } else if (enemyObj && enemyObj.kind === 'rapid') {
+        ctx.font = 'bold 11px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.fillText('⚡ SZYBKOSTRZELNY', 0, -32);
+      } else if (label) {
+        ctx.font = 'bold 12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(label, 0, -32);
+      }
+
+      ctx.restore();
+    }
+
+    function render() {
+      update();
+
+      ctx.fillStyle = currentArena.bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = currentArena.gridColor;
+      ctx.lineWidth = 2;
+      for (let x = 0; x < canvas.width; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 60) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      for (const ob of obstacles) {
+        ctx.fillStyle = ob.type === 'crate' ? '#b45309' : (ob.type === 'bunker' ? '#334155' : '#475569');
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(ob.x, ob.y, ob.w, ob.h, 8);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.drawImage(paintCanvas, 0, 0);
+
+      // Paczki z nabojami na mapie (+5 z wrogów, +10 ze zrzutów)
+      for (const pack of ammoPickups) {
+        ctx.save();
+        ctx.translate(pack.x, pack.y);
+        const s = 1 + Math.sin(pack.pulse) * 0.08;
+        ctx.scale(s, s);
+
+        ctx.beginPath();
+        ctx.roundRect(-14, -12, 28, 24, 6);
+        ctx.fillStyle = pack.amount >= 10 ? '#0284c7' : '#16a34a';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#fde047';
+        ctx.stroke();
+
+        ctx.font = '900 12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`+${pack.amount}`, 0, 4);
+        ctx.restore();
+      }
+
+      // Placed mines
+      for (const mine of placedMines) {
+        drawMine(mine);
+      }
+
+      // Mine explosions
+      for (const ex of explosions) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ex.alpha);
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+        ctx.fillStyle = ex.color;
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#fde047';
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const el of eliminatedHumans) {
+        ctx.save();
+        ctx.globalAlpha = el.timer / 45;
+        drawHuman(el.x, el.y, 0, 0, el.shirtColor, false, el.splatColor, 'TRAFIONY!');
+        ctx.restore();
+      }
+
+      for (const en of enemies) {
+        drawHuman(en.x, en.y, en.angle, en.walkCycle, en.shirtColor, false, en.splatColor, '', en);
+      }
+
+      if (gameState !== 'dead') {
+        drawHuman(player.x, player.y, player.angle, player.walkCycle, '#2563eb', true, player.splatColor, 'TY');
+      }
+
+      for (const b of bullets) {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (const pop of popups) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, pop.alpha);
+        ctx.font = '900 18px system-ui';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 4;
+        ctx.strokeText(pop.text, pop.x, pop.y);
+        ctx.fillStyle = pop.color;
+        ctx.fillText(pop.text, pop.x, pop.y);
+        ctx.restore();
+      }
+
+      if (levelBannerTimer > 0 && gameState === 'playing') {
+        const cfg = getLevelConfig(level);
+        ctx.save();
+        ctx.font = '900 24px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 6;
+        const msg = `POZIOM ${level} (${currentArena.name}) — ${cfg.label}`;
+        ctx.strokeText(msg, canvas.width / 2, 48);
+        ctx.fillText(msg, canvas.width / 2, 48);
+        ctx.restore();
+      }
+
+      if (player.hitFlash > 0) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${player.hitFlash * 0.025})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (gameState === 'paused') {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 44px system-ui';
+        ctx.fillText('⏸️ GRA WSTRZYMANA (PAUZA)', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 20px system-ui';
+        ctx.fillText('Kliknij lewym przyciskiem myszy, naciśnij P lub guzik ▶️ Wznów, aby kontynuować', canvas.width / 2, canvas.height / 2 + 28);
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    startLevel(level);
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

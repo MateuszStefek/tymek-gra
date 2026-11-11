@@ -1,0 +1,13 @@
+- odradzanie hp - 1 hp na sekunde
+- inne motywy graficzne - do wyboru
+- stawianie min prawym przciskiem (ale zostaw tez spacje)
+- rozszerzenie interfejsu, zeby mapa skalowala sie do rozmiaru okna. (ale nadal te same proporcje szerokosc/wysokosc)
+- nowe bronie kupowane w sklepie
+  - kupuje sie za diamenty
+  - stan diamentow zapisany w storage
+  - za przejscie poziomu > 10 otrzymuje sie floor(poziom / 10) diamentow
+  - bron mozna zmieniac w trakcie etapu - klika sie guzik do gory
+  - pomiedzy etapami mozna zmienic domyslna bron
+  - nowe rodzaje broni:
+    - bazooka ktora namierza cel i goni go probujac ominac przeszkody. Bazooka ma osobne liczniki nabojow. Startujemy z 5oma. Bardzo rzadko dostajemy nowa rakiete. Ale licznik sie resetuje miedzy rundami.
+ - funkcjonalnosc chmury, ktora zaslania fragment mapy (okolo 20% x 20%). Mapy maja opcje posiadania 1-3 chmur.
