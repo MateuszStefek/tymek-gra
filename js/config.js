@@ -2,6 +2,25 @@
 
 const colors = ['#f43f5e', '#38bdf8', '#facc15', '#4ade80', '#a855f7', '#fb923c', '#ec4899'];
 
+const weaponsCatalog = [
+  {
+    id: 'pistol',
+    name: '🔫 Marker Paintballowy',
+    shortName: '🔫 Marker',
+    cost: 0,
+    desc: 'Klasyczny szybkostrzelny marker paintballowy. Korzysta ze zwykłych nabojów farby (start: 30 szt.).',
+    ammoLabel: '🎨 Naboje (30 na start)'
+  },
+  {
+    id: 'bazooka',
+    name: '🚀 Bazooka Samonaprowadzająca',
+    shortName: '🚀 Bazooka',
+    cost: 1,
+    desc: 'Wystrzeliwuje rakietę, która sama namierza najbliższego wroga i omija przeszkody! Osobny licznik: 5 rakiet na start rundy (rzadkie zrzuty na mapie).',
+    ammoLabel: '🚀 Rakiety (5 na start rundy)'
+  }
+];
+
 const graphicThemes = [
   {
     id: 'classic',

@@ -104,3 +104,23 @@ function playEmptyAmmoSound() {
     osc.stop(now + 0.05);
   } catch (e) {}
 }
+
+function playRocketLaunchSound() {
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(190, now);
+    osc.frequency.exponentialRampToValueAtTime(420, now + 0.14);
+    osc.frequency.exponentialRampToValueAtTime(95, now + 0.32);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.32);
+  } catch (e) {}
+}

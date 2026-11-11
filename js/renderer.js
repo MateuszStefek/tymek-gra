@@ -135,12 +135,25 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
   ctx.lineTo(12, 3);
   ctx.stroke();
 
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(10, -2, 18, 6);
-  ctx.fillStyle = isPlayer ? '#facc15' : '#cbd5e1';
-  ctx.beginPath();
-  ctx.arc(15, -5, 4.5, 0, Math.PI * 2);
-  ctx.fill();
+  if (isPlayer && player.weapon === 'bazooka') {
+    // Rysuj wyrzutnię rakiet (Bazookę)
+    ctx.fillStyle = '#15803d';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-6, -5, 34, 10, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(24, -6, 6, 12);
+  } else {
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(10, -2, 18, 6);
+    ctx.fillStyle = isPlayer ? '#facc15' : '#cbd5e1';
+    ctx.beginPath();
+    ctx.arc(15, -5, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 
@@ -242,6 +255,28 @@ function renderScene() {
     ctx.restore();
   }
 
+  // Rzadkie paczki z rakietami do bazooki (+1 rakieta)
+  for (const rpack of rocketPickups) {
+    ctx.save();
+    ctx.translate(rpack.x, rpack.y);
+    const s = 1 + Math.sin(rpack.pulse) * 0.1;
+    ctx.scale(s, s);
+
+    ctx.beginPath();
+    ctx.roundRect(-16, -13, 32, 26, 7);
+    ctx.fillStyle = '#ea580c';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#fde047';
+    ctx.stroke();
+
+    ctx.font = '900 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🚀+1', 0, 4);
+    ctx.restore();
+  }
+
   // Placed mines
   for (const mine of placedMines) {
     drawMine(mine);
@@ -284,6 +319,58 @@ function renderScene() {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+  }
+
+  // Rakiety samonaprowadzające z bazooki
+  for (const r of homingRockets) {
+    if (r.target && enemies.includes(r.target)) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.target.x, r.target.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(r.target.x, r.target.y, r.target.radius + 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(r.x, r.y);
+    ctx.rotate(r.angle);
+
+    // Płomień odrzutowy
+    ctx.beginPath();
+    ctx.moveTo(-10, -4);
+    ctx.lineTo(-19 - Math.random() * 6, 0);
+    ctx.lineTo(-10, 4);
+    ctx.closePath();
+    ctx.fillStyle = '#facc15';
+    ctx.fill();
+
+    // Korpus rakiety
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-10, -5, 18, 10, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    // Głowica rakiety
+    ctx.beginPath();
+    ctx.moveTo(8, -5);
+    ctx.lineTo(15, 0);
+    ctx.lineTo(8, 5);
+    ctx.closePath();
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   for (const p of particles) {

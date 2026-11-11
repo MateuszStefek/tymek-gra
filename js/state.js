@@ -9,7 +9,9 @@ paintCanvas.height = canvas.height;
 const paintCtx = paintCanvas.getContext('2d');
 
 const levelText = document.getElementById('levelText');
+const diamondsText = document.getElementById('diamondsText');
 const ammoText = document.getElementById('ammoText');
+const rocketsText = document.getElementById('rocketsText');
 const minesText = document.getElementById('minesText');
 const hpText = document.getElementById('hpText');
 const hpFill = document.getElementById('hpFill');
@@ -17,6 +19,8 @@ const aliveText = document.getElementById('aliveText');
 
 const btnOpenMenu = document.getElementById('btnOpenMenu');
 const btnOpenCustom = document.getElementById('btnOpenCustom');
+const btnOpenShop = document.getElementById('btnOpenShop');
+const btnSwitchWeapon = document.getElementById('btnSwitchWeapon');
 const btnPause = document.getElementById('btnPause');
 const btnPrevLevel = document.getElementById('btnPrevLevel');
 const btnNextLevel = document.getElementById('btnNextLevel');
@@ -42,6 +46,12 @@ const btnAddCustomMap = document.getElementById('btnAddCustomMap');
 const btnCustomToLevels = document.getElementById('btnCustomToLevels');
 const btnCloseCustom = document.getElementById('btnCloseCustom');
 
+const shopOverlay = document.getElementById('shopOverlay');
+const shopSubtitle = document.getElementById('shopSubtitle');
+const shopWeaponsGrid = document.getElementById('shopWeaponsGrid');
+const btnShopToLevels = document.getElementById('btnShopToLevels');
+const btnCloseShop = document.getElementById('btnCloseShop');
+
 const keys = {};
 let followMouse = true;
 let mouse = { x: 470, y: 380, down: false, active: false };
@@ -58,6 +68,8 @@ let player = {
   maxHp: 200,
   hpRegenTimer: 0,
   ammo: 30,
+  rockets: 5,
+  weapon: 'pistol',
   hitFlash: 0,
   splatColor: null
 };
@@ -73,6 +85,10 @@ let bestTimes = {};
 let activeCustomMapIndex = null;
 let totalEnemiesInLevel = 1;
 let currentThemeIndex = 0;
+let diamonds = 0;
+let ownedWeapons = ['pistol'];
+let defaultWeapon = 'pistol';
+let lastDiamondsEarned = 0;
 
 let customMaps = [
   { name: 'Moja Mapa 1', arenaIndex: 0, normal: 2, tough: 0, rapid: 1, boss: 0 },
@@ -101,6 +117,17 @@ try {
   if (!isNaN(savedTheme) && savedTheme >= 0 && savedTheme < graphicThemes.length) {
     currentThemeIndex = savedTheme;
   }
+  const savedDiamonds = parseInt(localStorage.getItem('tymek_paintball_diamonds') || '0', 10);
+  if (!isNaN(savedDiamonds) && savedDiamonds >= 0) diamonds = savedDiamonds;
+  const savedOwnedWeapons = JSON.parse(localStorage.getItem('tymek_paintball_owned_weapons') || '["pistol"]');
+  if (Array.isArray(savedOwnedWeapons) && savedOwnedWeapons.length > 0) {
+    ownedWeapons = savedOwnedWeapons.includes('pistol') ? savedOwnedWeapons : ['pistol', ...savedOwnedWeapons];
+  }
+  const savedDefaultWeapon = localStorage.getItem('tymek_paintball_default_weapon');
+  if (savedDefaultWeapon && ownedWeapons.includes(savedDefaultWeapon)) {
+    defaultWeapon = savedDefaultWeapon;
+    player.weapon = defaultWeapon;
+  }
 } catch (e) {}
 
 let levelBannerTimer = 0;
@@ -109,8 +136,11 @@ let menuPointerArmed = false;
 let pointerReleasedAfterMenuOpen = true;
 let menuCountdownInterval = null;
 let ammoSpawnTimer = 420; // Co ok. 7 sekund pojawia się paczka 10 nabojów na mapie
+let rocketSpawnTimer = 1500; // Bardzo rzadko (co ok. 25 sekund) pojawia się nowa rakieta do bazooki
 let enemies = [];
 let bullets = [];
+let homingRockets = [];
+let rocketPickups = [];
 let placedMines = [];
 let ammoPickups = [];
 let popups = [];
@@ -128,5 +158,8 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_follow_mouse', followMouse ? '1' : '0');
     localStorage.setItem('tymek_paintball_custom_maps', JSON.stringify(customMaps));
     localStorage.setItem('tymek_paintball_theme', String(currentThemeIndex));
+    localStorage.setItem('tymek_paintball_diamonds', String(diamonds));
+    localStorage.setItem('tymek_paintball_owned_weapons', JSON.stringify(ownedWeapons));
+    localStorage.setItem('tymek_paintball_default_weapon', defaultWeapon);
   } catch (e) {}
 }

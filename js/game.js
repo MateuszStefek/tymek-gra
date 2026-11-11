@@ -43,6 +43,27 @@ function spawnRandomMapAmmo() {
   }
 }
 
+function spawnRocketPickup(x, y) {
+  rocketPickups.push({
+    x: Math.max(35, Math.min(canvas.width - 35, x)),
+    y: Math.max(35, Math.min(canvas.height - 35, y)),
+    radius: 16,
+    pulse: Math.random() * Math.PI * 2
+  });
+}
+
+function spawnRandomMapRocket() {
+  for (let tries = 0; tries < 20; tries++) {
+    const rx = 65 + Math.random() * (canvas.width - 130);
+    const ry = 65 + Math.random() * (canvas.height - 130);
+    if (canMoveTo(rx, ry, 22) && Math.hypot(rx - player.x, ry - player.y) > 90) {
+      spawnRocketPickup(rx, ry);
+      popups.push({ x: rx, y: ry - 16, text: '🚀 +1 RAKIETA DO BAZOOKI!', color: '#fb923c', alpha: 1 });
+      return;
+    }
+  }
+}
+
 function placeMine() {
   if (gameState !== 'playing' || minesCount <= 0) return;
   minesCount--;
@@ -138,12 +159,18 @@ function triggerMineExplosion(mine) {
 
 function handleLevelVictory() {
   const tStr = survivalSeconds.toFixed(1);
+  lastDiamondsEarned = 0;
   if (activeCustomMapIndex === null) {
     if (!bestTimes[level] || parseFloat(tStr) < parseFloat(bestTimes[level])) {
       bestTimes[level] = tStr;
     }
     if (level + 1 > unlockedLevel) {
       unlockedLevel = level + 1;
+    }
+    // Za przejście poziomu > 10 otrzymuje się floor(poziom / 10) diamentów
+    if (level > 10) {
+      lastDiamondsEarned = Math.floor(level / 10);
+      diamonds += lastDiamondsEarned;
     }
   }
   // Niewykorzystane miny (także te postawione na ziemi, które nie wybuchły) przechodzą dalej + 1 nowa mina za przejście etapu!
@@ -224,6 +251,7 @@ function startLevel(targetLevel) {
 
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -234,14 +262,19 @@ function startLevel(targetLevel) {
   player.hp = 200;
   player.hpRegenTimer = 0;
   player.ammo = 30; // Zaczynamy poziom od 30 nabojów!
+  player.rockets = 5; // Bazooka: startujemy z 5 rakietami, licznik resetuje się między rundami!
+  player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
   player.splatColor = null;
 
   enemies = [];
   bullets = [];
+  homingRockets = [];
   ammoPickups = [];
+  rocketPickups = [];
   popups = [];
   ammoSpawnTimer = 360;
+  rocketSpawnTimer = 1500;
   explosions = [];
   particles = [];
   splats = [];
@@ -276,6 +309,7 @@ function startCustomMap(idx) {
 
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -286,14 +320,19 @@ function startCustomMap(idx) {
   player.hp = 200;
   player.hpRegenTimer = 0;
   player.ammo = 30;
+  player.rockets = 5;
+  player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
   player.splatColor = null;
 
   enemies = [];
   bullets = [];
+  homingRockets = [];
   ammoPickups = [];
+  rocketPickups = [];
   popups = [];
   ammoSpawnTimer = 360;
+  rocketSpawnTimer = 1500;
   explosions = [];
   particles = [];
   splats = [];
@@ -343,8 +382,140 @@ function firePaintball(fromX, fromY, angle, fromPlayer) {
   });
 }
 
+function findNearestEnemy(fromX, fromY) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const en of enemies) {
+    const d = Math.hypot(en.x - fromX, en.y - fromY);
+    if (d < bestDist) {
+      bestDist = d;
+      best = en;
+    }
+  }
+  return best;
+}
+
+function normalizeAngleDiff(a) {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function computeObstacleAvoidingAngle(rx, ry, currentAngle, targetX, targetY) {
+  const desiredAngle = Math.atan2(targetY - ry, targetX - rx);
+  const distToTarget = Math.hypot(targetX - rx, targetY - ry);
+
+  // Sprawdź czy linia prosta do celu jest wolna od przeszkód
+  let directClear = true;
+  const checkSteps = Math.min(8, Math.ceil(distToTarget / 22));
+  for (let s = 1; s <= checkSteps; s++) {
+    const d = Math.min(distToTarget, s * 22);
+    const tx = rx + Math.cos(desiredAngle) * d;
+    const ty = ry + Math.sin(desiredAngle) * d;
+    if (!canMoveTo(tx, ty, 8)) {
+      directClear = false;
+      break;
+    }
+  }
+  if (directClear) {
+    return desiredAngle;
+  }
+
+  // Jeśli na drodze jest przeszkoda, oceń 20 kierunków wokół rakiety (steering feelers)
+  let bestAngle = currentAngle;
+  let bestScore = -Infinity;
+  const numDirs = 20;
+  for (let i = 0; i < numDirs; i++) {
+    const candAngle = -Math.PI + (i / numDirs) * Math.PI * 2;
+    let clearDist = 0;
+    const maxLook = 110;
+    for (let d = 16; d <= maxLook; d += 16) {
+      const tx = rx + Math.cos(candAngle) * d;
+      const ty = ry + Math.sin(candAngle) * d;
+      if (canMoveTo(tx, ty, 9)) {
+        clearDist = d;
+      } else {
+        break;
+      }
+    }
+    if (clearDist < 16) continue;
+
+    const diffToGoal = Math.abs(normalizeAngleDiff(candAngle - desiredAngle));
+    const diffToCurrent = Math.abs(normalizeAngleDiff(candAngle - currentAngle));
+    const score = clearDist * 1.6 - diffToGoal * 55 - diffToCurrent * 18;
+    if (score > bestScore) {
+      bestScore = score;
+      bestAngle = candAngle;
+    }
+  }
+  return bestAngle;
+}
+
+function firePlayerWeapon(fromX, fromY, angle) {
+  if (player.weapon === 'bazooka') {
+    if (player.rockets <= 0) {
+      playEmptyAmmoSound();
+      popups.push({ x: player.x, y: player.y - 28, text: 'BRAK RAKIET! 🚀', color: '#ef4444', alpha: 1 });
+      return;
+    }
+    player.rockets--;
+    updateHud();
+    playRocketLaunchSound();
+    const target = findNearestEnemy(fromX, fromY);
+    homingRockets.push({
+      x: fromX + Math.cos(angle) * 26,
+      y: fromY + Math.sin(angle) * 26,
+      angle,
+      speed: 5.4,
+      target,
+      color: '#fb923c',
+      life: 480
+    });
+    player.cooldown = 28;
+  } else {
+    firePaintball(fromX, fromY, angle, true);
+    player.cooldown = 10;
+  }
+}
 // Event listenery przycisków i wejścia
 btnPause.addEventListener('click', togglePause);
+
+if (btnOpenShop) {
+  btnOpenShop.addEventListener('click', () => {
+    if (gameState === 'shop') {
+      shopOverlay.classList.add('hidden');
+      startTime = performance.now() - survivalSeconds * 1000;
+      gameState = 'playing';
+      updatePauseButtonUI();
+      canvas.focus();
+    } else {
+      openShopScreen();
+      updatePauseButtonUI();
+    }
+  });
+}
+
+if (btnSwitchWeapon) {
+  btnSwitchWeapon.addEventListener('click', switchWeaponInStage);
+}
+
+if (btnShopToLevels) {
+  btnShopToLevels.addEventListener('click', () => openMenu('select'));
+}
+
+if (btnCloseShop) {
+  btnCloseShop.addEventListener('click', () => {
+    shopOverlay.classList.add('hidden');
+    if (!hasStartedAnyGame) {
+      startLevel(level);
+    } else {
+      startTime = performance.now() - survivalSeconds * 1000;
+      gameState = 'playing';
+      updatePauseButtonUI();
+      canvas.focus();
+    }
+  });
+}
 
 btnOpenMenu.addEventListener('click', () => {
   if (gameState === 'menu') {
@@ -426,13 +597,16 @@ window.addEventListener('keydown', e => {
     toggleFollowMouse();
   } else if (e.code === 'KeyT') {
     cycleGraphicTheme();
+  } else if (e.code === 'KeyQ') {
+    switchWeaponInStage();
   } else if (e.code === 'KeyE' || (e.code === 'Space' && gameState === 'playing')) {
     placeMine();
   } else if (e.code === 'Escape' || e.code === 'KeyM') {
     if (gameState === 'playing' || gameState === 'paused') openMenu('select');
-    else if (gameState === 'menu' || gameState === 'custom_maps') {
+    else if (gameState === 'menu' || gameState === 'custom_maps' || gameState === 'shop') {
       menuOverlay.classList.add('hidden');
       customOverlay.classList.add('hidden');
+      if (shopOverlay) shopOverlay.classList.add('hidden');
       startTime = performance.now() - survivalSeconds * 1000;
       gameState = 'playing';
       updatePauseButtonUI();
@@ -482,8 +656,7 @@ canvas.addEventListener('mousedown', e => {
   mouse.down = true;
   mouse.active = true;
   const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-  firePaintball(player.x, player.y, angle, true);
-  player.cooldown = 10;
+  firePlayerWeapon(player.x, player.y, angle);
 });
 
 window.addEventListener('mouseup', () => {
@@ -539,8 +712,8 @@ function update() {
 
   if (player.cooldown > 0) player.cooldown--;
   if (mouse.down && player.cooldown <= 0) {
-    firePaintball(player.x, player.y, player.angle + (Math.random() - 0.5) * 0.08, true);
-    player.cooldown = 9;
+    const spread = player.weapon === 'bazooka' ? 0 : (Math.random() - 0.5) * 0.08;
+    firePlayerWeapon(player.x, player.y, player.angle + spread);
   }
 
   // Update enemies
@@ -677,6 +850,9 @@ function update() {
           }
 
           spawnAmmoPickup(en.x, en.y, 5); // Każdy zabity przeciwnik dropuje 5 nabojów!
+          if (Math.random() < 0.08) {
+            spawnRocketPickup(en.x + 14, en.y);
+          }
           eliminatedHumans.push({
             x: en.x,
             y: en.y,
@@ -726,6 +902,135 @@ function update() {
     }
   }
 
+  // Aktualizacja rakiet samonaprowadzających (Bazooka) z omijaniem przeszkód
+  for (let i = homingRockets.length - 1; i >= 0; i--) {
+    const r = homingRockets[i];
+    r.life--;
+    if (r.life <= 0) {
+      addPaintSplat(r.x, r.y, r.color, 26);
+      homingRockets.splice(i, 1);
+      continue;
+    }
+
+    r.target = findNearestEnemy(r.x, r.y);
+    if (r.target) {
+      const steerAngle = computeObstacleAvoidingAngle(r.x, r.y, r.angle, r.target.x, r.target.y);
+      const diff = normalizeAngleDiff(steerAngle - r.angle);
+      const maxTurn = 0.14;
+      r.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
+    }
+
+    const nx = r.x + Math.cos(r.angle) * r.speed;
+    const ny = r.y + Math.sin(r.angle) * r.speed;
+    if (canMoveTo(nx, ny, 6)) {
+      r.x = nx;
+      r.y = ny;
+    } else {
+      // Ślizganie wzdłuż krawędzi przeszkody (omijanie bez utknięcia)
+      let moved = false;
+      if (canMoveTo(nx, r.y, 6)) {
+        r.x = nx;
+        moved = true;
+      }
+      if (canMoveTo(r.x, ny, 6)) {
+        r.y = ny;
+        moved = true;
+      }
+      if (!moved) {
+        r.angle += 0.65;
+      }
+    }
+
+    if (r.life % 2 === 0) {
+      particles.push({
+        x: r.x - Math.cos(r.angle) * 10,
+        y: r.y - Math.sin(r.angle) * 10,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: (Math.random() - 0.5) * 0.8,
+        r: 3.5,
+        color: '#fb923c',
+        alpha: 0.75
+      });
+    }
+
+    let hitIdx = -1;
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const en = enemies[j];
+      if (Math.hypot(r.x - en.x, r.y - en.y) <= en.radius + 12) {
+        hitIdx = j;
+        break;
+      }
+    }
+
+    if (hitIdx !== -1) {
+      playExplosionSound();
+      const blastColor = colors[Math.floor(Math.random() * colors.length)];
+      addPaintSplat(r.x, r.y, blastColor, 38);
+      explosions.push({
+        x: r.x,
+        y: r.y,
+        radius: 8,
+        maxRadius: 68,
+        color: blastColor,
+        alpha: 1
+      });
+      for (let k = 0; k < 28; k++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 2 + Math.random() * 5.5;
+        particles.push({
+          x: r.x,
+          y: r.y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          r: 4 + Math.random() * 3,
+          color: blastColor,
+          alpha: 1
+        });
+      }
+
+      // Zadaj obrażenia trafionemu wrogowi (3 HP) oraz pobliskim w promieniu wybuchu
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const en = enemies[j];
+        const dist = Math.hypot(r.x - en.x, r.y - en.y);
+        if (j === hitIdx || dist <= 68) {
+          const dmg = j === hitIdx ? 3 : 1;
+          en.hp -= dmg;
+          en.splatColor = blastColor;
+          if (en.hp > 0) {
+            popups.push({
+              x: en.x,
+              y: en.y - 24,
+              text: `💥 RAKIETA! (${en.hp}/${en.maxHp} ❤️)`,
+              color: '#fb923c',
+              alpha: 1
+            });
+          } else {
+            spawnAmmoPickup(en.x, en.y, 5);
+            if (Math.random() < 0.08) {
+              spawnRocketPickup(en.x + 14, en.y);
+            }
+            eliminatedHumans.push({
+              x: en.x,
+              y: en.y,
+              shirtColor: blastColor,
+              splatColor: blastColor,
+              timer: 45
+            });
+            enemies.splice(j, 1);
+          }
+        }
+      }
+
+      homingRockets.splice(i, 1);
+      if (enemies.length === 0) {
+        handleLevelVictory();
+        return;
+      } else {
+        updateHud();
+      }
+    }
+  }
+
   // Co jakiś czas na mapie pojawia się paczka 10 nowych nabojów!
   ammoSpawnTimer--;
   if (ammoSpawnTimer <= 0) {
@@ -733,6 +1038,34 @@ function update() {
       spawnRandomMapAmmo();
     }
     ammoSpawnTimer = 420; // Co 7 sekund
+  }
+
+  // Bardzo rzadko na mapie pojawia się nowa rakieta do bazooki!
+  rocketSpawnTimer--;
+  if (rocketSpawnTimer <= 0) {
+    if (rocketPickups.length < 2) {
+      spawnRandomMapRocket();
+    }
+    rocketSpawnTimer = 1500; // Co ok. 25 sekund
+  }
+
+  // Zbieranie rakiet po najechaniu postacią
+  for (let i = rocketPickups.length - 1; i >= 0; i--) {
+    const rpack = rocketPickups[i];
+    rpack.pulse += 0.1;
+    if (Math.hypot(player.x - rpack.x, player.y - rpack.y) <= player.radius + rpack.radius + 4) {
+      player.rockets += 1;
+      playPickupSound();
+      popups.push({
+        x: rpack.x,
+        y: rpack.y - 12,
+        text: `+1 RAKIETA! 🚀`,
+        color: '#fb923c',
+        alpha: 1
+      });
+      rocketPickups.splice(i, 1);
+      updateHud();
+    }
   }
 
   // Zbieranie nabojów po najechaniu / najściu na nie postacią

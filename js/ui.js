@@ -30,6 +30,7 @@ function applyGraphicTheme() {
   canvas.style.borderColor = theme.accentColor;
   menuOverlay.style.borderColor = theme.accentColor;
   customOverlay.style.borderColor = theme.accentColor;
+  if (shopOverlay) shopOverlay.style.borderColor = theme.accentColor;
   if (btnTheme) {
     btnTheme.textContent = `🎨 Motyw: ${theme.name} [T]`;
   }
@@ -119,8 +120,18 @@ function updateHud() {
   levelText.textContent = activeCustomMapIndex !== null
     ? `🛠️ ${customMaps[activeCustomMapIndex].name}`
     : `${level} (max: ${unlockedLevel})`;
+  if (diamondsText) diamondsText.textContent = diamonds;
   ammoText.textContent = player.ammo;
   ammoText.style.color = player.ammo > 5 ? '#facc15' : '#ef4444';
+  if (rocketsText) {
+    rocketsText.textContent = player.rockets;
+    rocketsText.style.color = player.rockets > 0 ? '#fb923c' : '#ef4444';
+  }
+  if (btnSwitchWeapon) {
+    const wObj = weaponsCatalog.find(w => w.id === player.weapon) || weaponsCatalog[0];
+    btnSwitchWeapon.textContent = `${wObj.shortName} [Q]`;
+    btnSwitchWeapon.classList.toggle('active', player.weapon === 'bazooka');
+  }
   minesText.textContent = minesCount;
   btnPlaceMine.textContent = `💣 Postaw minę: ${minesCount} [PPM / SPACJA]`;
   btnPlaceMine.disabled = minesCount <= 0;
@@ -131,6 +142,105 @@ function updateHud() {
   btnPrevLevel.disabled = level <= 1;
   btnNextLevel.disabled = level >= unlockedLevel;
   updatePauseButtonUI();
+}
+
+function switchWeaponInStage() {
+  if (ownedWeapons.length <= 1) {
+    popups.push({
+      x: player.x,
+      y: player.y - 30,
+      text: 'Kup więcej broni w 🛒 Sklepie!',
+      color: '#38bdf8',
+      alpha: 1
+    });
+    canvas.focus();
+    return;
+  }
+  const idx = ownedWeapons.indexOf(player.weapon);
+  player.weapon = ownedWeapons[(idx + 1) % ownedWeapons.length];
+  const wObj = weaponsCatalog.find(w => w.id === player.weapon) || weaponsCatalog[0];
+  popups.push({
+    x: player.x,
+    y: player.y - 30,
+    text: `Wybrano: ${wObj.shortName}!`,
+    color: '#fde047',
+    alpha: 1
+  });
+  updateHud();
+  canvas.focus();
+}
+
+function openShopScreen() {
+  if (menuCountdownInterval) {
+    clearInterval(menuCountdownInterval);
+    menuCountdownInterval = null;
+  }
+  mouse.down = false;
+  gameState = 'shop';
+  menuOverlay.classList.add('hidden');
+  customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.remove('hidden');
+  renderShopWeapons();
+}
+
+function renderShopWeapons() {
+  if (!shopWeaponsGrid) return;
+  const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
+  if (shopSubtitle) {
+    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń na start rundy: <b style="color:#fde047;">${defObj.name}</b><br><span style="font-size:13px;color:#94a3b8;">Za przejście poziomu &gt; 10 otrzymujesz floor(poziom / 10) 💎 diamentów! W trakcie gry zmieniasz broń przyciskiem u góry lub klawiszem [Q].</span>`;
+  }
+  shopWeaponsGrid.innerHTML = '';
+  weaponsCatalog.forEach(w => {
+    const isOwned = ownedWeapons.includes(w.id);
+    const isDefault = defaultWeapon === w.id;
+    const card = document.createElement('div');
+    card.className = 'level-card' + (isOwned ? ' completed' : '') + (isDefault ? ' current' : '');
+    card.style.cursor = 'default';
+    card.innerHTML = `
+      <div class="lvl-title">${w.name}</div>
+      <div class="lvl-enemies" style="margin:6px 0;">${w.desc}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:12px;">${w.ammoLabel}</div>
+      <div class="lvl-status" style="color:${isOwned ? '#4ade80' : '#38bdf8'};">
+        ${isOwned ? (isDefault ? '⭐ Domyślna broń na start' : '✅ Posiadana w arsenale') : `💰 Cena: ${w.cost} 💎`}
+      </div>
+      <div class="custom-card-btns" style="margin-top:8px;gap:8px;"></div>
+    `;
+    const btnWrap = card.querySelector('.custom-card-btns');
+    if (!isOwned) {
+      const btnBuy = document.createElement('button');
+      btnBuy.className = 'btn-green';
+      btnBuy.style.padding = '7px 14px';
+      btnBuy.style.fontSize = '13px';
+      btnBuy.disabled = diamonds < w.cost;
+      btnBuy.textContent = diamonds >= w.cost ? `🛒 Kup za ${w.cost} 💎` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
+      btnBuy.onclick = () => {
+        if (diamonds < w.cost) return;
+        diamonds -= w.cost;
+        if (!ownedWeapons.includes(w.id)) ownedWeapons.push(w.id);
+        defaultWeapon = w.id;
+        player.weapon = w.id;
+        saveProgress();
+        updateHud();
+        renderShopWeapons();
+      };
+      btnWrap.appendChild(btnBuy);
+    } else {
+      const btnDef = document.createElement('button');
+      btnDef.className = isDefault ? 'btn-blue' : 'btn-purple';
+      btnDef.style.padding = '7px 14px';
+      btnDef.style.fontSize = '13px';
+      btnDef.textContent = isDefault ? '⭐ Ustawiona jako domyślna' : '⭐ Ustaw jako domyślną';
+      btnDef.onclick = () => {
+        defaultWeapon = w.id;
+        player.weapon = w.id;
+        saveProgress();
+        updateHud();
+        renderShopWeapons();
+      };
+      btnWrap.appendChild(btnDef);
+    }
+    shopWeaponsGrid.appendChild(card);
+  });
 }
 
 function openCustomMapsScreen(editIdx = null) {
@@ -314,24 +424,27 @@ function openMenu(mode = 'select') {
 
   gameState = mode === 'select' ? 'menu' : mode;
   customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
   menuOverlay.classList.remove('hidden');
 
   const stageName = activeCustomMapIndex !== null
     ? `WŁASNA MAPA "${customMaps[activeCustomMapIndex].name}"`
     : `POZIOM ${level}`;
 
+  const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
   if (mode === 'level_clear') {
-    menuTitle.textContent = `🏆 ${stageName} UKOŃCZONY! (+1 💣 MINA)`;
+    const diamondMsg = lastDiamondsEarned > 0 ? ` +${lastDiamondsEarned} 💎 DIAMENT!` : '';
+    menuTitle.textContent = `🏆 ${stageName} UKOŃCZONY! (+1 💣 MINA${diamondMsg})`;
     menuTitle.style.color = '#4ade80';
-    menuSubtitle.textContent = `Czas: ${survivalSeconds.toFixed(1)}s | Twoje miny na kolejny etap: ${minesCount} 💣 — Wybierz poziom:`;
+    menuSubtitle.textContent = `Czas: ${survivalSeconds.toFixed(1)}s | Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń: ${defObj.shortName}`;
   } else if (mode === 'dead') {
     menuTitle.textContent = `💀 ODPADASZ: ${stageName}! (0 HP)`;
     menuTitle.style.color = '#ef4444';
-    menuSubtitle.textContent = `Przetrwałeś ${survivalSeconds.toFixed(1)}s. Masz ${minesCount} 💣 min. Spróbuj ponownie lub wybierz inny etap:`;
+    menuSubtitle.textContent = `Przetrwałeś ${survivalSeconds.toFixed(1)}s | Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń: ${defObj.shortName}`;
   } else {
     menuTitle.textContent = '📋 MENU WYBORU POZIOMÓW';
     menuTitle.style.color = '#38bdf8';
-    menuSubtitle.textContent = `Masz w zapasie ${minesCount} 💣 min (niewykorzystane miny przechodzą między etapami):`;
+    menuSubtitle.textContent = `Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń na start: ${defObj.shortName}`;
   }
 
   levelsGrid.innerHTML = '';
@@ -475,6 +588,17 @@ function openMenu(mode = 'select') {
   };
   menuActions.appendChild(btnGoCustom);
   actionButtons.push(btnGoCustom);
+
+  const btnGoShop = document.createElement('button');
+  btnGoShop.className = 'btn-big btn-blue';
+  const curDef = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
+  btnGoShop.dataset.label = `🛒 Sklep i Domyślna Broń (${curDef.shortName} | 💎 ${diamonds})`;
+  btnGoShop.onclick = () => {
+    if (!canActivateMenuAction()) return;
+    openShopScreen();
+  };
+  menuActions.appendChild(btnGoShop);
+  actionButtons.push(btnGoShop);
 
   if (isResultScreen && activeCustomMapIndex !== null) {
     const btnEditCurrentCustom = document.createElement('button');
