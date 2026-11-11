@@ -224,16 +224,16 @@ const arenaLayouts = [
 
 function getLevelConfig(lvl) {
   const presets = {
-    1:  { roster: ['normal'], label: '1x Zwykły (1 HP)', clouds: 0 },
-    2:  { roster: ['normal', 'normal'], label: '2x Zwykły', clouds: 1 },
-    3:  { roster: ['tough'], label: '1x Pancerny 🛡️ (3 strzały)', clouds: 1 },
-    4:  { roster: ['rapid'], label: '1x Szybkostrzelny ⚡ (Seria strzałów!)', clouds: 2 },
-    5:  { roster: ['normal', 'tough', 'rapid'], label: '1x Zwykły + 1x 🛡️ + 1x ⚡ Szybki', clouds: 1 },
-    6:  { roster: ['boss'], label: '1x BARDZO MOCNY 👑 (Odporny na miny!)', clouds: 2 },
-    7:  { roster: ['rapid', 'rapid', 'tough'], label: '2x Szybkostrzelny ⚡ + 1x 🛡️', clouds: 2 },
-    8:  { roster: ['normal', 'tough', 'rapid', 'boss'], label: '1x Zwykły + 🛡️ + ⚡ + 👑 Boss', clouds: 3 },
-    9:  { roster: ['rapid', 'rapid', 'boss'], label: '2x Szybkostrzelny ⚡ + 1x 👑 Boss', clouds: 2 },
-    10: { roster: ['tough', 'tough', 'rapid', 'boss', 'boss'], label: '2x 🛡️ + 1x ⚡ + 2x 👑 Boss', clouds: 3 }
+    1:  { roster: ['normal'], label: '1x Zwykły (1 HP)', clouds: 0, civilians: 1 },
+    2:  { roster: ['normal', 'normal'], label: '2x Zwykły', clouds: 1, civilians: 1 },
+    3:  { roster: ['tough'], label: '1x Pancerny 🛡️ (3 strzały)', clouds: 1, civilians: 1 },
+    4:  { roster: ['rapid'], label: '1x Szybkostrzelny ⚡ (Seria strzałów!)', clouds: 2, civilians: 2 },
+    5:  { roster: ['normal', 'tough', 'rapid'], label: '1x Zwykły + 1x 🛡️ + 1x ⚡ Szybki', clouds: 1, civilians: 2 },
+    6:  { roster: ['boss'], label: '1x BARDZO MOCNY 👑 (Odporny na miny!)', clouds: 2, civilians: 2 },
+    7:  { roster: ['rapid', 'rapid', 'tough'], label: '2x Szybkostrzelny ⚡ + 1x 🛡️', clouds: 2, civilians: 2 },
+    8:  { roster: ['normal', 'tough', 'rapid', 'boss'], label: '1x Zwykły + 🛡️ + ⚡ + 👑 Boss', clouds: 3, civilians: 2 },
+    9:  { roster: ['rapid', 'rapid', 'boss'], label: '2x Szybkostrzelny ⚡ + 1x 👑 Boss', clouds: 2, civilians: 3 },
+    10: { roster: ['tough', 'tough', 'rapid', 'boss', 'boss'], label: '2x 🛡️ + 1x ⚡ + 2x 👑 Boss', clouds: 3, civilians: 3 }
   };
   if (presets[lvl]) {
     const p = presets[lvl];
@@ -241,6 +241,7 @@ function getLevelConfig(lvl) {
       roster: p.roster,
       label: p.label,
       clouds: p.clouds,
+      civilians: p.civilians,
       arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
     };
   }
@@ -254,10 +255,12 @@ function getLevelConfig(lvl) {
   for (let i = 0; i < toughCnt; i++) roster.push('tough');
   for (let i = 0; i < bossCnt; i++) roster.push('boss');
   const clouds = 1 + (lvl % 3); // 1-3 chmury
+  const civilians = 1 + (lvl % 3); // 1-3 cywili
   return {
     roster,
     label: `${normCnt ? normCnt + 'x Zwykły + ' : ''}${rapidCnt}x ⚡ + ${toughCnt}x 🛡️ + ${bossCnt}x 👑`,
     clouds,
+    civilians,
     arena: arenaLayouts[(lvl - 1) % arenaLayouts.length]
   };
 }

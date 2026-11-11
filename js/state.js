@@ -107,10 +107,10 @@ let ownedUpgrades = [];
 let lastDiamondsEarned = 0;
 
 let customMaps = [
-  { name: 'Moja Mapa 1', arenaIndex: 0, clouds: 1, normal: 2, tough: 0, rapid: 1, boss: 0 },
-  { name: 'Twierdza Pancernych', arenaIndex: 2, clouds: 2, normal: 1, tough: 2, rapid: 0, boss: 0 },
-  { name: 'Szybkie Starcie', arenaIndex: 1, clouds: 1, normal: 0, tough: 1, rapid: 3, boss: 0 },
-  { name: 'Arena Bossów', arenaIndex: 3, clouds: 3, normal: 1, tough: 1, rapid: 1, boss: 2 }
+  { name: 'Moja Mapa 1', arenaIndex: 0, clouds: 1, civilians: 1, normal: 2, tough: 0, rapid: 1, boss: 0 },
+  { name: 'Twierdza Pancernych', arenaIndex: 2, clouds: 2, civilians: 2, normal: 1, tough: 2, rapid: 0, boss: 0 },
+  { name: 'Szybkie Starcie', arenaIndex: 1, clouds: 1, civilians: 1, normal: 0, tough: 1, rapid: 3, boss: 0 },
+  { name: 'Arena Bossów', arenaIndex: 3, clouds: 3, civilians: 2, normal: 1, tough: 1, rapid: 1, boss: 2 }
 ];
 
 try {
@@ -193,6 +193,8 @@ let menuCountdownInterval = null;
 let ammoSpawnTimer = 420; // Co ok. 7 sekund pojawia się paczka 10 nabojów na mapie
 let rocketSpawnTimer = 1500; // Bardzo rzadko (co ok. 25 sekund) pojawia się nowa rakieta do bazooki
 let enemies = [];
+let civilians = [];
+let civilianRespawnQueue = [];
 let bullets = [];
 let homingRockets = [];
 let rocketPickups = [];

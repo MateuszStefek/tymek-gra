@@ -589,13 +589,14 @@ function renderCustomMapsList() {
   customMaps.forEach((cm, idx) => {
     const arenaObj = arenaLayouts[cm.arenaIndex % arenaLayouts.length];
     const cloudsCnt = typeof cm.clouds === 'number' ? cm.clouds : 1;
+    const civsCnt = typeof cm.civilians === 'number' ? cm.civilians : 1;
     const card = document.createElement('div');
     card.className = 'level-card completed' + (activeCustomMapIndex === idx ? ' current' : '');
     card.style.cursor = 'default';
     card.innerHTML = `
       <div class="lvl-title" style="color:#e9d5ff;">🛠️ ${cm.name}</div>
       <div class="lvl-enemies">🎯 ${formatCustomMapSummary(cm)}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🗺️ ${arenaObj.name} | ☁️ Chmury: ${cloudsCnt}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🗺️ ${arenaObj.name} | ☁️ ${cloudsCnt} | 🏥 Cywile: ${civsCnt}</div>
       <div class="lvl-status" style="color:#4ade80;">🔓 Zawsze odblokowana</div>
       <div class="custom-card-btns" style="margin-top:6px;">
         <button class="btn-green" id="playCustom_${idx}">▶️ Graj</button>
@@ -611,7 +612,7 @@ function renderCustomMapsList() {
 function renderCustomMapEditor(idx) {
   customListView.style.display = 'none';
   customEditorView.style.display = 'flex';
-  const draft = { clouds: 1, ...customMaps[idx] };
+  const draft = { clouds: 1, civilians: 1, ...customMaps[idx] };
   customOverlayTitle.textContent = `✏️ EDYTOR WŁASNEJ MAPY: ${draft.name}`;
   customOverlaySub.textContent = 'Ustaw układ przeszkód oraz dokładną liczbę przeciwników każdego rodzaju:';
 
@@ -671,6 +672,14 @@ function renderCustomMapEditor(idx) {
           <button id="edBossInc">➕</button>
         </div>
       </div>
+      <div class="editor-row">
+        <span>🏥 Cywil — Lekarz (2 HP, kara -50 HP za zabicie):</span>
+        <div class="editor-stepper">
+          <button id="edCivDec">➖</button>
+          <span>${draft.civilians}</span>
+          <button id="edCivInc">➕</button>
+        </div>
+      </div>
       <div style="text-align:center;font-size:13px;color:${total > 0 ? '#4ade80' : '#ef4444'};font-weight:800;">
         Łącznie przeciwników na mapie: ${total} ${total === 0 ? '(ustaw przynajmniej 1 przeciwnika!)' : ''}
       </div>
@@ -713,6 +722,9 @@ function renderCustomMapEditor(idx) {
 
     customEditorView.querySelector('#edBossDec').onclick = () => { draft.boss = Math.max(0, draft.boss - 1); refreshEditorDOM(); };
     customEditorView.querySelector('#edBossInc').onclick = () => { draft.boss = Math.min(8, draft.boss + 1); refreshEditorDOM(); };
+
+    customEditorView.querySelector('#edCivDec').onclick = () => { draft.civilians = Math.max(0, (draft.civilians || 0) - 1); refreshEditorDOM(); };
+    customEditorView.querySelector('#edCivInc').onclick = () => { draft.civilians = Math.min(8, (draft.civilians || 0) + 1); refreshEditorDOM(); };
 
     customEditorView.querySelector('#edSaveAndPlay').onclick = () => {
       if (draft.normal + draft.tough + draft.rapid + draft.boss <= 0) return;
@@ -894,7 +906,8 @@ function openMenu(mode = 'select') {
     const cfg = getLevelConfig(i);
     const enemyLabel = cfg.label;
     const cloudsInfo = cfg.clouds > 0 ? ` | ☁️ ${cfg.clouds}` : '';
-    const mapLabel = `🗺️ ${cfg.arena.name}${cloudsInfo}`;
+    const civInfo = cfg.civilians > 0 ? ` | 🏥 ${cfg.civilians}` : '';
+    const mapLabel = `🗺️ ${cfg.arena.name}${cloudsInfo}${civInfo}`;
     let statusLabel = '🔒 Zablokowany';
     if (isCompleted) {
       statusLabel = `⭐ Ukończono (${bestTimes[i]}s)`;

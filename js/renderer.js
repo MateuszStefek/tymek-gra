@@ -244,6 +244,111 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
   ctx.restore();
 }
 
+function drawCivilian(civ) {
+  ctx.save();
+  ctx.translate(civ.x, civ.y);
+
+  // Cień pod postacią
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 14, 6, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.fill();
+
+  // Nogi
+  const legSwing = Math.sin(civ.walkCycle) * 5;
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(-5, 6);
+  ctx.lineTo(-6 - legSwing * 0.4, 17 + legSwing);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(5, 6);
+  ctx.lineTo(6 + legSwing * 0.4, 17 - legSwing);
+  ctx.stroke();
+
+  // Biały fartuch lekarski
+  ctx.fillStyle = '#f8fafc';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.roundRect(-11, -8, 22, 19, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  // Czerwony krzyż medyczny na fartuchu
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(-2, -3, 4, 10);
+  ctx.fillRect(-5, 0, 10, 4);
+
+  if (civ.splatColor) {
+    ctx.fillStyle = civ.splatColor;
+    ctx.beginPath();
+    ctx.arc(3, 2, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Ręka z apteczką lekarską
+  ctx.save();
+  ctx.translate(0, -1);
+  ctx.rotate(civ.angle);
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(11, 4);
+  ctx.stroke();
+
+  // Apteczka
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(9, -1, 10, 9, 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(13, 1, 2, 5);
+  ctx.fillRect(11.5, 2.5, 5, 2);
+  ctx.restore();
+
+  // Głowa
+  ctx.beginPath();
+  ctx.arc(0, -16, 10, 0, Math.PI * 2);
+  ctx.fillStyle = '#fde68a';
+  ctx.fill();
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Czepek lekarski z czerwonym krzyżykiem
+  ctx.beginPath();
+  ctx.arc(0, -18, 10.5, Math.PI, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(-1.5, -25, 3, 6);
+  ctx.fillRect(-3.5, -23, 7, 2.5);
+
+  // Pasek HP cywila (2 HP — przeżywa 1 strzał)
+  const pct = Math.max(0, civ.hp) / civ.maxHp;
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  ctx.fillRect(-18, -36, 36, 6);
+  ctx.fillStyle = pct > 0.5 ? '#38bdf8' : '#facc15';
+  ctx.fillRect(-17, -35, 34 * pct, 4);
+
+  ctx.font = 'bold 10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e0f2fe';
+  ctx.fillText(`🏥 CYWIL (${civ.hp}/${civ.maxHp})`, 0, -40);
+
+  ctx.restore();
+}
+
 function renderScene() {
   const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
   ctx.fillStyle = theme.arenaBgOverride || currentArena.bgColor;
@@ -343,6 +448,10 @@ function renderScene() {
     ctx.restore();
   }
 
+  for (const civ of civilians) {
+    drawCivilian(civ);
+  }
+
   for (const en of enemies) {
     drawHuman(en.x, en.y, en.angle, en.walkCycle, en.shirtColor, false, en.splatColor, '', en);
   }
@@ -363,10 +472,11 @@ function renderScene() {
 
   // Rakiety samonaprowadzające z bazooki
   for (const r of homingRockets) {
-    if (r.target && enemies.includes(r.target)) {
+    if (r.target && (enemies.includes(r.target) || civilians.includes(r.target))) {
+      const isCivTarget = civilians.includes(r.target);
       ctx.save();
-      ctx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isCivTarget ? 'rgba(239, 68, 68, 0.75)' : 'rgba(249, 115, 22, 0.45)';
+      ctx.lineWidth = isCivTarget ? 2 : 1.5;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(r.x, r.y);

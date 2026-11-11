@@ -150,6 +150,15 @@ function triggerMineExplosion(mine) {
     }
   }
 
+  // Miny ranią również cywili będących w promieniu wybuchu!
+  for (let c = civilians.length - 1; c >= 0; c--) {
+    const civ = civilians[c];
+    if (Math.hypot(civ.x - mine.x, civ.y - mine.y) <= mine.blastRadius) {
+      damageCivilian(c, 2, blastColor);
+      if (gameState !== 'playing') return;
+    }
+  }
+
   if (enemies.length === 0 && gameState === 'playing') {
     handleLevelVictory();
   } else {
@@ -275,6 +284,132 @@ function spawnEnemy(index, kind = 'normal') {
   });
 }
 
+function spawnCivilian(index = 0) {
+  const radius = 15;
+  let cx = 470;
+  let cy = 280;
+  let found = false;
+
+  for (let tries = 0; tries < 50; tries++) {
+    const rx = 70 + Math.random() * (canvas.width - 140);
+    const ry = 70 + Math.random() * (canvas.height - 140);
+    if (!canMoveTo(rx, ry, radius + 8)) continue;
+    if (Math.hypot(rx - player.x, ry - player.y) < 110) continue;
+
+    let nearArmedMine = false;
+    for (const m of placedMines) {
+      if (m.armed && Math.hypot(rx - m.x, ry - m.y) < m.blastRadius + 35) {
+        nearArmedMine = true;
+        break;
+      }
+    }
+    if (nearArmedMine) continue;
+
+    cx = rx;
+    cy = ry;
+    found = true;
+    break;
+  }
+
+  if (!found) {
+    const fallbackSpots = [
+      { x: 240, y: 170 },
+      { x: 700, y: 170 },
+      { x: 240, y: 390 },
+      { x: 700, y: 390 }
+    ];
+    const spot = fallbackSpots[index % fallbackSpots.length];
+    if (canMoveTo(spot.x, spot.y, radius)) {
+      cx = spot.x;
+      cy = spot.y;
+    }
+  }
+
+  const initAngle = Math.random() * Math.PI * 2;
+  const speed = 1.35 + Math.random() * 0.25;
+  civilians.push({
+    x: cx,
+    y: cy,
+    vx: Math.cos(initAngle) * speed,
+    vy: Math.sin(initAngle) * speed,
+    isCivilian: true,
+    hp: 2, // Przetrwa dokładnie 1 strzał (ma 2 HP)
+    maxHp: 2,
+    speed,
+    radius,
+    angle: initAngle,
+    walkCycle: Math.random() * 10,
+    splatColor: null,
+    changeDirTimer: 35 + Math.random() * 55
+  });
+}
+
+function damageCivilian(civIdx, dmg, splatColor) {
+  const civ = civilians[civIdx];
+  if (!civ) return;
+
+  civ.hp -= dmg;
+  civ.splatColor = splatColor;
+  addPaintSplat(civ.x, civ.y, splatColor, civ.hp <= 0 ? 30 : 16);
+
+  for (let k = 0; k < (civ.hp <= 0 ? 22 : 10); k++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 1.5 + Math.random() * 4.5;
+    particles.push({
+      x: civ.x,
+      y: civ.y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      r: 4 + Math.random() * 3,
+      color: splatColor,
+      alpha: 1
+    });
+  }
+
+  if (civ.hp > 0) {
+    popups.push({
+      x: civ.x,
+      y: civ.y - 26,
+      text: `⚠️ UWAŻAJ! TO CYWIL! (${civ.hp}/${civ.maxHp} ❤️)`,
+      color: '#38bdf8',
+      alpha: 1
+    });
+    return;
+  }
+
+  // Cywil został zabity!
+  eliminatedHumans.push({
+    x: civ.x,
+    y: civ.y,
+    shirtColor: '#f8fafc',
+    splatColor,
+    timer: 50
+  });
+  civilians.splice(civIdx, 1);
+
+  // Zabity cywil respawnuje się po 5 sekundach (300 klatek)
+  civilianRespawnQueue.push({ timer: 5 * 60 });
+
+  // Kara za zabicie cywila: zmniejsza HP oraz maksymalne HP o 50 (maksymalne HP wraca do domyślnego po zakończeniu poziomu)
+  player.maxHp = Math.max(1, player.maxHp - 50);
+  player.hp = Math.max(0, player.hp - 50);
+  player.hitFlash = 28;
+  player.splatColor = '#ef4444';
+
+  popups.push({
+    x: player.x,
+    y: player.y - 34,
+    text: '💀 ZABIŁEŚ CYWILA! -50 HP i -50 MAX HP!',
+    color: '#ef4444',
+    alpha: 1
+  });
+
+  updateHud();
+  if (player.hp <= 0 && gameState === 'playing') {
+    openMenu('dead');
+  }
+}
+
 function startLevel(targetLevel) {
   if (menuCountdownInterval) {
     clearInterval(menuCountdownInterval);
@@ -314,6 +449,8 @@ function startLevel(targetLevel) {
   player.splatColor = null;
 
   enemies = [];
+  civilians = [];
+  civilianRespawnQueue = [];
   bullets = [];
   homingRockets = [];
   ammoPickups = [];
@@ -331,6 +468,10 @@ function startLevel(targetLevel) {
   totalEnemiesInLevel = cfg.roster.length;
   for (let i = 0; i < cfg.roster.length; i++) {
     spawnEnemy(i, cfg.roster[i]);
+  }
+  const civCount = typeof cfg.civilians === 'number' ? cfg.civilians : 1;
+  for (let i = 0; i < civCount; i++) {
+    spawnCivilian(i);
   }
   spawnClouds(cfg.clouds || 0);
   saveProgress();
@@ -375,6 +516,8 @@ function startCustomMap(idx) {
   player.splatColor = null;
 
   enemies = [];
+  civilians = [];
+  civilianRespawnQueue = [];
   bullets = [];
   homingRockets = [];
   ammoPickups = [];
@@ -399,6 +542,10 @@ function startCustomMap(idx) {
   totalEnemiesInLevel = roster.length;
   for (let i = 0; i < roster.length; i++) {
     spawnEnemy(i, roster[i]);
+  }
+  const civCount = typeof cm.civilians === 'number' ? cm.civilians : 1;
+  for (let i = 0; i < civCount; i++) {
+    spawnCivilian(i);
   }
   spawnClouds(typeof cm.clouds === 'number' ? cm.clouds : 1);
   saveProgress();
@@ -432,6 +579,7 @@ function firePaintball(fromX, fromY, angle, fromPlayer) {
   });
 }
 
+// Bazooka śledzi najbliższego przeciwnika LUB cywila (jeśli pechowo jest najbliżej kursora myszy!)
 function findNearestEnemy(fromX, fromY) {
   let best = null;
   let bestDist = Infinity;
@@ -440,6 +588,13 @@ function findNearestEnemy(fromX, fromY) {
     if (d < bestDist) {
       bestDist = d;
       best = en;
+    }
+  }
+  for (const civ of civilians) {
+    const d = Math.hypot(civ.x - fromX, civ.y - fromY);
+    if (d < bestDist) {
+      bestDist = d;
+      best = civ;
     }
   }
   return best;
@@ -734,6 +889,7 @@ btnAddCustomMap.addEventListener('click', () => {
     name: `Własna Mapa ${customMaps.length + 1}`,
     arenaIndex: customMaps.length % arenaLayouts.length,
     clouds: 1,
+    civilians: 1,
     normal: 1,
     tough: 1,
     rapid: 1,
@@ -1050,7 +1206,110 @@ function update() {
     }
   }
 
-  // Uzbrajanie min (5 sekund pik-pik-pik) oraz detekcja wrogów i gracza!
+  // Odradzanie zabitych cywili po 5 sekundach (300 klatek)
+  for (let q = civilianRespawnQueue.length - 1; q >= 0; q--) {
+    civilianRespawnQueue[q].timer--;
+    if (civilianRespawnQueue[q].timer <= 0) {
+      civilianRespawnQueue.splice(q, 1);
+      spawnCivilian(civilians.length);
+      const newest = civilians[civilians.length - 1];
+      if (newest) {
+        popups.push({
+          x: newest.x,
+          y: newest.y - 24,
+          text: '🏥 CYWIL WRÓCIŁ NA ARENĘ!',
+          color: '#38bdf8',
+          alpha: 1
+        });
+      }
+    }
+  }
+
+  // Ruch cywili (chodzą losowo po mapie i omijają UZBROJONE miny; nie widzą min w trakcie uzbrajania!)
+  for (let c = civilians.length - 1; c >= 0; c--) {
+    const civ = civilians[c];
+    civ.changeDirTimer--;
+
+    // Sprawdź czy w pobliżu znajduje się uzbrojona mina (mine.armed === true)
+    let closestArmedMine = null;
+    let closestMineDist = Infinity;
+    for (const m of placedMines) {
+      if (!m.armed) continue; // Cywil NIE widzi min w trakcie uzbrajania!
+      const d = Math.hypot(civ.x - m.x, civ.y - m.y);
+      if (d < closestMineDist) {
+        closestMineDist = d;
+        closestArmedMine = m;
+      }
+    }
+
+    const safeMineDistance = closestArmedMine ? (closestArmedMine.triggerRadius + 95) : 0;
+    if (closestArmedMine && closestMineDist < safeMineDistance) {
+      // Wybierz ścieżkę ucieczki daleko od uzbrojonej miny
+      const awayAngle = Math.atan2(civ.y - closestArmedMine.y, civ.x - closestArmedMine.x);
+      let chosenAngle = awayAngle;
+      for (let step = 0; step <= 8; step++) {
+        const delta = (step * Math.PI) / 10;
+        const c1 = awayAngle + delta;
+        if (canMoveTo(civ.x + Math.cos(c1) * 20, civ.y + Math.sin(c1) * 20, civ.radius)) {
+          chosenAngle = c1;
+          break;
+        }
+        const c2 = awayAngle - delta;
+        if (canMoveTo(civ.x + Math.cos(c2) * 20, civ.y + Math.sin(c2) * 20, civ.radius)) {
+          chosenAngle = c2;
+          break;
+        }
+      }
+      civ.vx = Math.cos(chosenAngle) * (civ.speed * 1.15);
+      civ.vy = Math.sin(chosenAngle) * (civ.speed * 1.15);
+      civ.changeDirTimer = 18;
+    } else if (civ.changeDirTimer <= 0) {
+      // Losowy kierunek marszu z dala od uzbrojonych min
+      let bestAngle = Math.random() * Math.PI * 2;
+      for (let tries = 0; tries < 10; tries++) {
+        const cand = Math.random() * Math.PI * 2;
+        const testX = civ.x + Math.cos(cand) * 48;
+        const testY = civ.y + Math.sin(cand) * 48;
+        if (!canMoveTo(testX, testY, civ.radius)) continue;
+        let nearArmed = false;
+        for (const m of placedMines) {
+          if (m.armed && Math.hypot(testX - m.x, testY - m.y) < m.triggerRadius + 85) {
+            nearArmed = true;
+            break;
+          }
+        }
+        if (!nearArmed) {
+          bestAngle = cand;
+          break;
+        }
+      }
+      civ.vx = Math.cos(bestAngle) * civ.speed;
+      civ.vy = Math.sin(bestAngle) * civ.speed;
+      civ.changeDirTimer = 40 + Math.random() * 65;
+    }
+
+    const cnx = civ.x + civ.vx;
+    const cny = civ.y + civ.vy;
+    if (canMoveTo(cnx, civ.y, civ.radius)) {
+      civ.x = cnx;
+    } else {
+      civ.vx *= -1;
+      civ.changeDirTimer = Math.min(civ.changeDirTimer, 12);
+    }
+    if (canMoveTo(civ.x, cny, civ.radius)) {
+      civ.y = cny;
+    } else {
+      civ.vy *= -1;
+      civ.changeDirTimer = Math.min(civ.changeDirTimer, 12);
+    }
+
+    civ.walkCycle += 0.19;
+    if (Math.hypot(civ.vx, civ.vy) > 0.05) {
+      civ.angle = Math.atan2(civ.vy, civ.vx);
+    }
+  }
+
+  // Uzbrajanie min (5 sekund pik-pik-pik) oraz detekcja wrogów, cywili i gracza!
   for (let m = placedMines.length - 1; m >= 0; m--) {
     const mine = placedMines[m];
     mine.pulse += 0.14;
@@ -1075,6 +1334,14 @@ function update() {
         if (Math.hypot(en.x - mine.x, en.y - mine.y) <= mine.triggerRadius) {
           triggered = true;
           break;
+        }
+      }
+      if (!triggered) {
+        for (const civ of civilians) {
+          if (Math.hypot(civ.x - mine.x, civ.y - mine.y) <= mine.triggerRadius) {
+            triggered = true;
+            break;
+          }
         }
       }
     }
@@ -1168,6 +1435,22 @@ function update() {
         bullets.splice(i, 1);
         continue;
       }
+
+      // Strzały gracza ranią cywila (strzały przeciwnika go NIE ranią!)
+      let hitCivilian = false;
+      for (let c = civilians.length - 1; c >= 0; c--) {
+        const civ = civilians[c];
+        if (Math.hypot(b.x - civ.x, b.y - civ.y) < civ.radius + 6) {
+          hitCivilian = true;
+          damageCivilian(c, 1, b.color);
+          break;
+        }
+      }
+      if (hitCivilian) {
+        bullets.splice(i, 1);
+        if (gameState !== 'playing') return;
+        continue;
+      }
     } else {
       if (Math.hypot(b.x - player.x, b.y - player.y) < player.radius + 6) {
         player.hp = Math.max(0, player.hp - 15);
@@ -1207,7 +1490,7 @@ function update() {
       continue;
     }
 
-    if (!r.target || !enemies.includes(r.target)) {
+    if (!r.target || (!enemies.includes(r.target) && !civilians.includes(r.target))) {
       r.target = findNearestEnemy(mouse.x, mouse.y);
     }
     if (r.target) {
@@ -1251,6 +1534,7 @@ function update() {
     }
 
     let hitIdx = -1;
+    let hitCivIdx = -1;
     for (let j = enemies.length - 1; j >= 0; j--) {
       const en = enemies[j];
       if (Math.hypot(r.x - en.x, r.y - en.y) <= en.radius + 12) {
@@ -1258,8 +1542,17 @@ function update() {
         break;
       }
     }
+    if (hitIdx === -1) {
+      for (let c = civilians.length - 1; c >= 0; c--) {
+        const civ = civilians[c];
+        if (Math.hypot(r.x - civ.x, r.y - civ.y) <= civ.radius + 12) {
+          hitCivIdx = c;
+          break;
+        }
+      }
+    }
 
-    if (hitIdx !== -1) {
+    if (hitIdx !== -1 || hitCivIdx !== -1) {
       playExplosionSound();
       const blastColor = colors[Math.floor(Math.random() * colors.length)];
       addPaintSplat(r.x, r.y, blastColor, 38);
@@ -1314,6 +1607,20 @@ function update() {
               timer: 45
             });
             enemies.splice(j, 1);
+          }
+        }
+      }
+
+      // Rakiety z Bazooki ranią również cywili (bezpośrednie trafienie zabija na miejscu: 2 obrażenia)
+      for (let c = civilians.length - 1; c >= 0; c--) {
+        const civ = civilians[c];
+        const dist = Math.hypot(r.x - civ.x, r.y - civ.y);
+        if (c === hitCivIdx || dist <= 68) {
+          const civDmg = (c === hitCivIdx || dist <= civ.radius + 16) ? 2 : 1;
+          damageCivilian(c, civDmg, blastColor);
+          if (gameState !== 'playing') {
+            homingRockets.splice(i, 1);
+            return;
           }
         }
       }
