@@ -1,5 +1,5 @@
 - [DONE] TORY w sklepie powinny byc poziome (bedzie duzo torow). Kazdy z torow powinen miec widoczny ostatni kupiony i nastepny do odblokowania. (Te juz kupine powinny sie rozwijac tylko po najechaniu)
 - [DONE] Wprowadz ekran ustawien
   - [DONE] Reset osiagniec - pelny Reset
-- Wprowadz cheat kod - 7x klikniecie w ikone diamentu dodaje 10 diamentow
+- [DONE] Wprowadz cheat kod - 7x klikniecie w ikone diamentu dodaje 10 diamentow
 - przeciwnicy powinni byc bardziej losowi. Jesli wykryja ze sa w tym samym miejscu zbyt dlugo (w prostakacie mniejszym niz 20% rozmiaru ekranu) (bo gracz jest po drugiej stronie przeszkody np) to raz na 30 sekund podejmuja losowa decyzje o zmianie pozycji - nigdy nie wybieraja nowej pozycji blisko gracza

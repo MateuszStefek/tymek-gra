@@ -9,6 +9,7 @@ paintCanvas.height = canvas.height;
 const paintCtx = paintCanvas.getContext('2d');
 
 const levelText = document.getElementById('levelText');
+const diamondStatBox = document.getElementById('diamondStatBox');
 const diamondsText = document.getElementById('diamondsText');
 const ammoText = document.getElementById('ammoText');
 const rocketsText = document.getElementById('rocketsText');
