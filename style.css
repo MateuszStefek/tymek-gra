@@ -504,3 +504,65 @@ button:disabled, .level-card.guard-wait {
 .tree-connector.active {
   color: #4ade80;
 }
+.popup-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(3px);
+  border-radius: 0 0 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 30;
+}
+.popup-backdrop.hidden {
+  display: none;
+}
+.result-popup-card {
+  background: #1e293b;
+  border: 3px solid #38bdf8;
+  border-radius: 18px;
+  padding: 26px 30px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+.result-popup-card h2 {
+  font-size: 28px;
+  font-weight: 900;
+}
+.result-popup-sub {
+  font-size: 16px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.result-popup-rewards {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fde047;
+  width: 100%;
+}
+.result-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+.result-popup-actions button {
+  width: 100%;
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 10px;
+}

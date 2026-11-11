@@ -8,6 +8,16 @@ menuOverlay.addEventListener('mousedown', (e) => {
   }
 });
 
+if (resultPopupOverlay) {
+  resultPopupOverlay.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && performance.now() >= menuReadyAt && pointerReleasedAfterMenuOpen) {
+      menuPointerArmed = true;
+    } else {
+      menuPointerArmed = false;
+    }
+  });
+}
+
 function canActivateMenuAction() {
   return performance.now() >= menuReadyAt && pointerReleasedAfterMenuOpen && menuPointerArmed;
 }
@@ -181,6 +191,7 @@ function openShopScreen() {
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.remove('hidden');
   renderShopWeapons();
 }
@@ -200,6 +211,7 @@ function openSettingsScreen() {
   menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.remove('hidden');
   renderSettingsScreen();
 }
@@ -558,6 +570,7 @@ function openCustomMapsScreen(editIdx = null) {
   menuOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   customOverlay.classList.remove('hidden');
 
   if (editIdx !== null) {
@@ -721,19 +734,17 @@ function renderCustomMapEditor(idx) {
   refreshEditorDOM();
 }
 
-function openMenu(mode = 'select') {
+function openResultPopup(mode) {
   if (menuCountdownInterval) {
     clearInterval(menuCountdownInterval);
     menuCountdownInterval = null;
   }
-  // Mocna blokada UX po zakończeniu etapu: wymagamy puszczenia przycisku myszy ORAZ odczekania 1.6s, zanim przyciski staną się aktywne
-  const isResultScreen = (mode === 'level_clear' || mode === 'dead');
-  pointerReleasedAfterMenuOpen = !mouse.down || !isResultScreen;
+  // Blokada zapobiegająca przypadkowemu kliknięciu (1.6s opóźnienia + wymóg puszczenia przycisku myszy)
+  pointerReleasedAfterMenuOpen = !mouse.down;
   mouse.down = false;
   menuPointerArmed = false;
-  menuReadyAt = performance.now() + (isResultScreen ? 1600 : 0);
+  menuReadyAt = performance.now() + 1600;
 
-  // Jeśli gracz wychodzi do menu lub ginie, nieużyte miny postawione na mapie wracają do jego kieszeni, żeby nie przepadły
   if (placedMines.length > 0) {
     minesCount += placedMines.length;
     placedMines = [];
@@ -741,41 +752,136 @@ function openMenu(mode = 'select') {
     updateHud();
   }
 
-  gameState = mode === 'select' ? 'menu' : mode;
+  gameState = mode; // 'level_clear' | 'dead'
+  menuOverlay.classList.add('hidden');
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  resultPopupOverlay.classList.remove('hidden');
+
+  const isWin = mode === 'level_clear';
+  const stageName = activeCustomMapIndex !== null
+    ? `Własna Mapa "${customMaps[activeCustomMapIndex].name}"`
+    : `Poziom ${level}`;
+
+  resultPopupCard.style.borderColor = isWin ? '#4ade80' : '#ef4444';
+  resultPopupTitle.style.color = isWin ? '#4ade80' : '#ef4444';
+
+  if (isWin) {
+    resultPopupTitle.textContent = `🏆 ${stageName.toUpperCase()} UKOŃCZONY!`;
+    resultPopupSub.textContent = `Świetna robota! Czas ukończenia: ${survivalSeconds.toFixed(1)}s`;
+    const diamondPart = lastDiamondsEarned > 0 ? ` | +${lastDiamondsEarned} 💎 Diament!` : '';
+    resultPopupRewards.textContent = `Nagroda: +1 💣 Mina${diamondPart} (Masz: ${minesCount} 💣 | ${diamonds} 💎)`;
+  } else {
+    resultPopupTitle.textContent = `💀 PRZEGRANA — ${stageName.toUpperCase()}`;
+    resultPopupSub.textContent = `Straciłeś całe zdrowie (0 HP) po ${survivalSeconds.toFixed(1)}s walki.`;
+    resultPopupRewards.textContent = `Twoje zapasy: ${minesCount} 💣 min | ${diamonds} 💎 diamentów`;
+  }
+
+  resultPopupActions.innerHTML = '';
+  const popupButtons = [];
+
+  // 1. Guzik "Następny" (dla kampanii, gdy kolejny poziom jest odblokowany — po wygranej zawsze odblokowany)
+  if (activeCustomMapIndex === null && level < unlockedLevel) {
+    const nextCfg = getLevelConfig(level + 1);
+    const btnNext = document.createElement('button');
+    btnNext.className = 'btn-green';
+    btnNext.dataset.label = `▶️ Następny (Poziom ${level + 1} — ${nextCfg.label})`;
+    btnNext.onclick = () => {
+      if (!canActivateMenuAction()) return;
+      resultPopupOverlay.classList.add('hidden');
+      startLevel(level + 1);
+    };
+    resultPopupActions.appendChild(btnNext);
+    popupButtons.push(btnNext);
+  }
+
+  // 2. Guzik "Zagraj jeszcze raz"
+  const btnReplay = document.createElement('button');
+  btnReplay.className = isWin && activeCustomMapIndex === null ? 'btn-blue' : 'btn-green';
+  btnReplay.dataset.label = `🔄 Zagraj jeszcze raz (${stageName})`;
+  btnReplay.onclick = () => {
+    if (!canActivateMenuAction()) return;
+    resultPopupOverlay.classList.add('hidden');
+    if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);
+    else startLevel(level);
+  };
+  resultPopupActions.appendChild(btnReplay);
+  popupButtons.push(btnReplay);
+
+  // 3. Guzik "Wróć do głównego ekranu"
+  const btnMainScreen = document.createElement('button');
+  btnMainScreen.className = 'btn-purple';
+  btnMainScreen.dataset.label = '🏠 Wróć do głównego ekranu';
+  btnMainScreen.onclick = () => {
+    if (!canActivateMenuAction()) return;
+    resultPopupOverlay.classList.add('hidden');
+    openMenu('select');
+  };
+  resultPopupActions.appendChild(btnMainScreen);
+  popupButtons.push(btnMainScreen);
+
+  function syncPopupGuardUI() {
+    const now = performance.now();
+    const remMs = menuReadyAt - now;
+    const locked = remMs > 0 || !pointerReleasedAfterMenuOpen;
+    popupButtons.forEach(b => {
+      b.disabled = locked;
+      if (remMs > 0) {
+        b.textContent = `${b.dataset.label} (⏳ ${(remMs / 1000).toFixed(1)}s)`;
+      } else if (!pointerReleasedAfterMenuOpen) {
+        b.textContent = `🖱️ Puść przycisk myszy...`;
+      } else {
+        b.textContent = b.dataset.label;
+      }
+    });
+    if (!locked && menuCountdownInterval) {
+      clearInterval(menuCountdownInterval);
+      menuCountdownInterval = null;
+    }
+  }
+
+  syncPopupGuardUI();
+  menuCountdownInterval = setInterval(syncPopupGuardUI, 80);
+}
+
+function openMenu(mode = 'select') {
+  if (mode === 'level_clear' || mode === 'dead') {
+    openResultPopup(mode);
+    return;
+  }
+  if (menuCountdownInterval) {
+    clearInterval(menuCountdownInterval);
+    menuCountdownInterval = null;
+  }
+  pointerReleasedAfterMenuOpen = true;
+  mouse.down = false;
+  menuPointerArmed = false;
+  menuReadyAt = 0;
+
+  if (placedMines.length > 0) {
+    minesCount += placedMines.length;
+    placedMines = [];
+    saveProgress();
+    updateHud();
+  }
+
+  gameState = 'menu';
+  customOverlay.classList.add('hidden');
+  if (shopOverlay) shopOverlay.classList.add('hidden');
+  if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   menuOverlay.classList.remove('hidden');
 
-  const stageName = activeCustomMapIndex !== null
-    ? `WŁASNA MAPA "${customMaps[activeCustomMapIndex].name}"`
-    : `POZIOM ${level}`;
-
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
-  if (mode === 'level_clear') {
-    const diamondMsg = lastDiamondsEarned > 0 ? ` +${lastDiamondsEarned} 💎 DIAMENT!` : '';
-    menuTitle.textContent = `🏆 ${stageName} UKOŃCZONY! (+1 💣 MINA${diamondMsg})`;
-    menuTitle.style.color = '#4ade80';
-    menuSubtitle.textContent = `Czas: ${survivalSeconds.toFixed(1)}s | Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń: ${defObj.shortName}`;
-  } else if (mode === 'dead') {
-    menuTitle.textContent = `💀 ODPADASZ: ${stageName}! (0 HP)`;
-    menuTitle.style.color = '#ef4444';
-    menuSubtitle.textContent = `Przetrwałeś ${survivalSeconds.toFixed(1)}s | Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń: ${defObj.shortName}`;
-  } else {
-    menuTitle.textContent = '📋 MENU WYBORU POZIOMÓW';
-    menuTitle.style.color = '#38bdf8';
-    menuSubtitle.textContent = `Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń na start: ${defObj.shortName}`;
-  }
+  menuTitle.textContent = '📋 MENU WYBORU POZIOMÓW';
+  menuTitle.style.color = '#38bdf8';
+  menuSubtitle.textContent = `Miny: ${minesCount} 💣 | Diamenty: ${diamonds} 💎 | Domyślna broń na start: ${defObj.shortName}`;
 
   levelsGrid.innerHTML = '';
-  if (isResultScreen && activeCustomMapIndex !== null) {
-    levelsGrid.style.display = 'none';
-  } else {
-    levelsGrid.style.display = 'grid';
-  }
+  levelsGrid.style.display = 'grid';
 
   const totalCards = Math.max(8, Math.ceil((unlockedLevel + 2) / 4) * 4);
-  const unlockedCards = [];
   for (let i = 1; i <= totalCards; i++) {
     const isUnlocked = i <= unlockedLevel;
     const isCompleted = Boolean(bestTimes[i]);
@@ -804,7 +910,6 @@ function openMenu(mode = 'select') {
     `;
 
     if (isUnlocked) {
-      unlockedCards.push(card);
       card.addEventListener('click', () => {
         if (!canActivateMenuAction()) return;
         startLevel(i);
@@ -819,164 +924,49 @@ function openMenu(mode = 'select') {
   }
 
   menuActions.innerHTML = '';
-  const actionButtons = [];
 
-  if (mode === 'level_clear') {
-    if (activeCustomMapIndex !== null) {
-      const cm = customMaps[activeCustomMapIndex];
-      const btnReplayCustom = document.createElement('button');
-      btnReplayCustom.className = 'btn-big btn-green';
-      btnReplayCustom.dataset.label = `🔄 Zagraj ponownie: ${cm.name}`;
-      btnReplayCustom.onclick = () => {
-        if (!canActivateMenuAction()) return;
-        startCustomMap(activeCustomMapIndex);
-      };
-      menuActions.appendChild(btnReplayCustom);
-      actionButtons.push(btnReplayCustom);
+  const btnCont = document.createElement('button');
+  btnCont.className = 'btn-big btn-green';
+  btnCont.textContent = hasStartedAnyGame ? `▶️ Wróć do gry` : `▶️ Zagraj (Poziom ${level})`;
+  btnCont.onclick = () => {
+    if (!canActivateMenuAction()) return;
+    if (!hasStartedAnyGame) {
+      startLevel(level);
     } else {
-      const nextCfg = getLevelConfig(level + 1);
-      const btnNext = document.createElement('button');
-      btnNext.className = 'btn-big btn-green';
-      btnNext.dataset.label = `▶️ Graj w Poziom ${level + 1} (${nextCfg.label}, masz ${minesCount} 💣)`;
-      btnNext.onclick = () => {
-        if (!canActivateMenuAction()) return;
-        startLevel(level + 1);
-      };
-      menuActions.appendChild(btnNext);
-      actionButtons.push(btnNext);
-
-      const btnReplay = document.createElement('button');
-      btnReplay.className = 'btn-big btn-blue';
-      btnReplay.dataset.label = `🔄 Powtórz Poziom ${level}`;
-      btnReplay.onclick = () => {
-        if (!canActivateMenuAction()) return;
-        startLevel(level);
-      };
-      menuActions.appendChild(btnReplay);
-      actionButtons.push(btnReplay);
+      menuOverlay.classList.add('hidden');
+      startTime = performance.now() - survivalSeconds * 1000;
+      gameState = 'playing';
+      updatePauseButtonUI();
+      canvas.focus();
     }
-  } else if (mode === 'dead') {
-    const btnAgain = document.createElement('button');
-    btnAgain.className = 'btn-big btn-green';
-    btnAgain.dataset.label = activeCustomMapIndex !== null
-      ? `🔄 Spróbuj ponownie (${customMaps[activeCustomMapIndex].name})`
-      : `🔄 Spróbuj ponownie (Poziom ${level})`;
-    btnAgain.onclick = () => {
-      if (!canActivateMenuAction()) return;
-      if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);
-      else startLevel(level);
-    };
-    menuActions.appendChild(btnAgain);
-    actionButtons.push(btnAgain);
-
-    if (activeCustomMapIndex === null && level > 1) {
-      const btnPrev = document.createElement('button');
-      btnPrev.className = 'btn-big btn-blue';
-      btnPrev.dataset.label = `⬅️ Wróć do Poziomu ${level - 1}`;
-      btnPrev.onclick = () => {
-        if (!canActivateMenuAction()) return;
-        startLevel(level - 1);
-      };
-      menuActions.appendChild(btnPrev);
-      actionButtons.push(btnPrev);
-    }
-  } else {
-    const btnCont = document.createElement('button');
-    btnCont.className = 'btn-big btn-green';
-    btnCont.dataset.label = hasStartedAnyGame ? `▶️ Wróć do gry` : `▶️ Zagraj (Poziom ${level})`;
-    btnCont.onclick = () => {
-      if (!canActivateMenuAction()) return;
-      if (!hasStartedAnyGame) {
-        startLevel(level);
-      } else {
-        menuOverlay.classList.add('hidden');
-        startTime = performance.now() - survivalSeconds * 1000;
-        gameState = 'playing';
-        updatePauseButtonUI();
-        canvas.focus();
-      }
-    };
-    menuActions.appendChild(btnCont);
-    actionButtons.push(btnCont);
-  }
+  };
+  menuActions.appendChild(btnCont);
 
   const btnGoCustom = document.createElement('button');
   btnGoCustom.className = 'btn-big btn-purple';
-  btnGoCustom.dataset.label = '🛠️ Własne Mapy i Edytor';
+  btnGoCustom.textContent = '🛠️ Własne Mapy i Edytor';
   btnGoCustom.onclick = () => {
     if (!canActivateMenuAction()) return;
     openCustomMapsScreen(null);
   };
   menuActions.appendChild(btnGoCustom);
-  actionButtons.push(btnGoCustom);
 
   const btnGoShop = document.createElement('button');
   btnGoShop.className = 'btn-big btn-blue';
   const curDef = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
-  btnGoShop.dataset.label = `🛒 Sklep i Domyślna Broń (${curDef.shortName} | 💎 ${diamonds})`;
+  btnGoShop.textContent = `🛒 Sklep i Domyślna Broń (${curDef.shortName} | 💎 ${diamonds})`;
   btnGoShop.onclick = () => {
     if (!canActivateMenuAction()) return;
     openShopScreen();
   };
   menuActions.appendChild(btnGoShop);
-  actionButtons.push(btnGoShop);
 
   const btnGoSettings = document.createElement('button');
   btnGoSettings.className = 'btn-big';
-  btnGoSettings.dataset.label = '⚙️ Ustawienia / Reset';
+  btnGoSettings.textContent = '⚙️ Ustawienia / Reset';
   btnGoSettings.onclick = () => {
     if (!canActivateMenuAction()) return;
     openSettingsScreen();
   };
   menuActions.appendChild(btnGoSettings);
-  actionButtons.push(btnGoSettings);
-
-  if (isResultScreen && activeCustomMapIndex !== null) {
-    const btnEditCurrentCustom = document.createElement('button');
-    btnEditCurrentCustom.className = 'btn-big btn-blue';
-    btnEditCurrentCustom.dataset.label = `✏️ Edytuj tę mapę (${customMaps[activeCustomMapIndex].name})`;
-    btnEditCurrentCustom.onclick = () => {
-      if (!canActivateMenuAction()) return;
-      openCustomMapsScreen(activeCustomMapIndex);
-    };
-    menuActions.appendChild(btnEditCurrentCustom);
-    actionButtons.push(btnEditCurrentCustom);
-
-    const btnGoLevels = document.createElement('button');
-    btnGoLevels.className = 'btn-big';
-    btnGoLevels.dataset.label = '📋 Menu Poziomów (1–20)';
-    btnGoLevels.onclick = () => {
-      if (!canActivateMenuAction()) return;
-      activeCustomMapIndex = null;
-      openMenu('select');
-    };
-    menuActions.appendChild(btnGoLevels);
-    actionButtons.push(btnGoLevels);
-  }
-
-  function syncMenuGuardUI() {
-    const now = performance.now();
-    const remMs = menuReadyAt - now;
-    const locked = remMs > 0 || !pointerReleasedAfterMenuOpen;
-    unlockedCards.forEach(c => c.classList.toggle('guard-wait', locked));
-    actionButtons.forEach(b => {
-      b.disabled = locked;
-      if (remMs > 0) {
-        b.textContent = `⏳ Poczekaj ${(remMs / 1000).toFixed(1)}s...`;
-      } else if (!pointerReleasedAfterMenuOpen) {
-        b.textContent = `🖱️ Puść przycisk myszy, aby wybrać...`;
-      } else {
-        b.textContent = b.dataset.label;
-      }
-    });
-    if (!locked && menuCountdownInterval) {
-      clearInterval(menuCountdownInterval);
-      menuCountdownInterval = null;
-    }
-  }
-
-  syncMenuGuardUI();
-  if (isResultScreen) {
-    menuCountdownInterval = setInterval(syncMenuGuardUI, 80);
-  }
 }

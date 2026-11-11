@@ -297,6 +297,7 @@ function startLevel(targetLevel) {
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;
@@ -357,6 +358,7 @@ function startCustomMap(idx) {
   customOverlay.classList.add('hidden');
   if (shopOverlay) shopOverlay.classList.add('hidden');
   if (settingsOverlay) settingsOverlay.classList.add('hidden');
+  if (resultPopupOverlay) resultPopupOverlay.classList.add('hidden');
   paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   startTime = performance.now();
   survivalSeconds = 0;

@@ -59,6 +59,13 @@ const settingsBox = document.getElementById('settingsBox');
 const btnSettingsToLevels = document.getElementById('btnSettingsToLevels');
 const btnCloseSettings = document.getElementById('btnCloseSettings');
 
+const resultPopupOverlay = document.getElementById('resultPopupOverlay');
+const resultPopupCard = document.getElementById('resultPopupCard');
+const resultPopupTitle = document.getElementById('resultPopupTitle');
+const resultPopupSub = document.getElementById('resultPopupSub');
+const resultPopupRewards = document.getElementById('resultPopupRewards');
+const resultPopupActions = document.getElementById('resultPopupActions');
+
 const keys = {};
 let followMouse = true;
 let mouse = { x: 470, y: 380, down: false, active: false };
