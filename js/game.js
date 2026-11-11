@@ -261,6 +261,13 @@ function spawnEnemy(index, kind = 'normal') {
     shirtColor,
     splatColor: null,
     changeDirTimer: 0,
+    boxMinX: ex,
+    boxMaxX: ex,
+    boxMinY: ey,
+    boxMaxY: ey,
+    stuckFrames: 0,
+    repositionCooldown: Math.floor(Math.random() * 300), // Losowy startowy offset
+    repositionTarget: null,
     shootTimer: kind === 'rapid' ? (16 + Math.random() * 14) : (50 + Math.random() * 65)
   });
 }
@@ -820,27 +827,102 @@ function update() {
   }
 
   // Update enemies
+  const maxStuckW = canvas.width * 0.20;
+  const maxStuckH = canvas.height * 0.20;
+
   for (let i = enemies.length - 1; i >= 0; i--) {
     const en = enemies[i];
     en.changeDirTimer--;
+    if (en.repositionCooldown > 0) en.repositionCooldown--;
+
+    // Śledzenie prostokąta przebywania przeciwnika (czy utknął w obszarze < 20% rozmiaru ekranu)
+    en.boxMinX = Math.min(en.boxMinX, en.x);
+    en.boxMaxX = Math.max(en.boxMaxX, en.x);
+    en.boxMinY = Math.min(en.boxMinY, en.y);
+    en.boxMaxY = Math.max(en.boxMaxY, en.y);
+
+    if ((en.boxMaxX - en.boxMinX) <= maxStuckW && (en.boxMaxY - en.boxMinY) <= maxStuckH) {
+      en.stuckFrames++;
+    } else {
+      en.boxMinX = en.x;
+      en.boxMaxX = en.x;
+      en.boxMinY = en.y;
+      en.boxMaxY = en.y;
+      en.stuckFrames = 0;
+    }
+
+    // Jeśli jest w tym samym małym prostokącie (< 20% ekranu) zbyt długo, raz na 30 sekund (1800 klatek)
+    // podejmuje losową decyzję o zmianie pozycji (nigdy blisko gracza!)
+    if (en.stuckFrames >= 180 && en.repositionCooldown <= 0) {
+      for (let tries = 0; tries < 30; tries++) {
+        const gx = 55 + Math.random() * (canvas.width - 110);
+        const gy = 55 + Math.random() * (canvas.height - 110);
+        const distFromPlayer = Math.hypot(gx - player.x, gy - player.y);
+        const distFromSelf = Math.hypot(gx - en.x, gy - en.y);
+        if (distFromPlayer >= 250 && distFromSelf >= 180 && canMoveTo(gx, gy, en.radius + 4)) {
+          en.repositionTarget = { x: gx, y: gy, timer: 240 };
+          en.repositionCooldown = 30 * 60; // Raz na 30 sekund (1800 klatek)
+          en.stuckFrames = 0;
+          en.boxMinX = en.x;
+          en.boxMaxX = en.x;
+          en.boxMinY = en.y;
+          en.boxMaxY = en.y;
+          en.changeDirTimer = 0;
+          break;
+        }
+      }
+    }
+
     const distToPlayer = Math.hypot(player.x - en.x, player.y - en.y);
 
-    if (en.changeDirTimer <= 0) {
+    if (en.repositionTarget) {
+      en.repositionTarget.timer--;
+      const distToGoal = Math.hypot(en.repositionTarget.x - en.x, en.repositionTarget.y - en.y);
+      if (distToGoal < 28 || en.repositionTarget.timer <= 0) {
+        en.repositionTarget = null;
+        en.changeDirTimer = 0;
+      } else if (en.changeDirTimer <= 0) {
+        const moveAngle = computeObstacleAvoidingAngle(
+          en.x,
+          en.y,
+          Math.atan2(en.vy, en.vx),
+          en.repositionTarget.x,
+          en.repositionTarget.y
+        ) + (Math.random() - 0.5) * 0.35;
+        en.vx = Math.cos(moveAngle) * en.speed * 1.15;
+        en.vy = Math.sin(moveAngle) * en.speed * 1.15;
+        en.changeDirTimer = 15 + Math.random() * 15;
+      }
+    } else if (en.changeDirTimer <= 0) {
       let targetAngle;
-      if (distToPlayer < 140) {
-        targetAngle = Math.atan2(en.y - player.y, en.x - player.x) + (Math.random() - 0.5) * 1.1;
+      const roll = Math.random();
+      if (roll < 0.35) {
+        // Bardziej losowe zachowanie: flankowanie lub losowy kierunek
+        targetAngle = Math.random() * Math.PI * 2;
+      } else if (distToPlayer < 140) {
+        targetAngle = Math.atan2(en.y - player.y, en.x - player.x) + (Math.random() - 0.5) * 1.4;
       } else {
-        targetAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * 1.5;
+        targetAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * 1.8;
       }
       en.vx = Math.cos(targetAngle) * en.speed;
       en.vy = Math.sin(targetAngle) * en.speed;
-      en.changeDirTimer = 30 + Math.random() * 40;
+      en.changeDirTimer = 25 + Math.random() * 45;
     }
 
     const nx = en.x + en.vx;
     const ny = en.y + en.vy;
-    if (canMoveTo(nx, en.y, en.radius)) en.x = nx; else en.vx *= -1;
-    if (canMoveTo(en.x, ny, en.radius)) en.y = ny; else en.vy *= -1;
+    if (canMoveTo(nx, en.y, en.radius)) {
+      en.x = nx;
+    } else {
+      en.vx *= -1;
+      en.vy += (Math.random() - 0.5) * en.speed;
+    }
+    if (canMoveTo(en.x, ny, en.radius)) {
+      en.y = ny;
+    } else {
+      en.vy *= -1;
+      en.vx += (Math.random() - 0.5) * en.speed;
+    }
 
     en.walkCycle += 0.22;
     en.angle = Math.atan2(player.y - en.y, player.x - en.x);

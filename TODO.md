@@ -2,4 +2,4 @@
 - [DONE] Wprowadz ekran ustawien
   - [DONE] Reset osiagniec - pelny Reset
 - [DONE] Wprowadz cheat kod - 7x klikniecie w ikone diamentu dodaje 10 diamentow
-- przeciwnicy powinni byc bardziej losowi. Jesli wykryja ze sa w tym samym miejscu zbyt dlugo (w prostakacie mniejszym niz 20% rozmiaru ekranu) (bo gracz jest po drugiej stronie przeszkody np) to raz na 30 sekund podejmuja losowa decyzje o zmianie pozycji - nigdy nie wybieraja nowej pozycji blisko gracza
+- [DONE] przeciwnicy powinni byc bardziej losowi. Jesli wykryja ze sa w tym samym miejscu zbyt dlugo (w prostakacie mniejszym niz 20% rozmiaru ekranu) (bo gracz jest po drugiej stronie przeszkody np) to raz na 30 sekund podejmuja losowa decyzje o zmianie pozycji - nigdy nie wybieraja nowej pozycji blisko gracza
