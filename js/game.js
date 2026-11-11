@@ -244,6 +244,7 @@ function startLevel(targetLevel) {
   ammoSpawnTimer = 360;
   explosions = [];
   particles = [];
+  splats = [];
   eliminatedHumans = [];
   gameState = 'playing';
   levelBannerTimer = 85;
@@ -295,6 +296,7 @@ function startCustomMap(idx) {
   ammoSpawnTimer = 360;
   explosions = [];
   particles = [];
+  splats = [];
   eliminatedHumans = [];
   gameState = 'playing';
   levelBannerTimer = 85;
@@ -768,6 +770,13 @@ function update() {
     p.y += p.vy;
     p.alpha -= 0.03;
     if (p.alpha <= 0) particles.splice(i, 1);
+  }
+
+  for (let i = splats.length - 1; i >= 0; i--) {
+    splats[i].ageFrames++;
+    if (splats[i].ageFrames >= splats[i].maxFrames) {
+      splats.splice(i, 1);
+    }
   }
 
   for (let i = eliminatedHumans.length - 1; i >= 0; i--) {

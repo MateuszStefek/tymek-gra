@@ -116,6 +116,7 @@ let ammoPickups = [];
 let popups = [];
 let explosions = [];
 let particles = [];
+let splats = [];
 let eliminatedHumans = [];
 
 function saveProgress() {

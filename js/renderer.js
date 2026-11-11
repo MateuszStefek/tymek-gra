@@ -1,20 +1,27 @@
 // Rysowanie na Canvasie: postacie ludzi, miny, plamy farby, skrzynki z amunicją i efekty
 
 function addPaintSplat(x, y, color, radius = 22) {
-  paintCtx.save();
-  paintCtx.fillStyle = color;
-  paintCtx.beginPath();
-  paintCtx.arc(x, y, radius, 0, Math.PI * 2);
-  paintCtx.fill();
+  const drops = [];
   for (let i = 0; i < 10; i++) {
     const a = Math.random() * Math.PI * 2;
     const d = radius * (0.5 + Math.random() * 1.1);
     const r = 2 + Math.random() * (radius * 0.35);
-    paintCtx.beginPath();
-    paintCtx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r, 0, Math.PI * 2);
-    paintCtx.fill();
+    drops.push({
+      dx: Math.cos(a) * d,
+      dy: Math.sin(a) * d,
+      r
+    });
   }
-  paintCtx.restore();
+  splats.push({
+    x,
+    y,
+    color,
+    radius,
+    drops,
+    ageFrames: 0,
+    fullFrames: 60 * 60, // 1 minuta (3600 klatek) pełnej widoczności
+    maxFrames: 120 * 60  // 2 minuty (7200 klatek) do całkowitego zniknięcia
+  });
 }
 
 function drawMine(mine) {
@@ -193,7 +200,25 @@ function renderScene() {
     ctx.stroke();
   }
 
-  ctx.drawImage(paintCanvas, 0, 0);
+  // Plamy po kulach (1 min pełna widoczność, potem przez 1 min fadowanie do 2 min)
+  for (const s of splats) {
+    let alpha = 1;
+    if (s.ageFrames > s.fullFrames) {
+      alpha = Math.max(0, 1 - (s.ageFrames - s.fullFrames) / (s.maxFrames - s.fullFrames));
+    }
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+    ctx.fill();
+    for (const d of s.drops) {
+      ctx.beginPath();
+      ctx.arc(s.x + d.dx, s.y + d.dy, d.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
   // Paczki z nabojami na mapie (+5 z wrogów, +10 ze zrzutów)
   for (const pack of ammoPickups) {

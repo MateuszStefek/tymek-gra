@@ -1,7 +1,7 @@
 - [DONE] pierwszy ekran po zaladowaniu gry nie powinen byc grą która trwa ale, wyborem poziomów
 - [DONE] odradzanie hp - 1 hp na sekunde
 - [DONE] inne motywy graficzne - do wyboru
-- plamy po kulach powinny znikac po 2 minutach. Powinny przez 1 minute byc widoczne pelnie. Potem fadować
+- [DONE] plamy po kulach powinny znikac po 2 minutach. Powinny przez 1 minute byc widoczne pelnie. Potem fadować
 - [DONE] stawianie min prawym przciskiem (ale zostaw tez spacje)
 - rozszerzenie interfejsu, zeby mapa skalowala sie do rozmiaru okna. (ale nadal te same proporcje szerokosc/wysokosc)
 - nowe bronie kupowane w sklepie
