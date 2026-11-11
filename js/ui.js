@@ -327,7 +327,7 @@ function renderShopWeapons() {
   if (!shopWeaponsGrid) return;
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
   if (shopSubtitle) {
-    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b><br><span style="font-size:12px;color:#94a3b8;">Każdy tor pokazuje po lewej <b>aktualny stan</b>, a po prawej <b>następną rzecz do kupienia</b> (pierwszy zakup odblokowuje tor).</span>`;
+    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b> | Leczenie: <b style="color:#4ade80;">+${getHealingPer5Sec()} HP / 5s 💚</b><br><span style="font-size:12px;color:#94a3b8;">Każdy tor pokazuje po lewej <b>aktualny stan</b>, a po prawej <b>następną rzecz do kupienia</b> (pierwszy zakup odblokowuje tor).</span>`;
   }
   shopWeaponsGrid.innerHTML = '';
 
@@ -553,6 +553,74 @@ function renderShopWeapons() {
       `<span style="font-size:12px;color:#4ade80;">❤️ Aktualnie na start: ${getStartingMaxHp()} HP</span>`,
       hpCurrentNode,
       hpNextNode
+    )
+  );
+
+  // Tor Leczenia (Regeneracji HP co 5 sekund) — zaczynamy od 0, pierwszy poziom (1 HP co 5s) też się kupuje, ceny rosną Fibonaccim
+  const curHeal = getHealingPer5Sec();
+  const nextHealLvl = curHeal + 1;
+  const nextHealCost = getHealingUpgradeCost(nextHealLvl);
+
+  const healCurrentNode = document.createElement('div');
+  if (curHeal <= 0) {
+    healCurrentNode.className = 'tree-node locked';
+    healCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
+        <div class="lvl-title" style="font-size:15px;color:#94a3b8;">${healingTrackConfig.lockedName}</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${healingTrackConfig.lockedDesc}</div>
+        <div class="lvl-enemies" style="color:#64748b;font-size:11px;">💚 Aktualne leczenie: 0 HP co 5 sekund</div>
+      </div>
+    `;
+  } else {
+    healCurrentNode.className = 'tree-node owned last-owned';
+    healCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN</div>
+        <div class="lvl-title" style="font-size:15px;">💚 Leczenie Poziom ${curHeal} (+${curHeal} HP / 5s)</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Twoja postać automatycznie odzyskuje zdrowie co 5 sekund podczas walki.</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">💚 Regeneracja: +${curHeal} HP co 5 sekund</div>
+      </div>
+    `;
+  }
+
+  const healNextNode = document.createElement('div');
+  const isFirstHealUnlock = curHeal === 0;
+  healNextNode.className = 'tree-node next-unlock';
+  healNextNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#facc15;">${isFirstHealUnlock ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
+      <div class="lvl-title" style="font-size:15px;">💚 Leczenie Poziom ${nextHealLvl} (+${nextHealLvl} HP / 5s)</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${isFirstHealUnlock ? 'Odblokowuje automatyczne leczenie: +1 HP co każde 5 sekund!' : `Zwiększa automatyczne leczenie o kolejne +1 HP co 5 sekund!`}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">💚 Regeneracja: ${curHeal} ➡️ +${nextHealLvl} HP co 5 sekund</div>
+    </div>
+    <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+  `;
+  const healBtnWrap = healNextNode.querySelector('.custom-card-btns');
+  const btnBuyHeal = document.createElement('button');
+  btnBuyHeal.className = 'btn-green';
+  btnBuyHeal.disabled = diamonds < nextHealCost;
+  btnBuyHeal.textContent = diamonds >= nextHealCost
+    ? `🛒 ${isFirstHealUnlock ? 'Odblokuj tor' : 'Kup wzmocnienie'} (${nextHealCost} 💎)`
+    : `🔒 Brak 💎 (${diamonds}/${nextHealCost})`;
+  btnBuyHeal.onclick = () => {
+    if (diamonds < nextHealCost) return;
+    diamonds -= nextHealCost;
+    healingLevel = nextHealLvl;
+    saveProgress();
+    updateHud();
+    renderShopWeapons();
+  };
+  healBtnWrap.appendChild(btnBuyHeal);
+
+  shopWeaponsGrid.appendChild(
+    renderHorizontalTrack(
+      healingTrackConfig.title,
+      curHeal > 0
+        ? `<span style="font-size:12px;color:#4ade80;">💚 Aktywne: +${curHeal} HP co 5s</span>`
+        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany (0 HP / 5s)</span>`,
+      healCurrentNode,
+      healNextNode
     )
   );
 }

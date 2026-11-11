@@ -60,7 +60,7 @@ const weaponsCatalog = [
 const hpTrackConfig = {
   title: '❤️ Tor Wzmocnienia Życia',
   baseName: '❤️ Zdrowie Bazowe (200 HP)',
-  baseDesc: 'Podstawowa wytrzymałość zawodnika: 200 HP na start oraz regeneracja +1 HP/s.',
+  baseDesc: 'Podstawowa wytrzymałość zawodnika: 200 HP na start każdej rundy.',
   upgrades: [
     {
       id: 'hp_boost_1',
@@ -91,6 +91,26 @@ const hpTrackConfig = {
     }
   ]
 };
+
+const healingTrackConfig = {
+  title: '💚 Tor Leczenia (Regeneracja co 5s)',
+  lockedName: '💚 Leczenie Wyłączone (0 HP / 5s)',
+  lockedDesc: 'Brak automatycznej regeneracji zdrowia. Odblokuj tor po prawej stronie!'
+};
+
+// Ceny kolejnych poziomów leczenia (+1 HP co 5s na każdy poziom) rosną ciągiem Fibonacciego: 1, 2, 3, 5, 8, 13, 21...
+function getHealingUpgradeCost(targetLevel) {
+  let a = 1;
+  let b = 2;
+  if (targetLevel <= 1) return a;
+  if (targetLevel === 2) return b;
+  for (let i = 3; i <= targetLevel; i++) {
+    const next = a + b;
+    a = b;
+    b = next;
+  }
+  return b;
+}
 
 const graphicThemes = [
   {

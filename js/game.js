@@ -1049,12 +1049,23 @@ function update() {
 
   survivalSeconds = (performance.now() - startTime) / 1000;
 
-  // Odradzanie HP: +1 HP na sekundę (co 60 klatek)
-  if (player.hp > 0 && player.hp < player.maxHp) {
+  // Tor leczenia: zaczynamy od 0 HP/5s; każdy kupiony poziom daje +1 HP co 5 sekund (300 klatek przy 60 FPS)
+  const healPer5s = getHealingPer5Sec();
+  if (healPer5s > 0 && player.hp > 0 && player.hp < player.maxHp) {
     player.hpRegenTimer = (player.hpRegenTimer || 0) + 1;
-    if (player.hpRegenTimer >= 60) {
+    if (player.hpRegenTimer >= 300) {
       player.hpRegenTimer = 0;
-      player.hp = Math.min(player.maxHp, player.hp + 1);
+      const healed = Math.min(player.maxHp - player.hp, healPer5s);
+      player.hp = Math.min(player.maxHp, player.hp + healPer5s);
+      if (healed > 0) {
+        popups.push({
+          x: player.x,
+          y: player.y - 26,
+          text: `💚 +${healed} HP`,
+          color: '#4ade80',
+          alpha: 1
+        });
+      }
       updateHud();
     }
   } else {
