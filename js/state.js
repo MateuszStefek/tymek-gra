@@ -54,6 +54,7 @@ let player = {
   cooldown: 0,
   hp: 200,
   maxHp: 200,
+  hpRegenTimer: 0,
   ammo: 30,
   hitFlash: 0,
   splatColor: null

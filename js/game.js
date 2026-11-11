@@ -232,6 +232,7 @@ function startLevel(targetLevel) {
   player.y = 495;
   player.maxHp = 200;
   player.hp = 200;
+  player.hpRegenTimer = 0;
   player.ammo = 30; // Zaczynamy poziom od 30 nabojów!
   player.hitFlash = 0;
   player.splatColor = null;
@@ -282,6 +283,7 @@ function startCustomMap(idx) {
   player.y = 495;
   player.maxHp = 200;
   player.hp = 200;
+  player.hpRegenTimer = 0;
   player.ammo = 30;
   player.hitFlash = 0;
   player.splatColor = null;
@@ -478,6 +480,18 @@ function update() {
   if (gameState !== 'playing') return;
 
   survivalSeconds = (performance.now() - startTime) / 1000;
+
+  // Odradzanie HP: +1 HP na sekundę (co 60 klatek)
+  if (player.hp > 0 && player.hp < player.maxHp) {
+    player.hpRegenTimer = (player.hpRegenTimer || 0) + 1;
+    if (player.hpRegenTimer >= 60) {
+      player.hpRegenTimer = 0;
+      player.hp = Math.min(player.maxHp, player.hp + 1);
+      updateHud();
+    }
+  } else {
+    player.hpRegenTimer = 0;
+  }
 
   if (player.hitFlash > 0) player.hitFlash--;
 
