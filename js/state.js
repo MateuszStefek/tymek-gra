@@ -150,15 +150,20 @@ function getStartingMaxHp() {
   let hp = 200;
   if (ownedUpgrades.includes('hp_boost_1')) hp += 5;
   if (ownedUpgrades.includes('hp_boost_2')) hp += 10;
+  if (ownedUpgrades.includes('hp_boost_3')) hp += 15;
   return hp;
 }
 
 function getStartingAmmo() {
-  return ownedUpgrades.includes('pistol_ammo_1') ? 40 : 30;
+  if (ownedUpgrades.includes('pistol_ammo_2')) return 55;
+  if (ownedUpgrades.includes('pistol_ammo_1')) return 40;
+  return 30;
 }
 
 function getStartingRockets() {
-  return (bazookaUpgraded || ownedUpgrades.includes('bazooka_rockets_5')) ? 5 : 3;
+  if (ownedUpgrades.includes('bazooka_rockets_7')) return 7;
+  if (bazookaUpgraded || ownedUpgrades.includes('bazooka_rockets_5')) return 5;
+  return 3;
 }
 
 player.maxHp = getStartingMaxHp();

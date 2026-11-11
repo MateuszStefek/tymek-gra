@@ -13,11 +13,19 @@ const weaponsCatalog = [
     upgrades: [
       {
         id: 'pistol_ammo_1',
-        name: '📦 Powiększony Magazynek',
+        name: '📦 Powiększony Magazynek I',
         cost: 1,
         desc: 'Zwiększa liczbę nabojów na starcie rundy z 30 do 40 sztuk!',
         effectLabel: '🎨 Startowe naboje: 30 ➡️ 40',
         requiresUpgrade: null
+      },
+      {
+        id: 'pistol_ammo_2',
+        name: '📦 Powiększony Magazynek II',
+        cost: 2,
+        desc: 'Zwiększa liczbę nabojów na starcie rundy z 40 do 55 sztuk!',
+        effectLabel: '🎨 Startowe naboje: 40 ➡️ 55',
+        requiresUpgrade: 'pistol_ammo_1'
       }
     ]
   },
@@ -31,11 +39,19 @@ const weaponsCatalog = [
     upgrades: [
       {
         id: 'bazooka_rockets_5',
-        name: '⚡ Wzmocnienie Bazooki (5 rakiet)',
+        name: '⚡ Wzmocnienie Bazooki I (5 rakiet)',
         cost: 1,
         desc: 'Zwiększa zapas startowy Bazooki z 3 do 5 rakiet na początku każdej rundy!',
         effectLabel: '🚀 Startowe rakiety: 3 ➡️ 5',
         requiresUpgrade: null
+      },
+      {
+        id: 'bazooka_rockets_7',
+        name: '⚡ Wzmocnienie Bazooki II (7 rakiet)',
+        cost: 2,
+        desc: 'Zwiększa zapas startowy Bazooki z 5 do 7 rakiet na początku każdej rundy!',
+        effectLabel: '🚀 Startowe rakiety: 5 ➡️ 7',
+        requiresUpgrade: 'bazooka_rockets_5'
       }
     ]
   }
@@ -43,7 +59,7 @@ const weaponsCatalog = [
 
 const hpTrackConfig = {
   title: '❤️ Tor Wzmocnienia Życia',
-  baseName: '❤️ Zdrowie Bazowe',
+  baseName: '❤️ Zdrowie Bazowe (200 HP)',
   baseDesc: 'Podstawowa wytrzymałość zawodnika: 200 HP na start oraz regeneracja +1 HP/s.',
   upgrades: [
     {
@@ -63,6 +79,15 @@ const hpTrackConfig = {
       desc: 'Drugie wzmocnienie pancerza: kolejne +10 HP na start (łącznie 215 HP)!',
       effectLabel: '❤️ Startowe HP: 205 ➡️ 215 HP',
       requiresUpgrade: 'hp_boost_1'
+    },
+    {
+      id: 'hp_boost_3',
+      name: '🛡️ Wzmocnienie Życia III (+15 HP)',
+      cost: 3,
+      bonusHp: 15,
+      desc: 'Trzecie wzmocnienie pancerza: kolejne +15 HP na start (łącznie 230 HP)!',
+      effectLabel: '❤️ Startowe HP: 215 ➡️ 230 HP',
+      requiresUpgrade: 'hp_boost_2'
     }
   ]
 };
