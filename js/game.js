@@ -905,7 +905,7 @@ function update() {
   // Lekko powiększony prostokąt wykrywania utknięcia (~26% szerokości i wysokości mapy: ok. 244x145 px)
   const maxStuckW = canvas.width * 0.26;
   const maxStuckH = canvas.height * 0.26;
-  const STUCK_TRIGGER_FRAMES = 180; // 3 sekundy (180 klatek) przebywania w małym prostokącie uruchamia stan zagubienia
+  const STUCK_TRIGGER_FRAMES = 12 * 60; // 12 sekund (720 klatek) przebywania w małym prostokącie uruchamia stan zagubienia
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     const en = enemies[i];
@@ -921,27 +921,28 @@ function update() {
       en.vy *= 0.85;
 
       if (en.aiStateTimer <= 0) {
-        // Po 2 sekundach: ikonka mózgu 🧠 i wybór nowej pozycji daleko od gracza
+        // Po 2 sekundach: ikonka mózgu 🧠 i wybór nowej pozycji daleko od gracza ORAZ z dala od przeszkód
         let chosenTarget = null;
-        for (let tries = 0; tries < 45; tries++) {
-          const gx = 55 + Math.random() * (canvas.width - 110);
-          const gy = 55 + Math.random() * (canvas.height - 110);
+        const safeClearance = en.radius + 28; // Duży zapas od przeszkód i ścian, aby pozycja zawsze była łatwo osiągalna
+        for (let tries = 0; tries < 60; tries++) {
+          const gx = 70 + Math.random() * (canvas.width - 140);
+          const gy = 70 + Math.random() * (canvas.height - 140);
           const distFromPlayer = Math.hypot(gx - player.x, gy - player.y);
           const distFromSelf = Math.hypot(gx - en.x, gy - en.y);
-          if (distFromPlayer >= 250 && distFromSelf >= 170 && canMoveTo(gx, gy, en.radius + 6)) {
+          if (distFromPlayer >= 250 && distFromSelf >= 160 && canMoveTo(gx, gy, safeClearance)) {
             chosenTarget = { x: gx, y: gy };
             break;
           }
         }
-        // Fallback jeśli gracz stoi na środku i trudno o 250px: wybierz najdalszy bezpieczny punkt od gracza
+        // Fallback jeśli gracz stoi na środku i trudno o 250px: wybierz najdalszy bezpieczny punkt od gracza z dużym odstępem od przeszkód
         if (!chosenTarget) {
           let bestDist = -1;
-          for (let tries = 0; tries < 30; tries++) {
-            const gx = 55 + Math.random() * (canvas.width - 110);
-            const gy = 55 + Math.random() * (canvas.height - 110);
+          for (let tries = 0; tries < 40; tries++) {
+            const gx = 70 + Math.random() * (canvas.width - 140);
+            const gy = 70 + Math.random() * (canvas.height - 140);
             const distFromPlayer = Math.hypot(gx - player.x, gy - player.y);
             const distFromSelf = Math.hypot(gx - en.x, gy - en.y);
-            if (distFromSelf >= 130 && canMoveTo(gx, gy, en.radius + 6) && distFromPlayer > bestDist) {
+            if (distFromSelf >= 120 && canMoveTo(gx, gy, safeClearance) && distFromPlayer > bestDist) {
               bestDist = distFromPlayer;
               chosenTarget = { x: gx, y: gy };
             }
@@ -951,7 +952,7 @@ function update() {
         if (chosenTarget) {
           en.aiState = 'repositioning';
           en.repositionTarget = chosenTarget;
-          en.aiStateTimer = 600; // Maksymalnie 10s na dojście, gdyby trasa była bardzo długa
+          en.aiStateTimer = 3 * 60; // Maksymalnie 3 sekundy (180 klatek) na manewr zmiany pozycji
           en.orbitSign = Math.random() < 0.5 ? 1 : -1;
         } else {
           en.aiState = 'normal';
