@@ -1113,6 +1113,7 @@ function update() {
     splats[i].ageFrames++;
     if (splats[i].ageFrames >= splats[i].maxFrames) {
       splats.splice(i, 1);
+      paintCanvasDirty = true;
     }
   }
 

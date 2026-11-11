@@ -4,7 +4,7 @@
 - [DONE] plamy po kulach powinny znikac po 2 minutach. Powinny przez 1 minute byc widoczne pelnie. Potem fadować
 - [DONE] stawianie min prawym przciskiem (ale zostaw tez spacje)
 - [DONE] rozszerzenie interfejsu, zeby mapa skalowala sie do rozmiaru okna. (ale nadal te same proporcje szerokosc/wysokosc)
-- fadowanie powoduje ze mapa zamula. Zmien logike, ze jesli jest wiecej niz 100 plam, to najstarsze znikaja od razu (i plamy znikaja z pamieci gry gdy juz nie sa potrzebne)
+- [DONE] fadowanie powoduje ze mapa zamula. Zmien logike, ze jesli jest wiecej niz 100 plam, to najstarsze znikaja od razu (i plamy znikaja z pamieci gry gdy juz nie sa potrzebne)
 - [DONE] nowe bronie kupowane w sklepie
   - [DONE] kupuje sie za diamenty
   - [DONE] stan diamentow zapisany w storage

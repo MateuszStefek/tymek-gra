@@ -147,6 +147,7 @@ let popups = [];
 let explosions = [];
 let particles = [];
 let splats = [];
+let paintCanvasDirty = false;
 let eliminatedHumans = [];
 
 function saveProgress() {
