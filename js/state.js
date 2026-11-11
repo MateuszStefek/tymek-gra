@@ -68,7 +68,7 @@ let player = {
   maxHp: 200,
   hpRegenTimer: 0,
   ammo: 30,
-  rockets: 5,
+  rockets: 3,
   weapon: 'pistol',
   hitFlash: 0,
   splatColor: null
@@ -88,6 +88,7 @@ let currentThemeIndex = 0;
 let diamonds = 0;
 let ownedWeapons = ['pistol'];
 let defaultWeapon = 'pistol';
+let bazookaUpgraded = false;
 let lastDiamondsEarned = 0;
 
 let customMaps = [
@@ -128,6 +129,11 @@ try {
     defaultWeapon = savedDefaultWeapon;
     player.weapon = defaultWeapon;
   }
+  const savedBazookaUpg = localStorage.getItem('tymek_paintball_bazooka_upgraded');
+  if (savedBazookaUpg === '1') {
+    bazookaUpgraded = true;
+    player.rockets = 5;
+  }
 } catch (e) {}
 
 let levelBannerTimer = 0;
@@ -163,5 +169,6 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_diamonds', String(diamonds));
     localStorage.setItem('tymek_paintball_owned_weapons', JSON.stringify(ownedWeapons));
     localStorage.setItem('tymek_paintball_default_weapon', defaultWeapon);
+    localStorage.setItem('tymek_paintball_bazooka_upgraded', bazookaUpgraded ? '1' : '0');
   } catch (e) {}
 }

@@ -193,13 +193,16 @@ function renderShopWeapons() {
   weaponsCatalog.forEach(w => {
     const isOwned = ownedWeapons.includes(w.id);
     const isDefault = defaultWeapon === w.id;
+    const ammoTextInfo = w.id === 'bazooka'
+      ? `🚀 Rakiety (${bazookaUpgraded ? '5' : '3'} na start rundy)`
+      : w.ammoLabel;
     const card = document.createElement('div');
     card.className = 'level-card' + (isOwned ? ' completed' : '') + (isDefault ? ' current' : '');
     card.style.cursor = 'default';
     card.innerHTML = `
       <div class="lvl-title">${w.name}</div>
       <div class="lvl-enemies" style="margin:6px 0;">${w.desc}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:12px;">${w.ammoLabel}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:12px;">${ammoTextInfo}</div>
       <div class="lvl-status" style="color:${isOwned ? '#4ade80' : '#38bdf8'};">
         ${isOwned ? (isDefault ? '⭐ Domyślna broń na start' : '✅ Posiadana w arsenale') : `💰 Cena: ${w.cost} 💎`}
       </div>
@@ -241,6 +244,44 @@ function renderShopWeapons() {
     }
     shopWeaponsGrid.appendChild(card);
   });
+
+  // Wzmocnienie Bazooki w sklepie: 5 rakiet na starcie (zamiast standardowych 3)
+  const hasBazooka = ownedWeapons.includes('bazooka');
+  const upgCost = 1;
+  const upgCard = document.createElement('div');
+  upgCard.className = 'level-card' + (bazookaUpgraded ? ' completed' : (!hasBazooka ? ' locked' : ''));
+  upgCard.style.cursor = 'default';
+  upgCard.innerHTML = `
+    <div class="lvl-title">⚡ Wzmocnienie Bazooki</div>
+    <div class="lvl-enemies" style="margin:6px 0;">Zwiększa zapas startowy Bazooki z <b>3 do 5 rakiet</b> na początku każdej rundy!</div>
+    <div class="lvl-enemies" style="color:#93c5fd;font-size:12px;">🚀 Startowe rakiety: 3 ➡️ 5</div>
+    <div class="lvl-status" style="color:${bazookaUpgraded ? '#4ade80' : '#facc15'};">
+      ${bazookaUpgraded ? '✅ Wzmocnienie aktywne (5 rakiet na start)' : (hasBazooka ? `💰 Cena wzmocnienia: ${upgCost} 💎` : '🔒 Wymaga posiadania Bazooki')}
+    </div>
+    <div class="custom-card-btns" style="margin-top:8px;gap:8px;"></div>
+  `;
+  const upgBtnWrap = upgCard.querySelector('.custom-card-btns');
+  if (!bazookaUpgraded) {
+    const btnBuyUpg = document.createElement('button');
+    btnBuyUpg.className = 'btn-green';
+    btnBuyUpg.style.padding = '7px 14px';
+    btnBuyUpg.style.fontSize = '13px';
+    btnBuyUpg.disabled = !hasBazooka || diamonds < upgCost;
+    btnBuyUpg.textContent = !hasBazooka
+      ? '🔒 Najpierw kup Bazookę'
+      : (diamonds >= upgCost ? `🛒 Kup wzmocnienie za ${upgCost} 💎` : `🔒 Brak 💎 (${diamonds}/${upgCost})`);
+    btnBuyUpg.onclick = () => {
+      if (!hasBazooka || diamonds < upgCost) return;
+      diamonds -= upgCost;
+      bazookaUpgraded = true;
+      player.rockets = Math.max(player.rockets, 5);
+      saveProgress();
+      updateHud();
+      renderShopWeapons();
+    };
+    upgBtnWrap.appendChild(btnBuyUpg);
+  }
+  shopWeaponsGrid.appendChild(upgCard);
 }
 
 function openCustomMapsScreen(editIdx = null) {

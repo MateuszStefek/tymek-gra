@@ -296,7 +296,7 @@ function startLevel(targetLevel) {
   player.hp = 200;
   player.hpRegenTimer = 0;
   player.ammo = 30; // Zaczynamy poziom od 30 nabojów!
-  player.rockets = 5; // Bazooka: startujemy z 5 rakietami, licznik resetuje się między rundami!
+  player.rockets = bazookaUpgraded ? 5 : 3; // Standardowa bazooka: 3 rakiety na starcie (5 po wzmocnieniu ze sklepu)
   player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
   player.splatColor = null;
@@ -355,7 +355,7 @@ function startCustomMap(idx) {
   player.hp = 200;
   player.hpRegenTimer = 0;
   player.ammo = 30;
-  player.rockets = 5;
+  player.rockets = bazookaUpgraded ? 5 : 3;
   player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
   player.splatColor = null;

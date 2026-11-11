@@ -16,8 +16,8 @@ const weaponsCatalog = [
     name: '🚀 Bazooka Samonaprowadzająca',
     shortName: '🚀 Bazooka',
     cost: 1,
-    desc: 'Wystrzeliwuje rakietę, która sama namierza najbliższego wroga i omija przeszkody! Osobny licznik: 5 rakiet na start rundy (rzadkie zrzuty na mapie).',
-    ammoLabel: '🚀 Rakiety (5 na start rundy)'
+    desc: 'Wystrzeliwuje rakietę, która sama namierza najbliższego wroga i omija przeszkody! Osobny licznik: standardowo 3 rakiety na start rundy (5 po wzmocnieniu).',
+    ammoLabel: '🚀 Rakiety (3 na start rundy)'
   }
 ];
 
