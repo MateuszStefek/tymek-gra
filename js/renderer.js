@@ -196,15 +196,25 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
   ctx.lineWidth = 2;
   ctx.stroke();
 
+  const isBossKind = enemyObj && (enemyObj.kind === 'boss' || enemyObj.kind === 'returning_boss');
+  const isProKind = enemyObj && enemyObj.kind === 'pro';
+  const isRetKind = enemyObj && enemyObj.kind.startsWith('returning_');
+
   ctx.beginPath();
   ctx.arc(0, -18, 10.5, Math.PI, Math.PI * 2);
-  ctx.fillStyle = isPlayer ? '#0284c7' : (enemyObj && enemyObj.kind === 'boss' ? '#eab308' : shirtColor);
+  ctx.fillStyle = isPlayer ? '#0284c7' : (isBossKind ? '#eab308' : (isProKind ? '#0f172a' : shirtColor));
   ctx.fill();
 
-  ctx.fillStyle = isPlayer ? '#38bdf8' : (enemyObj && enemyObj.kind === 'boss' ? '#ef4444' : '#1e293b');
+  ctx.fillStyle = isPlayer ? '#38bdf8' : (isBossKind ? '#ef4444' : (isProKind ? '#ef4444' : '#1e293b'));
   ctx.beginPath();
   ctx.roundRect(-8, -19, 16, 6, 3);
   ctx.fill();
+
+  // Opaska taktyczna Profesjonalisty
+  if (isProKind) {
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(-9, -24, 18, 3.5);
+  }
 
   ctx.save();
   ctx.translate(0, -2);
@@ -229,9 +239,9 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.fillStyle = '#f97316';
     ctx.fillRect(24, -6, 6, 12);
   } else {
-    ctx.fillStyle = '#334155';
+    ctx.fillStyle = isProKind ? '#0f172a' : '#334155';
     ctx.fillRect(10, -2, 18, 6);
-    ctx.fillStyle = isPlayer ? '#facc15' : '#cbd5e1';
+    ctx.fillStyle = isPlayer ? '#facc15' : (isProKind ? '#ef4444' : '#cbd5e1');
     ctx.beginPath();
     ctx.arc(15, -5, 4.5, 0, Math.PI * 2);
     ctx.fill();
@@ -255,8 +265,27 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     const pct = Math.max(0, enemyObj.hp) / enemyObj.maxHp;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     ctx.fillRect(-20, -37, 40, 6);
-    ctx.fillStyle = enemyObj.kind === 'boss' ? '#c084fc' : '#f59e0b';
+    ctx.fillStyle = isBossKind ? '#c084fc' : (isProKind ? '#818cf8' : '#f59e0b');
     ctx.fillRect(-19, -36, 38 * pct, 4);
+  }
+
+  // Wyróżniki graficzne specjalnych wrogów
+  if (!isPlayer && enemyObj) {
+    if (isBossKind) {
+      ctx.font = '14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('👑', 0, enemyObj.maxHp > 1 ? -41 : -33);
+    }
+    if (isRetKind) {
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔄', 12, enemyObj.maxHp > 1 ? -41 : -33);
+    }
+    if (isProKind) {
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎯', 0, -41);
+    }
   }
 
   // Ikonka stanu AI nad wrogiem: ❓ (zagubiony przez 2s) lub 🧠 (zmiana na lepszą pozycję)
@@ -403,14 +432,11 @@ function drawNpcPreviewOnCanvas(previewCanvas, kind) {
         splatColor: null
       });
     } else {
-      const shirtColor = kind === 'boss'
-        ? '#9333ea'
-        : (kind === 'tough' ? '#d97706' : (kind === 'rapid' ? '#eab308' : (kind === 'miner' ? '#15803d' : '#ef4444')));
-      const maxHp = kind === 'boss' ? 5 : (kind === 'tough' ? 3 : (kind === 'miner' ? 8 : 1));
-      drawHuman(cx, cy, 0.15, 0.5, shirtColor, false, null, '', {
+      const stats = typeof getEnemyKindStats === 'function' ? getEnemyKindStats(kind, 0) : { shirtColor: '#ef4444', maxHits: 1 };
+      drawHuman(cx, cy, 0.15, 0.5, stats.shirtColor, false, null, '', {
         kind,
-        hp: maxHp,
-        maxHp,
+        hp: stats.maxHits,
+        maxHp: stats.maxHits,
         aiState: 'normal'
       });
     }

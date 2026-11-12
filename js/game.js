@@ -65,7 +65,7 @@ function spawnRandomMapRocket() {
 }
 
 function placeMine() {
-  if (gameState !== 'playing' || minesCount <= 0) return;
+  if (gameState !== 'playing' || player.hp <= 0 || minesCount <= 0) return;
   minesCount--;
   playMineBeep(false);
   placedMines.push({
@@ -76,11 +76,53 @@ function placeMine() {
     pulse: 0,
     armFrames: 300, // 5 sekund uzbrajania (60 fps * 5 = 300 klatek)
     armed: false,
-    color: '#f97316'
+    color: '#f97316',
+    visibleToPro: Math.random() < 0.5 // Profesjonalista widzi 50% min
   });
   saveProgress();
   updateHud();
   canvas.focus();
+}
+
+function eliminateEnemy(j, en, splatColor) {
+  addPaintSplat(en.x, en.y, splatColor, 34);
+  spawnAmmoPickup(en.x, en.y, 5);
+  if (Math.random() < 0.08) {
+    spawnRocketPickup(en.x + 14, en.y);
+  }
+  eliminatedHumans.push({
+    x: en.x,
+    y: en.y,
+    shirtColor: splatColor,
+    splatColor,
+    timer: 48
+  });
+  dropEnemyLoot(en);
+
+  // Obsługa powracających przeciwników (Punkty 3, 4, 5, 6)
+  if (en.kind && en.kind.startsWith('returning_')) {
+    let delaySec = 10;
+    if (en.kind === 'returning_tough') delaySec = 15;
+    else if (en.kind === 'returning_boss') delaySec = 20;
+    enemyRespawnQueue.push({
+      kind: en.kind,
+      timer: Math.round(delaySec * 60)
+    });
+  }
+
+  enemies.splice(j, 1);
+
+  // Punkt 15: Jeśli gracz zabije ostatniego przeciwnika, to chmury znikają
+  if (enemies.length === 0) {
+    clouds = [];
+    levelClearPending = true;
+    if (bullets.length === 0 && homingRockets.length === 0 && gameState === 'playing') {
+      levelClearPending = false;
+      handleLevelVictory();
+      return;
+    }
+  }
+  updateHud();
 }
 
 function triggerMineExplosion(mine) {
@@ -118,12 +160,16 @@ function triggerMineExplosion(mine) {
     addPaintSplat(player.x, player.y, blastColor, 34);
     if (player.hp <= 0) {
       updateHud();
-      openMenu('dead');
-      return;
+      clouds = [];
+      playerDeadPending = true;
+      if (bullets.length === 0 && homingRockets.length === 0) {
+        openMenu('dead');
+        return;
+      }
     }
   }
 
-  // Eliminate enemies inside blastRadius (chyba że przeciwnik jest odporny na miny - 'boss'!)
+  // Eliminate enemies inside blastRadius (chyba że przeciwnik jest odporny na miny - 'boss' / 'returning_boss'!)
   for (let j = enemies.length - 1; j >= 0; j--) {
     const en = enemies[j];
     if (Math.hypot(en.x - mine.x, en.y - mine.y) <= mine.blastRadius) {
@@ -137,17 +183,7 @@ function triggerMineExplosion(mine) {
         });
         continue;
       }
-      addPaintSplat(en.x, en.y, blastColor, 34);
-      spawnAmmoPickup(en.x, en.y, 5);
-      eliminatedHumans.push({
-        x: en.x,
-        y: en.y,
-        shirtColor: blastColor,
-        splatColor: blastColor,
-        timer: 50
-      });
-      dropEnemyLoot(en);
-      enemies.splice(j, 1);
+      eliminateEnemy(j, en, blastColor);
     }
   }
 
@@ -160,7 +196,7 @@ function triggerMineExplosion(mine) {
     }
   }
 
-  if (enemies.length === 0 && gameState === 'playing') {
+  if (enemies.length === 0 && gameState === 'playing' && bullets.length === 0 && homingRockets.length === 0) {
     handleLevelVictory();
   } else {
     updateHud();
@@ -226,6 +262,101 @@ function spawnClouds(count) {
   }
 }
 
+function spawnEnemyAt(x, y, kind = 'normal', index = 0) {
+  const stats = typeof getEnemyKindStats === 'function' ? getEnemyKindStats(kind, index) : {
+    maxHits: 1, radius: 16, shirtColor: '#ef4444', speed: 1.7, shootTimer: 60, mineImmune: false
+  };
+
+  let ex = x;
+  let ey = y;
+  if (!canMoveTo(ex, ey, stats.radius)) {
+    for (let r = 12; r <= 90; r += 16) {
+      let found = false;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+        const tx = ex + Math.cos(a) * r;
+        const ty = ey + Math.sin(a) * r;
+        if (canMoveTo(tx, ty, stats.radius)) {
+          ex = tx;
+          ey = ty;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+  }
+
+  enemies.push({
+    x: ex,
+    y: ey,
+    vx: 0,
+    vy: 0,
+    kind,
+    hp: stats.maxHits,
+    maxHp: stats.maxHits,
+    mineImmune: stats.mineImmune,
+    speed: stats.speed,
+    radius: stats.radius,
+    angle: Math.PI / 2,
+    walkCycle: Math.random() * 10,
+    shirtColor: stats.shirtColor,
+    splatColor: null,
+    changeDirTimer: 0,
+    boxMinX: ex,
+    boxMaxX: ex,
+    boxMinY: ey,
+    boxMaxY: ey,
+    stuckFrames: 0,
+    aiState: 'normal',
+    aiStateTimer: 0,
+    repositionCooldown: 0,
+    repositionTarget: null,
+    orbitSign: Math.random() < 0.5 ? 1 : -1,
+    shootTimer: stats.shootTimer,
+    mineTimer: 15 * 60
+  });
+}
+
+function getFarSpawnSpot(px, py) {
+  const candidateSpots = [
+    { x: 470, y: 65 },
+    { x: 95, y: 75 },
+    { x: 845, y: 75 },
+    { x: 80, y: 260 },
+    { x: 860, y: 260 },
+    { x: 260, y: 65 },
+    { x: 680, y: 65 },
+    { x: 95, y: 490 },
+    { x: 845, y: 490 },
+    { x: 470, y: 495 }
+  ];
+  let bestSpot = null;
+  let bestDist = -1;
+
+  for (const s of candidateSpots) {
+    const d = Math.hypot(s.x - px, s.y - py);
+    if (d > bestDist && canMoveTo(s.x, s.y, 22)) {
+      bestDist = d;
+      bestSpot = s;
+    }
+  }
+
+  for (let tries = 0; tries < 45; tries++) {
+    const rx = 80 + Math.random() * (canvas.width - 160);
+    const ry = 70 + Math.random() * (canvas.height - 140);
+    const d = Math.hypot(rx - px, ry - py);
+    if (d >= 340 && canMoveTo(rx, ry, 22)) {
+      let onMine = false;
+      for (const m of placedMines) {
+        if (Math.hypot(rx - m.x, ry - m.y) < m.blastRadius + 25) { onMine = true; break; }
+      }
+      if (!onMine) return { x: rx, y: ry };
+    }
+  }
+
+  return bestSpot || { x: 470, y: 65 };
+}
+
 function spawnEnemy(index, kind = 'normal') {
   const spots = [
     { x: 470, y: 65 },
@@ -239,54 +370,9 @@ function spawnEnemy(index, kind = 'normal') {
     { x: 845, y: 345 }
   ];
   const spot = spots[index % spots.length];
-  const shirtColors = ['#ef4444', '#f97316', '#eab308', '#ec4899'];
-
-  const maxHits = kind === 'boss' ? 5 : (kind === 'miner' ? 8 : (kind === 'tough' ? 3 : 1));
-  const radius = kind === 'boss' ? 21 : (kind === 'miner' ? 18 : (kind === 'tough' ? 18 : 16));
-  const shirtColor = kind === 'boss'
-    ? '#9333ea'
-    : (kind === 'miner'
-      ? '#15803d'
-      : kind === 'tough'
-        ? '#d97706'
-        : (kind === 'rapid' ? '#eab308' : shirtColors[index % shirtColors.length]));
-
-  let ex = spot.x + (Math.random() - 0.5) * 24;
-  let ey = spot.y + (Math.random() - 0.5) * 24;
-  if (!canMoveTo(ex, ey, radius)) {
-    ex = spot.x;
-    ey = spot.y;
-  }
-
-  enemies.push({
-    x: ex,
-    y: ey,
-    vx: 0,
-    vy: 0,
-    kind,
-    hp: maxHits,
-    maxHp: maxHits,
-    mineImmune: kind === 'boss',
-    speed: kind === 'miner' ? 0.7 + Math.random() * 0.15 : Math.min(2.8, (kind === 'boss' ? 1.45 : (kind === 'tough' ? 1.6 : (kind === 'rapid' ? 1.95 : 1.7))) + Math.random() * 0.4 + Math.min(level, 8) * 0.06),
-    radius,
-    angle: Math.PI / 2,
-    walkCycle: Math.random() * 10,
-    shirtColor,
-    splatColor: null,
-    changeDirTimer: 0,
-    boxMinX: ex,
-    boxMaxX: ex,
-    boxMinY: ey,
-    boxMaxY: ey,
-    stuckFrames: 0,
-    aiState: 'normal', // 'normal' | 'confused' | 'repositioning'
-    aiStateTimer: 0,
-    repositionCooldown: 0, // Gotowy od startu; po zmianie pozycji odlicza 30s (1800 klatek)
-    repositionTarget: null,
-    orbitSign: Math.random() < 0.5 ? 1 : -1,
-    shootTimer: kind === 'miner' ? (180 + Math.random() * 120) : (kind === 'rapid' ? (16 + Math.random() * 14) : (50 + Math.random() * 65)),
-    mineTimer: 15 * 60 // Podkładacz min: pierwsza mina po 15s, potem co 30s
-  });
+  const ex = spot.x + (Math.random() - 0.5) * 24;
+  const ey = spot.y + (Math.random() - 0.5) * 24;
+  spawnEnemyAt(ex, ey, kind, index);
 }
 
 function spawnCivilian(index = 0) {
@@ -374,7 +460,7 @@ function plantEnemyMine(en) {
   playMineBeep(false);
 }
 
-// Omijanie min przez przeciwników: wszyscy widzą miny podkładacza, a podkładacz widzi także miny gracza
+// Omijanie min przez przeciwników: wszyscy widzą miny podkładacza, podkładacz widzi także miny gracza, a Profesjonalista widzi 50% min gracza
 function steerAwayFromMines(en) {
   let nearest = null;
   let nearestDist = Infinity;
@@ -388,6 +474,10 @@ function steerAwayFromMines(en) {
   for (const m of enemyMines) consider(m);
   if (en.kind === 'miner') {
     for (const m of placedMines) consider(m);
+  } else if (en.kind === 'pro') {
+    for (const m of placedMines) {
+      if (m.visibleToPro) consider(m);
+    }
   }
   if (!nearest) return;
   const safeDist = nearest.triggerRadius + en.radius + 30;
@@ -444,8 +534,12 @@ function updateEnemyMines() {
       popups.push({ x: player.x, y: player.y - 30, text: '💥 MINA PODKŁADACZA! -60 HP', color: '#c084fc', alpha: 1 });
       updateHud();
       if (player.hp <= 0) {
-        openMenu('dead');
-        return true;
+        clouds = [];
+        playerDeadPending = true;
+        if (bullets.length === 0 && homingRockets.length === 0) {
+          openMenu('dead');
+          return true;
+        }
       }
     }
   }
@@ -562,6 +656,11 @@ function startLevel(targetLevel) {
   player.splatColor = null;
 
   enemies = [];
+  enemyRespawnQueue = [];
+  levelClearPending = false;
+  playerDeadPending = false;
+  player.vx = 0;
+  player.vy = 0;
   enemyMines = [];
   civilians = [];
   civilianRespawnQueue = [];
@@ -647,6 +746,11 @@ function startCustomMap(idx) {
   player.splatColor = null;
 
   enemies = [];
+  enemyRespawnQueue = [];
+  levelClearPending = false;
+  playerDeadPending = false;
+  player.vx = 0;
+  player.vy = 0;
   enemyMines = [];
   civilians = [];
   civilianRespawnQueue = [];
@@ -665,11 +769,10 @@ function startCustomMap(idx) {
   levelBannerTimer = 85;
 
   const roster = [];
-  for (let i = 0; i < cm.normal; i++) roster.push('normal');
-  for (let i = 0; i < cm.tough; i++) roster.push('tough');
-  for (let i = 0; i < cm.rapid; i++) roster.push('rapid');
-  for (let i = 0; i < cm.boss; i++) roster.push('boss');
-  for (let i = 0; i < (cm.miner || 0); i++) roster.push('miner');
+  for (const k of ENEMY_KIND_KEYS) {
+    const cnt = cm[k] || 0;
+    for (let i = 0; i < cnt; i++) roster.push(k);
+  }
   if (roster.length === 0) roster.push('normal');
 
   totalEnemiesInLevel = roster.length;
@@ -688,6 +791,7 @@ function startCustomMap(idx) {
 
 function firePaintball(fromX, fromY, angle, fromPlayer) {
   if (fromPlayer) {
+    if (player.hp <= 0) return;
     if (player.ammo <= 0) {
       playEmptyAmmoSound();
       popups.push({ x: player.x, y: player.y - 28, text: 'BRAK NABOJÓW!', color: '#ef4444', alpha: 1 });
@@ -873,6 +977,7 @@ function getBestFallbackWeapon() {
 }
 
 function firePlayerWeapon(fromX, fromY, angle) {
+  if (player.hp <= 0) return;
   if (player.weapon === 'bazooka') {
     if (player.rockets <= 0) {
       player.emptyBazookaTries = (player.emptyBazookaTries || 0) + 1;
@@ -1478,6 +1583,9 @@ function update() {
     dy += touchJoystick.dy;
   }
 
+  const curPlayerX = player.x;
+  const curPlayerY = player.y;
+
   if (dx !== 0 || dy !== 0) {
     const len = Math.hypot(dx, dy);
     const speedFactor = touchJoystick.active && !keys['KeyW'] && !keys['KeyS'] && !keys['KeyA'] && !keys['KeyD'] ? Math.min(1, len) : 1;
@@ -1487,6 +1595,9 @@ function update() {
     if (canMoveTo(player.x, ny, player.radius)) player.y = ny;
     player.walkCycle += 0.26 * speedFactor;
   }
+
+  player.vx = player.x - curPlayerX;
+  player.vy = player.y - curPlayerY;
 
   if (touchAimId !== null || !touchJoystick.active || mouse.down) {
     player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
@@ -1635,7 +1746,7 @@ function update() {
     en.walkCycle += 0.22;
     en.angle = Math.atan2(player.y - en.y, player.x - en.x);
 
-    if (en.kind === 'miner') {
+    if (en.kind === 'miner' && player.hp > 0) {
       en.mineTimer--;
       if (en.mineTimer <= 0) {
         plantEnemyMine(en);
@@ -1644,22 +1755,56 @@ function update() {
     }
 
     en.shootTimer--;
-    if (en.shootTimer <= 0 && distToPlayer < 480) {
-      const spread = en.kind === 'rapid' ? 0.16 : (en.kind === 'miner' ? 0.4 : 0.25);
-      const aimAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * spread;
-      firePaintball(en.x, en.y, aimAngle, false);
-      if (en.kind === 'rapid') {
-        en.shootTimer = 14 + Math.random() * 10; // Strzela około 4 razy częściej!
-      } else if (en.kind === 'miner') {
-        en.shootTimer = 200 + Math.random() * 150; // Mały pistolecik — strzela całkiem rzadko
+    // Punkt 13: Uwaga: gdy gracz nie żyje, przeciwnicy nie strzelają
+    if (en.shootTimer <= 0 && distToPlayer < 480 && player.hp > 0) {
+      if (en.kind === 'pro') {
+        // Punkt 7: Profesjonalista bierze pod uwagę kierunek ruchu gracza i celuje z wyprzedzeniem
+        const t = distToPlayer / 5.2; // prędkość pocisku przeciwnika to 5.2
+        const leadX = player.x + (player.vx || 0) * t;
+        const leadY = player.y + (player.vy || 0) * t;
+        const aimAngle = Math.atan2(leadY - en.y, leadX - en.x) + (Math.random() - 0.5) * 0.08;
+        firePaintball(en.x, en.y, aimAngle, false);
+        en.shootTimer = 40 + Math.random() * 25;
       } else {
-        en.shootTimer = Math.max(35, 85 - level * 4) + Math.random() * 55;
+        const spread = (en.kind === 'rapid' || en.kind === 'returning_rapid') ? 0.16 : (en.kind === 'miner' ? 0.4 : 0.25);
+        const aimAngle = Math.atan2(player.y - en.y, player.x - en.x) + (Math.random() - 0.5) * spread;
+        firePaintball(en.x, en.y, aimAngle, false);
+        if (en.kind === 'rapid' || en.kind === 'returning_rapid') {
+          en.shootTimer = 14 + Math.random() * 10; // Strzela około 4 razy częściej!
+        } else if (en.kind === 'miner') {
+          en.shootTimer = 200 + Math.random() * 150; // Mały pistolecik — strzela całkiem rzadko
+        } else {
+          en.shootTimer = Math.max(35, 85 - level * 4) + Math.random() * 55;
+        }
       }
     }
   }
 
   // Miny podkładacza: uzbrajanie i wybuch przy wejściu gracza
   if (updateEnemyMines()) return;
+
+  // Odradzanie powracających przeciwników (Punkty 3, 4, 5, 6, 12)
+  for (let q = enemyRespawnQueue.length - 1; q >= 0; q--) {
+    enemyRespawnQueue[q].timer--;
+    if (enemyRespawnQueue[q].timer <= 0) {
+      const item = enemyRespawnQueue[q];
+      enemyRespawnQueue.splice(q, 1);
+      const spot = getFarSpawnSpot(player.x, player.y);
+      spawnEnemyAt(spot.x, spot.y, item.kind, enemies.length);
+      // Punkt 12: Jeżeli w tym czasie nie-cywil powróci na planszę, to gra wraca do normalnego stanu!
+      levelClearPending = false;
+      const newest = enemies[enemies.length - 1];
+      if (newest) {
+        popups.push({
+          x: newest.x,
+          y: newest.y - 24,
+          text: '🔄 PRZECIWNIK POWRÓCIŁ!',
+          color: '#38bdf8',
+          alpha: 1
+        });
+      }
+    }
+  }
 
   // Odradzanie zabitych cywili po 5 sekundach (300 klatek)
   for (let q = civilianRespawnQueue.length - 1; q >= 0; q--) {
@@ -1874,24 +2019,7 @@ function update() {
             break;
           }
 
-          spawnAmmoPickup(en.x, en.y, 5); // Każdy zabity przeciwnik dropuje 5 nabojów!
-          if (Math.random() < 0.08) {
-            spawnRocketPickup(en.x + 14, en.y);
-          }
-          eliminatedHumans.push({
-            x: en.x,
-            y: en.y,
-            shirtColor: b.color,
-            splatColor: b.color,
-            timer: 45
-          });
-          dropEnemyLoot(en);
-      enemies.splice(j, 1);
-          if (enemies.length === 0) {
-            handleLevelVictory();
-          } else {
-            updateHud();
-          }
+          eliminateEnemy(j, en, b.color);
           break;
         }
       }
@@ -1937,7 +2065,11 @@ function update() {
         bullets.splice(i, 1);
 
         if (player.hp <= 0) {
-          openMenu('dead');
+          clouds = [];
+          playerDeadPending = true;
+          if (bullets.length === 0 && homingRockets.length === 0) {
+            openMenu('dead');
+          }
         }
         continue;
       }
@@ -2059,19 +2191,7 @@ function update() {
               alpha: 1
             });
           } else {
-            spawnAmmoPickup(en.x, en.y, 5);
-            if (Math.random() < 0.08) {
-              spawnRocketPickup(en.x + 14, en.y);
-            }
-            eliminatedHumans.push({
-              x: en.x,
-              y: en.y,
-              shirtColor: blastColor,
-              splatColor: blastColor,
-              timer: 45
-            });
-            dropEnemyLoot(en);
-      enemies.splice(j, 1);
+            eliminateEnemy(j, en, blastColor);
           }
         }
       }
@@ -2091,12 +2211,7 @@ function update() {
       }
 
       homingRockets.splice(i, 1);
-      if (enemies.length === 0) {
-        handleLevelVictory();
-        return;
-      } else {
-        updateHud();
-      }
+      updateHud();
     }
   }
 
@@ -2203,6 +2318,26 @@ function update() {
   for (let i = eliminatedHumans.length - 1; i >= 0; i--) {
     eliminatedHumans[i].timer--;
     if (eliminatedHumans[i].timer <= 0) eliminatedHumans.splice(i, 1);
+  }
+
+  // Obsługa oczekiwania na zakończenie lotu pocisków (Punkty 12, 13, 14, 15)
+  const flyingProjectiles = bullets.length + homingRockets.length;
+
+  if (player.hp <= 0 || playerDeadPending) {
+    clouds = [];
+    if (flyingProjectiles === 0) {
+      playerDeadPending = false;
+      levelClearPending = false;
+      openMenu('dead');
+      return;
+    }
+  } else if (levelClearPending || (enemies.length === 0 && gameState === 'playing')) {
+    clouds = [];
+    if (flyingProjectiles === 0) {
+      levelClearPending = false;
+      handleLevelVictory();
+      return;
+    }
   }
 }
 

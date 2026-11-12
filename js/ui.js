@@ -224,56 +224,26 @@ function renderEnemiesCatalog() {
   if (!enemiesCatalogGrid) return;
   enemiesCatalogGrid.innerHTML = '';
 
-  const catalog = [
-    {
-      kind: 'normal',
-      title: '🎯 Zwykły Przeciwnik',
-      badge: '❤️ 1 HP | 💣 Wrażliwy na miny',
-      badgeColor: '#f87171',
-      desc: 'Podstawowy zawodnik na arenie w czerwonej lub pomarańczowej koszulce z ciemnym wizjerem.',
-      details: 'Ginie po 1 trafieniu z markera, miny lub bazooki. Po wyeliminowaniu zostawia paczkę +5 nabojów.'
-    },
-    {
-      kind: 'rapid',
-      title: '⚡ Szybkostrzelny',
-      badge: '❤️ 1 HP | ⚡ Strzela 4x częściej',
-      badgeColor: '#facc15',
-      desc: 'Rozpoznasz go po żółtej koszulce. Porusza się szybciej i zasypuje arenę gęstymi seriami kulek farby!',
-      details: 'Wymaga tylko 1 trafienia, ale przez wysoką szybkostrzelność warto wyeliminować go w pierwszej kolejności.'
-    },
-    {
-      kind: 'tough',
-      title: '🛡️ Pancerny Przeciwnik',
-      badge: '❤️ 3 HP | 🛡️ Pasek zdrowia',
-      badgeColor: '#fb923c',
-      desc: 'Większy zawodnik w brązowo-złotym pancerzu z widocznym paskiem wytrzymałości nad głową.',
-      details: 'Wytrzymuje aż 3 trafienia ze zwykłego markera (lub ginie od razu po bezpośrednim trafieniu rakietą z Bazooki albo wybuchu miny).'
-    },
-    {
-      kind: 'boss',
-      title: '👑 Bardzo Mocny Boss',
-      badge: '❤️ 5 HP | 👑 Odporny na miny!',
-      badgeColor: '#c084fc',
-      desc: 'Największy przeciwnik w fioletowym pancerzu ze złotym hełmem i czerwonym wizjerem.',
-      details: 'Całkowicie odporny na wybuchy min farbowych! Aby go pokonać, musisz trafić go 5 razy z markera lub użyć rakiet z Bazooki.'
-    },
-    {
-      kind: 'miner',
-      title: '💣 Podkładacz Min',
-      badge: '❤️ 8 HP | 🐢 Wolny | 💣 Mina co 30s',
-      badgeColor: '#4ade80',
-      desc: 'Zielony saper z plecakiem i miną na piersi. Porusza się powoli i rzadko strzela z małego pistoletu.',
-      details: 'Raz na 30 sekund podkłada fioletową minę (uzbraja się po 3s, rani Cię przy wejściu). Inni przeciwnicy i cywile widzą te miny i je omijają, a podkładacz unika także Twoich min. Po zabiciu dropuje dla Ciebie nową minę. Dostępny od poziomu 15.'
-    },
-    {
-      kind: 'civilian',
-      title: '🏥 Cywil — Lekarz',
-      badge: '❤️ 2 HP | ⚠️ Kara: -50 HP i -50 Max HP!',
-      badgeColor: '#38bdf8',
-      desc: 'Postać w białym fartuchu lekarskim z czerwonym krzyżem, czepkiem medycznym i apteczką w dłoni.',
-      details: 'Chodzi losowo po mapie i omija uzbrojone miny (nie widzi min w trakcie uzbrajania). Pociski wrogów go nie ranią, ale Twoje strzały, miny oraz Bazooka (jeśli jest najbliżej kursora) tak! Przetrwa 1 postrzał — zabicie go odejmuje 50 HP i 50 Max HP do końca poziomu (odradza się po 5s).'
-    }
-  ];
+  const catalog = ENEMY_KIND_KEYS.map(k => {
+    const info = ENEMY_KIND_INFO[k];
+    return {
+      kind: k,
+      title: info.name,
+      badge: info.badge,
+      badgeColor: info.badgeColor,
+      desc: info.desc,
+      details: info.details
+    };
+  });
+
+  catalog.push({
+    kind: 'civilian',
+    title: '🏥 Cywil — Lekarz',
+    badge: '❤️ 2 HP | ⚠️ Kara: -50 HP i -50 Max HP!',
+    badgeColor: '#38bdf8',
+    desc: 'Postać w białym fartuchu lekarskim z czerwonym krzyżem, czepkiem medycznym i apteczką w dłoni.',
+    details: 'Chodzi losowo po mapie i omija uzbrojone miny (nie widzi min w trakcie uzbrajania). Pociski wrogów go nie ranią, ale Twoje strzały, miny oraz Bazooka (jeśli jest najbliżej kursora) tak! Przetrwa 1 postrzał — zabicie go odejmuje 50 HP i 50 Max HP do końca poziomu (odradza się po 5s).'
+  });
 
   const unlockedKinds = getUnlockedEnemyKinds();
   catalog.filter(item => item.kind === 'civilian' || unlockedKinds.has(item.kind)).forEach(item => {
@@ -824,16 +794,39 @@ function renderCustomMapEditor(idx) {
   customListView.style.display = 'none';
   customEditorView.style.display = 'flex';
   const draft = { clouds: 1, civilians: 1, ...customMaps[idx] };
+  for (const k of ENEMY_KIND_KEYS) {
+    if (typeof draft[k] !== 'number') draft[k] = 0;
+  }
   customOverlayTitle.textContent = `✏️ EDYTOR WŁASNEJ MAPY: ${draft.name}`;
   customOverlaySub.textContent = 'Ustaw układ przeszkód oraz dokładną liczbę przeciwników każdego rodzaju:';
 
   function refreshEditorDOM() {
     const arenaObj = arenaLayouts[draft.arenaIndex % arenaLayouts.length];
-    const total = draft.normal + draft.tough + draft.rapid + draft.boss + (draft.miner || 0);
+    let total = 0;
+    for (const k of ENEMY_KIND_KEYS) {
+      total += (draft[k] || 0);
+    }
     const unlockedKinds = getUnlockedEnemyKinds();
     const isLocked = kind => !unlockedKinds.has(kind);
     const lockedUsed = getLockedKindsInCustomMap(draft);
     const cannotSave = total === 0 || lockedUsed.length > 0;
+
+    const enemyRowsHtml = ENEMY_KIND_KEYS.map(k => {
+      const info = ENEMY_KIND_INFO[k] || { icon: '🎯', shortName: k, badge: '' };
+      const val = draft[k] || 0;
+      const locked = isLocked(k);
+      return `
+        <div class="editor-row">
+          <span>${info.icon} ${info.shortName} <span style="font-size:11px;color:#94a3b8;">(${info.badge})</span>:</span>
+          <div class="editor-stepper">
+            <button data-dec-kind="${k}">➖</button>
+            <span>${val}</span>
+            <button data-inc-kind="${k}" ${locked ? 'disabled title="Przeciwnik zablokowany"' : ''}>${locked ? '🔒' : '➕'}</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
     customEditorView.innerHTML = `
       <div class="editor-row">
         <span>📝 Nazwa własnej mapy:</span>
@@ -855,46 +848,7 @@ function renderCustomMapEditor(idx) {
           <button id="edCloudsInc">➕</button>
         </div>
       </div>
-      <div class="editor-row">
-        <span>🎯 Zwykły przeciwnik (1 strzał):</span>
-        <div class="editor-stepper">
-          <button id="edNormDec">➖</button>
-          <span>${draft.normal}</span>
-          <button id="edNormInc" ${isLocked('normal') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('normal') ? '🔒' : '➕'}</button>
-        </div>
-      </div>
-      <div class="editor-row">
-        <span>🛡️ Pancerny przeciwnik (3 strzały):</span>
-        <div class="editor-stepper">
-          <button id="edToughDec">➖</button>
-          <span>${draft.tough}</span>
-          <button id="edToughInc" ${isLocked('tough') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('tough') ? '🔒' : '➕'}</button>
-        </div>
-      </div>
-      <div class="editor-row">
-        <span>⚡ Szybkostrzelny przeciwnik (seria strzałów):</span>
-        <div class="editor-stepper">
-          <button id="edRapidDec">➖</button>
-          <span>${draft.rapid}</span>
-          <button id="edRapidInc" ${isLocked('rapid') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('rapid') ? '🔒' : '➕'}</button>
-        </div>
-      </div>
-      <div class="editor-row">
-        <span>👑 Bardzo Mocny Boss (odporny na miny, 5 strzałów):</span>
-        <div class="editor-stepper">
-          <button id="edBossDec">➖</button>
-          <span>${draft.boss}</span>
-          <button id="edBossInc" ${isLocked('boss') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('boss') ? '🔒' : '➕'}</button>
-        </div>
-      </div>
-      <div class="editor-row">
-        <span>💣 Podkładacz min (dużo HP, podkłada miny; od poz. 15):</span>
-        <div class="editor-stepper">
-          <button id="edMinerDec">➖</button>
-          <span>${draft.miner || 0}</span>
-          <button id="edMinerInc" ${isLocked('miner') ? 'disabled title="Przeciwnik zablokowany"' : ''}>${isLocked('miner') ? '🔒' : '➕'}</button>
-        </div>
-      </div>
+      ${enemyRowsHtml}
       <div class="editor-row">
         <span>🏥 Cywil — Lekarz (2 HP, kara -50 HP za zabicie):</span>
         <div class="editor-stepper">
@@ -935,32 +889,33 @@ function renderCustomMapEditor(idx) {
       refreshEditorDOM();
     };
 
-    customEditorView.querySelector('#edNormDec').onclick = () => { draft.normal = Math.max(0, draft.normal - 1); refreshEditorDOM(); };
-    customEditorView.querySelector('#edNormInc').onclick = () => { draft.normal = Math.min(12, draft.normal + 1); refreshEditorDOM(); };
-
-    customEditorView.querySelector('#edToughDec').onclick = () => { draft.tough = Math.max(0, draft.tough - 1); refreshEditorDOM(); };
-    customEditorView.querySelector('#edToughInc').onclick = () => { draft.tough = Math.min(10, draft.tough + 1); refreshEditorDOM(); };
-
-    customEditorView.querySelector('#edRapidDec').onclick = () => { draft.rapid = Math.max(0, draft.rapid - 1); refreshEditorDOM(); };
-    customEditorView.querySelector('#edRapidInc').onclick = () => { draft.rapid = Math.min(10, draft.rapid + 1); refreshEditorDOM(); };
-
-    customEditorView.querySelector('#edMinerDec').onclick = () => { draft.miner = Math.max(0, (draft.miner || 0) - 1); refreshEditorDOM(); };
-    customEditorView.querySelector('#edMinerInc').onclick = () => { draft.miner = Math.min(6, (draft.miner || 0) + 1); refreshEditorDOM(); };
-
-    customEditorView.querySelector('#edBossDec').onclick = () => { draft.boss = Math.max(0, draft.boss - 1); refreshEditorDOM(); };
-    customEditorView.querySelector('#edBossInc').onclick = () => { draft.boss = Math.min(8, draft.boss + 1); refreshEditorDOM(); };
+    customEditorView.querySelectorAll('[data-dec-kind]').forEach(btn => {
+      btn.onclick = () => {
+        const k = btn.getAttribute('data-dec-kind');
+        draft[k] = Math.max(0, (draft[k] || 0) - 1);
+        refreshEditorDOM();
+      };
+    });
+    customEditorView.querySelectorAll('[data-inc-kind]').forEach(btn => {
+      btn.onclick = () => {
+        const k = btn.getAttribute('data-inc-kind');
+        if (isLocked(k)) return;
+        draft[k] = Math.min(15, (draft[k] || 0) + 1);
+        refreshEditorDOM();
+      };
+    });
 
     customEditorView.querySelector('#edCivDec').onclick = () => { draft.civilians = Math.max(0, (draft.civilians || 0) - 1); refreshEditorDOM(); };
     customEditorView.querySelector('#edCivInc').onclick = () => { draft.civilians = Math.min(8, (draft.civilians || 0) + 1); refreshEditorDOM(); };
 
     customEditorView.querySelector('#edSaveAndPlay').onclick = () => {
-      if (draft.normal + draft.tough + draft.rapid + draft.boss + (draft.miner || 0) <= 0 || getLockedKindsInCustomMap(draft).length > 0) return;
+      if (cannotSave) return;
       customMaps[idx] = { ...draft };
       saveProgress();
       startCustomMap(idx);
     };
     customEditorView.querySelector('#edSaveOnly').onclick = () => {
-      if (draft.normal + draft.tough + draft.rapid + draft.boss + (draft.miner || 0) <= 0 || getLockedKindsInCustomMap(draft).length > 0) return;
+      if (cannotSave) return;
       customMaps[idx] = { ...draft };
       saveProgress();
       openCustomMapsScreen(null);

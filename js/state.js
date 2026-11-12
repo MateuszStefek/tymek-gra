@@ -213,12 +213,15 @@ function getHealingPer5Sec() {
   return healingLevel;
 }
 
+let enemyRespawnQueue = [];
+let levelClearPending = false;
+let playerDeadPending = false;
+
 // Typy przeciwników, które występują na którymkolwiek z odblokowanych poziomów kampanii (1..unlockedLevel)
 function getUnlockedEnemyKinds() {
   const kinds = new Set();
   for (let i = 1; i <= unlockedLevel; i++) {
     for (const kind of getLevelConfig(i).roster) kinds.add(kind);
-    if (kinds.size >= 5) break;
   }
   return kinds;
 }
@@ -226,10 +229,12 @@ function getUnlockedEnemyKinds() {
 // Zwraca listę nazw zablokowanych typów przeciwników użytych w mapie własnej (pusta lista = mapę można uruchomić)
 function getLockedKindsInCustomMap(cm) {
   const unlocked = getUnlockedEnemyKinds();
-  const names = { normal: 'Zwykły', tough: 'Pancerny', rapid: 'Szybkostrzelny', boss: 'Boss', miner: 'Podkładacz min' };
   const locked = [];
-  for (const kind of ['normal', 'tough', 'rapid', 'boss', 'miner']) {
-    if ((cm[kind] || 0) > 0 && !unlocked.has(kind)) locked.push(names[kind]);
+  for (const kind of ENEMY_KIND_KEYS) {
+    if ((cm[kind] || 0) > 0 && !unlocked.has(kind)) {
+      const info = ENEMY_KIND_INFO[kind];
+      locked.push(info ? info.shortName : kind);
+    }
   }
   return locked;
 }
