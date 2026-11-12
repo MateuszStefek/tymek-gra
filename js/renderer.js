@@ -88,13 +88,13 @@ function drawMine(mine) {
   ctx.fillStyle = mine.armed ? (blink ? '#ef4444' : '#7f1d1d') : (blink ? '#fde047' : '#854d0e');
   ctx.fill();
 
-  // Napis odliczania 5s "PIK!" podczas uzbrajania
+  // Napis odliczania 5s podczas uzbrajania
   if (!mine.armed) {
     const secs = Math.ceil(mine.armFrames / 60);
-    ctx.font = 'bold 13px system-ui';
+    ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fde047';
-    ctx.fillText(`PIK! ${secs}s`, 0, -18);
+    ctx.fillText(`Uzbrajanie ${secs}s`, 0, -18);
   }
 
   ctx.restore();
@@ -688,5 +688,23 @@ function renderScene() {
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 20px system-ui';
     ctx.fillText('Kliknij lewym przyciskiem myszy, naciśnij P lub guzik ▶️ Wznów, aby kontynuować', canvas.width / 2, canvas.height / 2 + 28);
+  }
+
+  // Podświetlenie celownika: domyślny kursor jest ukryty, rysujemy małe kółko podświetlające cel
+  if (mouse.active && gameState === 'playing') {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 14, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
   }
 }

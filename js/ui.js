@@ -22,15 +22,6 @@ function canActivateMenuAction() {
   return performance.now() >= menuReadyAt && pointerReleasedAfterMenuOpen && menuPointerArmed;
 }
 
-function updateFollowButtonUI() {
-  if (!btnFollowMouse) return;
-  btnFollowMouse.classList.toggle('active', followMouse);
-  btnFollowMouse.textContent = followMouse
-    ? '🏃 Ruch za myszką: WŁ [Klawisz F]'
-    : '🏃 Ruch za myszką: WYŁ [Klawisz F]';
-}
-updateFollowButtonUI();
-
 function applyGraphicTheme() {
   const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
   document.body.style.backgroundColor = theme.bodyBg;
@@ -113,13 +104,6 @@ function resizeGameLayout() {
 
 window.addEventListener('resize', resizeGameLayout);
 setTimeout(resizeGameLayout, 0);
-
-function toggleFollowMouse() {
-  followMouse = !followMouse;
-  updateFollowButtonUI();
-  saveProgress();
-  canvas.focus();
-}
 
 function updatePauseButtonUI() {
   const isPaused = gameState === 'paused';
@@ -346,10 +330,6 @@ function renderSettingsScreen() {
   const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
   settingsBox.innerHTML = `
     <div class="editor-row">
-      <span>🏃 Podążanie postaci za kursorem myszy [F]:</span>
-      <button id="setToggleFollow" class="${followMouse ? 'btn-green' : 'btn-blue'}">${followMouse ? '✅ WŁĄCZONE' : '❌ WYŁĄCZONE'}</button>
-    </div>
-    <div class="editor-row">
       <span>🎨 Motyw graficzny areny [T]:</span>
       <div class="editor-stepper">
         <button id="setPrevTheme">⬅️</button>
@@ -372,10 +352,6 @@ function renderSettingsScreen() {
     </div>
   `;
 
-  settingsBox.querySelector('#setToggleFollow').onclick = () => {
-    toggleFollowMouse();
-    renderSettingsScreen();
-  };
   settingsBox.querySelector('#setPrevTheme').onclick = () => {
     currentThemeIndex = (currentThemeIndex + graphicThemes.length - 1) % graphicThemes.length;
     applyGraphicTheme();

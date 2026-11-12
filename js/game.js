@@ -1120,7 +1120,6 @@ btnNextLevel.addEventListener('click', () => {
 });
 
 btnPlaceMine.addEventListener('click', placeMine);
-if (btnFollowMouse) btnFollowMouse.addEventListener('click', toggleFollowMouse);
 if (btnTheme) btnTheme.addEventListener('click', cycleGraphicTheme);
 
 function toggleFullscreen() {
@@ -1339,8 +1338,6 @@ window.addEventListener('keydown', e => {
   }
   if (e.code === 'KeyP' || e.code === 'Pause') {
     togglePause();
-  } else if (e.code === 'KeyF') {
-    toggleFollowMouse();
   } else if (e.code === 'KeyT') {
     cycleGraphicTheme();
   } else if (e.code === 'KeyQ') {
@@ -1479,14 +1476,6 @@ function update() {
   if (touchJoystick.active) {
     dx += touchJoystick.dx;
     dy += touchJoystick.dy;
-  }
-
-  if (dx === 0 && dy === 0 && followMouse && mouse.active) {
-    const distToMouse = Math.hypot(mouse.x - player.x, mouse.y - player.y);
-    if (distToMouse > 45) {
-      dx = (mouse.x - player.x) / distToMouse;
-      dy = (mouse.y - player.y) / distToMouse;
-    }
   }
 
   if (dx !== 0 || dy !== 0) {

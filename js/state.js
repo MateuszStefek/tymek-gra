@@ -28,7 +28,6 @@ const btnNextLevel = document.getElementById('btnNextLevel');
 const btnPlaceMine = document.getElementById('btnPlaceMine');
 const btnRetry = document.getElementById('btnRetry');
 const btnFullscreen = document.getElementById('btnFullscreen');
-const btnFollowMouse = document.getElementById('btnFollowMouse');
 const btnTheme = document.getElementById('btnTheme');
 const btnOpenSettings = document.getElementById('btnOpenSettings');
 const topbarEl = document.querySelector('.topbar');
@@ -95,7 +94,6 @@ const resultPopupRewards = document.getElementById('resultPopupRewards');
 const resultPopupActions = document.getElementById('resultPopupActions');
 
 const keys = {};
-let followMouse = true;
 let mouse = { x: 470, y: 380, down: false, active: false };
 
 let player = {
@@ -158,8 +156,6 @@ try {
   }
   const savedTimes = JSON.parse(localStorage.getItem('tymek_paintball_times') || '{}');
   if (savedTimes && typeof savedTimes === 'object') bestTimes = savedTimes;
-  const savedFollow = localStorage.getItem('tymek_paintball_follow_mouse');
-  if (savedFollow !== null) followMouse = savedFollow === '1';
   const savedCustom = JSON.parse(localStorage.getItem('tymek_paintball_custom_maps') || 'null');
   if (Array.isArray(savedCustom) && savedCustom.length > 0) customMaps = savedCustom;
   const savedTheme = parseInt(localStorage.getItem('tymek_paintball_theme') || '0', 10);
@@ -289,7 +285,6 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_last_level', String(level));
     localStorage.setItem('tymek_paintball_mines', String(minesCount));
     localStorage.setItem('tymek_paintball_times', JSON.stringify(bestTimes));
-    localStorage.setItem('tymek_paintball_follow_mouse', followMouse ? '1' : '0');
     localStorage.setItem('tymek_paintball_custom_maps', JSON.stringify(customMaps));
     localStorage.setItem('tymek_paintball_theme', String(currentThemeIndex));
     localStorage.setItem('tymek_paintball_diamonds', String(diamonds));
