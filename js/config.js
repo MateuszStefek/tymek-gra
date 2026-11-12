@@ -435,17 +435,17 @@ function getLevelConfig(lvl) {
     6:  { roster: ['normal', 'tough'], label: '1x Zwykły + 1x 🛡️ Pancerny', clouds: 1, civilians: 2 },
     7:  { roster: ['boss'], label: '1x Boss 👑 (Odporny na miny! Nowy wróg!)', clouds: 0, civilians: 2 },
     8:  { roster: ['normal', 'rapid', 'tough'], label: '1x Zwykły + 1x ⚡ + 1x 🛡️', clouds: 2, civilians: 2 },
-    9:  { roster: ['returning_normal'], label: '1x Powracający 🔄 (Nowy wróg — powraca po 10s!)', clouds: 0, civilians: 1 },
-    10: { roster: ['normal', 'returning_normal'], label: '1x Zwykły + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
-    11: { roster: ['returning_rapid'], label: '1x Powracający Szybki ⚡🔄 (Nowy wróg!)', clouds: 0, civilians: 1 },
+    9:  { roster: ['normal', 'returning_normal'], label: '1x Zwykły + 1x 🔄 Powracający (Nowy wróg — powraca po 10s!)', clouds: 0, civilians: 1 },
+    10: { roster: ['tough', 'returning_normal'], label: '1x 🛡️ Pancerny + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
+    11: { roster: ['normal', 'returning_rapid'], label: '1x Zwykły + 1x ⚡🔄 Powracający Szybki (Nowy wróg!)', clouds: 0, civilians: 1 },
     12: { roster: ['rapid', 'returning_rapid'], label: '1x ⚡ Szybki + 1x ⚡🔄 Powracający', clouds: 1, civilians: 2 },
-    13: { roster: ['returning_tough'], label: '1x Powracający Pancerny 🛡️🔄 (Nowy wróg — 15s!)', clouds: 0, civilians: 2 },
+    13: { roster: ['normal', 'returning_tough'], label: '1x Zwykły + 1x 🛡️🔄 Powracający Pancerny (Nowy wróg — 15s!)', clouds: 0, civilians: 2 },
     14: { roster: ['tough', 'returning_tough'], label: '1x 🛡️ Pancerny + 1x 🛡️🔄 Powracający', clouds: 2, civilians: 2 },
     15: { roster: ['miner'], label: '1x Podkładacz Min 💣 (Nowy wróg — dropuje miny!)', clouds: 0, civilians: 2 },
     16: { roster: ['miner', 'returning_normal'], label: '1x 💣 Podkładacz + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
     17: { roster: ['pro'], label: '1x Profesjonalista 🎯 (Nowy wróg — strzał z wyprzedzeniem!)', clouds: 0, civilians: 2 },
     18: { roster: ['pro', 'miner'], label: '1x 🎯 Profesjonalista + 1x 💣 Podkładacz', clouds: 2, civilians: 2 },
-    19: { roster: ['returning_boss'], label: '1x Powracający Boss 👑🔄 (Nowy wróg — powraca po 20s!)', clouds: 0, civilians: 3 },
+    19: { roster: ['tough', 'returning_boss'], label: '1x 🛡️ Pancerny + 1x 👑🔄 Powracający Boss (Nowy wróg — powraca po 20s!)', clouds: 0, civilians: 3 },
     20: { roster: ['pro', 'miner', 'returning_boss'], label: '1x 🎯 Pro + 1x 💣 Podkładacz + 1x 👑🔄 Boss', clouds: 2, civilians: 3 }
   };
   if (presets[lvl]) {
