@@ -1899,8 +1899,8 @@ function update() {
     if (en.kind === 'shield') {
       if (typeof en.shieldAngle !== 'number') en.shieldAngle = en.angle || 0;
       const targetShieldAngle = Math.atan2(player.y - en.y, player.x - en.x);
-      // Obrót o 180 stopni zajmuje 4 sekundy (240 klatek przy 60 fps -> PI / 240 radiana na klatkę)
-      const maxTurnRate = Math.PI / (4 * 60);
+      // Wolniejszy obrót tarczy: obrót o 180 stopni zajmuje ok. 5.2 sekundy (312 klatek przy 60 fps)
+      const maxTurnRate = Math.PI / (5.2 * 60);
       let diff = targetShieldAngle - en.shieldAngle;
       while (diff < -Math.PI) diff += Math.PI * 2;
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -2160,15 +2160,16 @@ function update() {
         if (Math.hypot(b.x - en.x, b.y - en.y) < en.radius + 7) {
           hitEnemy = true;
 
-          // Przeciwnik z tarczą taktyczną: 50% obwodu (łuk 180°) osłonięte tarczą taktyczną
+          // Przeciwnik z tarczą taktyczną: 45% obwodu (łuk 162°: od -81° do +81° od osi) osłonięte tarczą taktyczną
           if (en.kind === 'shield') {
             const hitAngle = Math.atan2(b.y - en.y, b.x - en.x);
             let angleDiff = Math.abs(hitAngle - en.shieldAngle);
             while (angleDiff > Math.PI * 2) angleDiff -= Math.PI * 2;
             if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
-            // Uderzenie od strony tarczy (kąt odchylenia do 90° w obie strony = 180° = 50% obwodu)
-            if (angleDiff <= Math.PI / 2) {
+            // Uderzenie od strony tarczy (45% obwodu = Math.PI * 0.45 radianów = 81° w każdą stronę)
+            const shieldHalfAngle = Math.PI * 0.45;
+            if (angleDiff <= shieldHalfAngle) {
               // Uderzenie markerem od strony tarczy nic mu nie robi!
               playShieldBlockSound();
               addPaintSplat(b.x, b.y, b.color, 12);

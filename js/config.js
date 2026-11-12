@@ -311,10 +311,10 @@ const ENEMY_KIND_INFO = {
     name: '🛡️ Tarcza Taktyczna',
     shortName: 'Tarcza 🛡️',
     icon: '🛡️',
-    badge: '❤️ 3 HP | 🛡️ Tarcza 180° | 🐢 Wolny obrót 4s',
+    badge: '❤️ 3 HP | 🛡️ Tarcza 45% (162°) | 🐢 Wolny obrót 5s',
     badgeColor: '#06b6d4',
-    desc: 'Przeciwnik wyposażony w potężną tarczę zasłaniającą 50% obwodu (180°). Strzały markerem w tarczę nic mu nie robią!',
-    details: 'Posiada 3 HP i porusza się jak zwykły przeciwnik. Obrót tarczy o 180° zajmuje mu aż 4 sekundy! Aby go zranić, zajdź go od nieosłoniętej strony (plecy / flanka) lub użyj min.'
+    desc: 'Przeciwnik wyposażony w potężną tarczę zasłaniającą 45% obwodu (162°). Strzały markerem w tarczę nic mu nie robią!',
+    details: 'Posiada 3 HP i porusza się jak zwykły przeciwnik. Obrót tarczy o 180° zajmuje mu 5 sekund! Aby go zranić, zajdź go od nieosłoniętej strony (plecy / flanka) lub użyj min.'
   },
   boss: {
     key: 'boss',
@@ -459,7 +459,7 @@ function getLevelConfig(lvl) {
     5:  { roster: ['tough'], label: '1x Pancerny 🛡️ (Nowy wróg — 3 HP!)', clouds: 0, civilians: 2 },
     6:  { roster: ['normal', 'tough'], label: '1x Zwykły + 1x 🛡️ Pancerny', clouds: 1, civilians: 2 },
     7:  { roster: ['boss'], label: '1x Boss 👑 (Odporny na miny! Nowy wróg!)', clouds: 0, civilians: 2 },
-    8:  { roster: ['shield'], label: '1x Tarcza Taktyczna 🛡️ (Nowy wróg — osłona 180°, 3 HP!)', clouds: 0, civilians: 1 },
+    8:  { roster: ['shield'], label: '1x Tarcza Taktyczna 🛡️ (Nowy wróg — osłona 45% obwodu, 3 HP!)', clouds: 0, civilians: 1 },
     9:  { roster: ['normal', 'shield'], label: '1x Zwykły + 1x 🛡️ Tarcza Taktyczna', clouds: 1, civilians: 2 },
     10: { roster: ['normal', 'rapid', 'tough'], label: '1x Zwykły + 1x ⚡ + 1x 🛡️ Pancerny', clouds: 2, civilians: 2 },
     11: { roster: ['normal', 'returning_normal'], label: '1x Zwykły + 1x 🔄 Powracający (Nowy wróg — powraca po 10s!)', clouds: 0, civilians: 1 },

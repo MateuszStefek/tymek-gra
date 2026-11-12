@@ -15,4 +15,4 @@
 [DONE] Jesli gracz zabije ostatniego przeciwnika, to chmury znikaja. Chmury nie wracaja po resecie w trakcie czekania na ostatni pocisk (jesli kto powróci)
 [DONE] podswietlenie celownika: domyslny kursor nie jest widoczny. Niech bedzie male kółko pod kursorem, które podswietla.
 [DONE] Nowy przeciwnik: Powracający Profesjonalista (2 HP, strzał z wyprzedzeniem, unikanie strzałów gracza z dystansu, omijanie 50% min, powraca po 15 sekundach).
-[DONE] Nowy przeciwnik: Tarcza Taktyczna (50% obwodu osłonięte tarczą taktyczną, uderzenie markerem od strony tarczy nic mu nie robi, obrót tarczy o 180° trwa 4s, 3 HP, rusza się jak zwykły przeciwnik) + rebalans poziomów kampanii.
+[DONE] Nowy przeciwnik: Tarcza Taktyczna (45% obwodu osłonięte tarczą taktyczną - łuk 162°, uderzenie markerem od strony tarczy nic mu nie robi, obrót tarczy o 180° trwa 5.2s, 3 HP, rusza się jak zwykły przeciwnik) + rebalans poziomów kampanii.

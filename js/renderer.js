@@ -250,16 +250,18 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
 
   ctx.restore();
 
-  // Rysowanie Tarczy Taktycznej (osłona 180° = 50% obwodu)
+  // Rysowanie Tarczy Taktycznej (osłona 45% obwodu = 162°: od -81° do +81° od osi)
   if (isShieldKind) {
     ctx.save();
     const sAngle = typeof enemyObj.shieldAngle === 'number' ? enemyObj.shieldAngle : aimAngle;
     ctx.rotate(sAngle);
 
     const shieldR = 21;
+    const arcHalf = Math.PI * 0.45; // 45% obwodu (162 stopnie)
+
     // Cień krawędzi tarczy
     ctx.beginPath();
-    ctx.arc(0, 0, shieldR + 1, -Math.PI / 2, Math.PI / 2);
+    ctx.arc(0, 0, shieldR + 1, -arcHalf, arcHalf);
     ctx.lineWidth = 9;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.lineCap = 'round';
@@ -267,7 +269,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
 
     // Masywna balistyczna osłona kompozytowa
     ctx.beginPath();
-    ctx.arc(0, 0, shieldR, -Math.PI / 2, Math.PI / 2);
+    ctx.arc(0, 0, shieldR, -arcHalf, arcHalf);
     ctx.lineWidth = 7.5;
     ctx.strokeStyle = '#0f172a';
     ctx.lineCap = 'round';
@@ -275,7 +277,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
 
     // Pancerz w kolorze taktycznego błękitu
     ctx.beginPath();
-    ctx.arc(0, 0, shieldR, -Math.PI / 2, Math.PI / 2);
+    ctx.arc(0, 0, shieldR, -arcHalf, arcHalf);
     ctx.lineWidth = 5;
     ctx.strokeStyle = '#0284c7';
     ctx.lineCap = 'round';
@@ -289,10 +291,14 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Znaczniki taktyczne po bokach osłony
+    // Znaczniki taktyczne na krawędziach łuku tarczy
     ctx.fillStyle = '#fde047';
-    ctx.fillRect(shieldR - 3.5, -13, 3, 3.5);
-    ctx.fillRect(shieldR - 3.5, 9.5, 3, 3.5);
+    const tag1X = Math.cos(-arcHalf * 0.88) * shieldR;
+    const tag1Y = Math.sin(-arcHalf * 0.88) * shieldR;
+    const tag2X = Math.cos(arcHalf * 0.88) * shieldR;
+    const tag2Y = Math.sin(arcHalf * 0.88) * shieldR;
+    ctx.fillRect(tag1X - 2, tag1Y - 2, 4, 4);
+    ctx.fillRect(tag2X - 2, tag2Y - 2, 4, 4);
 
     ctx.restore();
   }
