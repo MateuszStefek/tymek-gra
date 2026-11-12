@@ -73,7 +73,7 @@ function resizeGameLayout() {
     topbarEl.style.width = `${availW}px`;
   }
   const topbarH = topbarEl ? topbarEl.offsetHeight : 80;
-  const hintH = hintEl ? hintEl.offsetHeight + 8 : 26;
+  const hintH = hintEl && hintEl.offsetParent !== null ? hintEl.offsetHeight + 8 : 0;
   const availH = Math.max(260, window.innerHeight - topbarH - hintH - padY);
 
   let targetW = availW;

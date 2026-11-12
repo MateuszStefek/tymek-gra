@@ -393,11 +393,7 @@ button:disabled, .level-card.guard-wait {
   font-weight: 700;
   width: 240px;
 }
-#hint {
-  margin-top: 8px;
-  color: #94a3b8;
-  font-size: 13px;
-}
+
 .shop-tree {
   display: flex;
   flex-direction: column;
@@ -683,16 +679,10 @@ button:disabled, .level-card.guard-wait {
   .stats span {
     font-size: 14px;
   }
-  #hint {
-    display: none;
-  }
 }
 
 @media (max-height: 650px) {
   .topbar {
     padding: 4px 8px;
-  }
-  #hint {
-    display: none;
   }
 }
