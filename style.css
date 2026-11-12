@@ -547,28 +547,29 @@ button:disabled, .level-card.guard-wait {
 
 /* --- KONTROLKI DOTYKOWE NA TABLETY / SMARTFONY --- */
 .touch-controls {
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 40;
+  z-index: 900;
 }
 .touch-controls.hidden {
   display: none !important;
 }
 
 .joystick-base {
-  position: absolute;
+  position: fixed;
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(15, 23, 42, 0.5) 100%);
-  border: 2.5px solid rgba(56, 189, 248, 0.6);
-  box-shadow: 0 0 25px rgba(56, 189, 248, 0.35);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 2.5px solid rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.45);
   transform: translate(-50%, -50%);
   pointer-events: none;
   display: none;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+  z-index: 905;
 }
 
 .joystick-thumb {
@@ -578,7 +579,7 @@ button:disabled, .level-card.guard-wait {
   border-radius: 50%;
   background: radial-gradient(circle, #38bdf8 0%, #0284c7 100%);
   border: 2.5px solid #ffffff;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.95);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -586,13 +587,14 @@ button:disabled, .level-card.guard-wait {
 }
 
 .touch-action-group {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  right: max(18px, env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   pointer-events: auto;
+  z-index: 910;
 }
 
 .touch-action-btn {

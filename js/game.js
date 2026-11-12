@@ -1213,6 +1213,11 @@ function handleCanvasTouchStart(e) {
     if (touchControls) touchControls.classList.remove('hidden');
   }
 
+  // Nie przechwytuj dotknięć w przyciski górnego paska, nakładki menu, przyciski akcji ani formularze
+  if (e.target.closest('button, .topbar, .overlay, .popup-backdrop, input, a, .touch-action-btn')) {
+    return;
+  }
+
   if (gameState === 'paused') {
     togglePause();
     e.preventDefault();
@@ -1222,18 +1227,19 @@ function handleCanvasTouchStart(e) {
   e.preventDefault();
 
   const rect = canvas.getBoundingClientRect();
+  const screenMidX = Math.max(rect.left + rect.width * 0.45, window.innerWidth * 0.48);
+
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
-    const relX = (t.clientX - rect.left) / rect.width;
-    const canvasX = (t.clientX - rect.left) * (canvas.width / rect.width);
-    const canvasY = (t.clientY - rect.top) * (canvas.height / rect.height);
+    const clientX = t.clientX;
+    const clientY = t.clientY;
 
-    // Lewa strona ekranu (<= 45% szerokości) steruje ruchem gracza (joystick)
-    if (relX <= 0.45 && touchJoystick.identifier === null) {
+    // Lewa strona ekranu (także w marginesie poza planszą!) steruje ruchem gracza (joystick)
+    if (clientX < screenMidX && touchJoystick.identifier === null) {
       touchJoystick.active = true;
       touchJoystick.identifier = t.identifier;
-      touchJoystick.baseX = t.clientX - rect.left;
-      touchJoystick.baseY = t.clientY - rect.top;
+      touchJoystick.baseX = clientX;
+      touchJoystick.baseY = clientY;
       touchJoystick.dx = 0;
       touchJoystick.dy = 0;
 
@@ -1245,13 +1251,15 @@ function handleCanvasTouchStart(e) {
         joystickBase.style.display = 'block';
       }
     } else if (touchAimId === null) {
-      // Prawa strona: celowanie i strzał
+      // Prawa strona ekranu: celowanie i strzał
       touchAimId = t.identifier;
-      mouse.x = canvasX;
-      mouse.y = canvasY;
+      const canvasX = (clientX - rect.left) * (canvas.width / rect.width);
+      const canvasY = (clientY - rect.top) * (canvas.height / rect.height);
+      mouse.x = Math.max(0, Math.min(canvas.width, canvasX));
+      mouse.y = Math.max(0, Math.min(canvas.height, canvasY));
       mouse.active = true;
       mouse.down = true;
-      const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      const angle = Math.atan2(canvasY - player.y, canvasX - player.x);
       firePlayerWeapon(player.x, player.y, angle);
     }
   }
@@ -1265,8 +1273,8 @@ function handleCanvasTouchMove(e) {
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
     if (t.identifier === touchJoystick.identifier) {
-      const curX = t.clientX - rect.left;
-      const curY = t.clientY - rect.top;
+      const curX = t.clientX;
+      const curY = t.clientY;
       const diffX = curX - touchJoystick.baseX;
       const diffY = curY - touchJoystick.baseY;
       const dist = Math.hypot(diffX, diffY);
@@ -1286,8 +1294,8 @@ function handleCanvasTouchMove(e) {
     } else if (t.identifier === touchAimId) {
       const canvasX = (t.clientX - rect.left) * (canvas.width / rect.width);
       const canvasY = (t.clientY - rect.top) * (canvas.height / rect.height);
-      mouse.x = canvasX;
-      mouse.y = canvasY;
+      mouse.x = Math.max(0, Math.min(canvas.width, canvasX));
+      mouse.y = Math.max(0, Math.min(canvas.height, canvasY));
       mouse.active = true;
     }
   }
@@ -1311,7 +1319,7 @@ function handleCanvasTouchEnd(e) {
   }
 }
 
-canvas.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
+window.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
 window.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
 window.addEventListener('touchend', handleCanvasTouchEnd, { passive: false });
 window.addEventListener('touchcancel', handleCanvasTouchEnd, { passive: false });
