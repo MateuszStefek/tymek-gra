@@ -27,10 +27,31 @@ const btnPrevLevel = document.getElementById('btnPrevLevel');
 const btnNextLevel = document.getElementById('btnNextLevel');
 const btnPlaceMine = document.getElementById('btnPlaceMine');
 const btnRetry = document.getElementById('btnRetry');
+const btnFullscreen = document.getElementById('btnFullscreen');
 const btnFollowMouse = document.getElementById('btnFollowMouse');
 const btnTheme = document.getElementById('btnTheme');
 const btnOpenSettings = document.getElementById('btnOpenSettings');
 const topbarEl = document.querySelector('.topbar');
+
+// Elementy sterowania dotykowego (tablety / telefony)
+const touchControls = document.getElementById('touchControls');
+const joystickBase = document.getElementById('joystickBase');
+const joystickThumb = document.getElementById('joystickThumb');
+const touchBtnWeapon = document.getElementById('touchBtnWeapon');
+const touchBtnMine = document.getElementById('touchBtnMine');
+const touchMineBadge = document.getElementById('touchMineBadge');
+
+const touchJoystick = {
+  active: false,
+  identifier: null,
+  baseX: 0,
+  baseY: 0,
+  dx: 0,
+  dy: 0,
+  radius: 50
+};
+let touchAimId = null;
+let isTouchDevice = false;
 
 const menuOverlay = document.getElementById('menuOverlay');
 const menuTitle = document.getElementById('menuTitle');

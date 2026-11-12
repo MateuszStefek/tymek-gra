@@ -1118,8 +1118,203 @@ btnNextLevel.addEventListener('click', () => {
 });
 
 btnPlaceMine.addEventListener('click', placeMine);
-btnFollowMouse.addEventListener('click', toggleFollowMouse);
+if (btnFollowMouse) btnFollowMouse.addEventListener('click', toggleFollowMouse);
 if (btnTheme) btnTheme.addEventListener('click', cycleGraphicTheme);
+
+function toggleFullscreen() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  if (!isFs) {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch(() => {});
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    } else if (elem.mozRequestFullScreen) {
+      elem.mozRequestFullScreen();
+    } else if (elem.msRequestFullscreen) {
+      elem.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+function updateFullscreenButton() {
+  if (!btnFullscreen) return;
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  btnFullscreen.textContent = isFs ? '🗗 Wyjdź z pełnego ekranu' : '⛶ Pełny ekran';
+  btnFullscreen.classList.toggle('active', isFs);
+}
+
+if (btnFullscreen) {
+  btnFullscreen.addEventListener('click', toggleFullscreen);
+}
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+
+// Wykrywanie urządzeń dotykowych i inicjalizacja kontrolek
+function checkTouchSupport() {
+  if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) {
+    isTouchDevice = true;
+    if (touchControls) touchControls.classList.remove('hidden');
+  }
+}
+checkTouchSupport();
+
+// Odblokowanie Web Audio API na iOS Safari przy pierwszym dotknięciu
+window.addEventListener('touchstart', () => {
+  ensureAudio();
+  if (!isTouchDevice) {
+    isTouchDevice = true;
+    if (touchControls) touchControls.classList.remove('hidden');
+  }
+}, { passive: true });
+
+// Przyciski akcji na ekranie dotykowym
+if (touchBtnMine) {
+  touchBtnMine.addEventListener('touchstart', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    ensureAudio();
+    if (gameState === 'playing') placeMine();
+  }, { passive: false });
+  touchBtnMine.addEventListener('click', e => {
+    e.preventDefault();
+    if (gameState === 'playing') placeMine();
+  });
+}
+
+if (touchBtnWeapon) {
+  touchBtnWeapon.addEventListener('touchstart', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    ensureAudio();
+    switchWeaponInStage();
+  }, { passive: false });
+  touchBtnWeapon.addEventListener('click', e => {
+    e.preventDefault();
+    switchWeaponInStage();
+  });
+}
+
+// Obsługa multi-touch (lewa ręka: joystick, prawa ręka: celowanie i strzelanie)
+function handleCanvasTouchStart(e) {
+  ensureAudio();
+  if (!isTouchDevice) {
+    isTouchDevice = true;
+    if (touchControls) touchControls.classList.remove('hidden');
+  }
+
+  if (gameState === 'paused') {
+    togglePause();
+    e.preventDefault();
+    return;
+  }
+  if (gameState !== 'playing') return;
+  e.preventDefault();
+
+  const rect = canvas.getBoundingClientRect();
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    const relX = (t.clientX - rect.left) / rect.width;
+    const canvasX = (t.clientX - rect.left) * (canvas.width / rect.width);
+    const canvasY = (t.clientY - rect.top) * (canvas.height / rect.height);
+
+    // Lewa strona ekranu (<= 45% szerokości) steruje ruchem gracza (joystick)
+    if (relX <= 0.45 && touchJoystick.identifier === null) {
+      touchJoystick.active = true;
+      touchJoystick.identifier = t.identifier;
+      touchJoystick.baseX = t.clientX - rect.left;
+      touchJoystick.baseY = t.clientY - rect.top;
+      touchJoystick.dx = 0;
+      touchJoystick.dy = 0;
+
+      if (joystickBase && joystickThumb) {
+        joystickBase.style.left = touchJoystick.baseX + 'px';
+        joystickBase.style.top = touchJoystick.baseY + 'px';
+        joystickThumb.style.left = '50%';
+        joystickThumb.style.top = '50%';
+        joystickBase.style.display = 'block';
+      }
+    } else if (touchAimId === null) {
+      // Prawa strona: celowanie i strzał
+      touchAimId = t.identifier;
+      mouse.x = canvasX;
+      mouse.y = canvasY;
+      mouse.active = true;
+      mouse.down = true;
+      const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      firePlayerWeapon(player.x, player.y, angle);
+    }
+  }
+}
+
+function handleCanvasTouchMove(e) {
+  if (touchJoystick.identifier === null && touchAimId === null) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === touchJoystick.identifier) {
+      const curX = t.clientX - rect.left;
+      const curY = t.clientY - rect.top;
+      const diffX = curX - touchJoystick.baseX;
+      const diffY = curY - touchJoystick.baseY;
+      const dist = Math.hypot(diffX, diffY);
+      const maxR = touchJoystick.radius;
+      const clampedDist = Math.min(dist, maxR);
+      const angle = Math.atan2(diffY, diffX);
+      const defX = Math.cos(angle) * clampedDist;
+      const defY = Math.sin(angle) * clampedDist;
+
+      touchJoystick.dx = defX / maxR;
+      touchJoystick.dy = defY / maxR;
+
+      if (joystickThumb) {
+        joystickThumb.style.left = `calc(50% + ${defX}px)`;
+        joystickThumb.style.top = `calc(50% + ${defY}px)`;
+      }
+    } else if (t.identifier === touchAimId) {
+      const canvasX = (t.clientX - rect.left) * (canvas.width / rect.width);
+      const canvasY = (t.clientY - rect.top) * (canvas.height / rect.height);
+      mouse.x = canvasX;
+      mouse.y = canvasY;
+      mouse.active = true;
+    }
+  }
+}
+
+function handleCanvasTouchEnd(e) {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === touchJoystick.identifier) {
+      touchJoystick.active = false;
+      touchJoystick.identifier = null;
+      touchJoystick.dx = 0;
+      touchJoystick.dy = 0;
+      if (joystickBase) joystickBase.style.display = 'none';
+    }
+    if (t.identifier === touchAimId) {
+      touchAimId = null;
+      mouse.down = false;
+      pointerReleasedAfterMenuOpen = true;
+    }
+  }
+}
+
+canvas.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
+window.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
+window.addEventListener('touchend', handleCanvasTouchEnd, { passive: false });
+window.addEventListener('touchcancel', handleCanvasTouchEnd, { passive: false });
 
 btnRetry.addEventListener('click', () => {
   if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);
@@ -1254,6 +1449,11 @@ function update() {
   if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
 
+  if (touchJoystick.active) {
+    dx += touchJoystick.dx;
+    dy += touchJoystick.dy;
+  }
+
   if (dx === 0 && dy === 0 && followMouse && mouse.active) {
     const distToMouse = Math.hypot(mouse.x - player.x, mouse.y - player.y);
     if (distToMouse > 45) {
@@ -1264,14 +1464,19 @@ function update() {
 
   if (dx !== 0 || dy !== 0) {
     const len = Math.hypot(dx, dy);
-    const nx = player.x + (dx / len) * player.speed;
-    const ny = player.y + (dy / len) * player.speed;
+    const speedFactor = touchJoystick.active && !keys['KeyW'] && !keys['KeyS'] && !keys['KeyA'] && !keys['KeyD'] ? Math.min(1, len) : 1;
+    const nx = player.x + (dx / len) * player.speed * speedFactor;
+    const ny = player.y + (dy / len) * player.speed * speedFactor;
     if (canMoveTo(nx, player.y, player.radius)) player.x = nx;
     if (canMoveTo(player.x, ny, player.radius)) player.y = ny;
-    player.walkCycle += 0.26;
+    player.walkCycle += 0.26 * speedFactor;
   }
 
-  player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+  if (touchAimId !== null || !touchJoystick.active || mouse.down) {
+    player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+  } else if (touchJoystick.active && (touchJoystick.dx !== 0 || touchJoystick.dy !== 0)) {
+    player.angle = Math.atan2(touchJoystick.dy, touchJoystick.dx);
+  }
 
   if (player.cooldown > 0) player.cooldown--;
   if (mouse.down && player.cooldown <= 0) {

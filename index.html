@@ -2,7 +2,9 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Paintball Arena - Poziomy i Miny</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -18,7 +20,7 @@
       <button id="btnPrevLevel" title="Poprzedni poziom">⬅️</button>
       <button id="btnNextLevel" title="Następny odblokowany poziom">➡️</button>
       <button id="btnPlaceMine" class="mine-btn">💣 Postaw minę: 2 [PPM / SPACJA]</button>
-      <button id="btnFollowMouse" class="active">🏃 Ruch za myszką: WŁ [Klawisz F]</button>
+      <button id="btnFullscreen" title="Przełącz pełny ekran">⛶ Pełny ekran</button>
       <button id="btnTheme" title="Zmień motyw graficzny [Klawisz T]">🎨 Motyw: 🌿 Klasyczny</button>
       <button id="btnOpenSettings" title="Otwórz ekran ustawień">⚙️ Ustawienia</button>
       <button id="btnRetry">🔄 Powtórz</button>
@@ -39,6 +41,20 @@
 
   <div class="game-wrapper">
     <canvas id="gameCanvas" width="940" height="560" tabindex="0"></canvas>
+
+    <!-- Dotykowy joystick i przyciski akcji dla tabletów/smartfonów -->
+    <div id="touchControls" class="touch-controls hidden">
+      <div id="joystickBase" class="joystick-base">
+        <div id="joystickThumb" class="joystick-thumb"></div>
+      </div>
+      <div class="touch-action-group">
+        <button id="touchBtnWeapon" class="touch-action-btn touch-btn-weapon" title="Zmień broń" aria-label="Zmień broń">🔫</button>
+        <button id="touchBtnMine" class="touch-action-btn touch-btn-mine" title="Postaw minę" aria-label="Postaw minę">
+          <span class="touch-btn-icon">💣</span>
+          <span id="touchMineBadge" class="touch-badge">2</span>
+        </button>
+      </div>
+    </div>
 
     <div id="menuOverlay" class="overlay hidden">
       <h1 id="menuTitle">📋 WYBIERZ POZIOM (ETAP)</h1>

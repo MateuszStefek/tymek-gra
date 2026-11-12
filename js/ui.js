@@ -159,6 +159,11 @@ function updateHud() {
   minesText.textContent = minesCount;
   btnPlaceMine.textContent = `💣 Postaw minę: ${minesCount} [PPM / SPACJA]`;
   btnPlaceMine.disabled = minesCount <= 0;
+  if (touchMineBadge) touchMineBadge.textContent = minesCount;
+  if (touchBtnMine) touchBtnMine.disabled = minesCount <= 0;
+  if (touchBtnWeapon) {
+    touchBtnWeapon.textContent = player.weapon === 'bazooka' ? '🚀' : '🔫';
+  }
   hpText.textContent = `${hp}/${player.maxHp}`;
   hpFill.style.width = pct + '%';
   hpFill.style.backgroundColor = pct > 50 ? '#22c55e' : (pct > 25 ? '#facc15' : '#ef4444');
@@ -934,6 +939,14 @@ function openResultPopup(mode) {
   // Blokada zapobiegająca przypadkowemu kliknięciu (1.6s opóźnienia + wymóg puszczenia przycisku myszy)
   pointerReleasedAfterMenuOpen = !mouse.down;
   mouse.down = false;
+  if (touchJoystick) {
+    touchJoystick.active = false;
+    touchJoystick.identifier = null;
+    touchJoystick.dx = 0;
+    touchJoystick.dy = 0;
+  }
+  if (joystickBase) joystickBase.style.display = 'none';
+  touchAimId = null;
   menuPointerArmed = false;
   menuReadyAt = performance.now() + 1600;
 
@@ -1050,6 +1063,14 @@ function openMenu(mode = 'select') {
   }
   pointerReleasedAfterMenuOpen = true;
   mouse.down = false;
+  if (touchJoystick) {
+    touchJoystick.active = false;
+    touchJoystick.identifier = null;
+    touchJoystick.dx = 0;
+    touchJoystick.dy = 0;
+  }
+  if (joystickBase) joystickBase.style.display = 'none';
+  touchAimId = null;
   menuPointerArmed = false;
   menuReadyAt = 0;
 
