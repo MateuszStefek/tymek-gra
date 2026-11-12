@@ -1162,7 +1162,9 @@ document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
 
 // Wykrywanie urządzeń dotykowych i inicjalizacja kontrolek
 function checkTouchSupport() {
-  if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) {
+  const isPureTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) &&
+    !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (isPureTouch) {
     isTouchDevice = true;
     if (touchControls) touchControls.classList.remove('hidden');
   }
@@ -1172,10 +1174,8 @@ checkTouchSupport();
 // Odblokowanie Web Audio API na iOS Safari przy pierwszym dotknięciu
 window.addEventListener('touchstart', () => {
   ensureAudio();
-  if (!isTouchDevice) {
-    isTouchDevice = true;
-    if (touchControls) touchControls.classList.remove('hidden');
-  }
+  isTouchDevice = true;
+  if (touchControls) touchControls.classList.remove('hidden');
 }, { passive: true });
 
 // Przyciski akcji na ekranie dotykowym

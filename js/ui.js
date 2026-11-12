@@ -23,6 +23,7 @@ function canActivateMenuAction() {
 }
 
 function updateFollowButtonUI() {
+  if (!btnFollowMouse) return;
   btnFollowMouse.classList.toggle('active', followMouse);
   btnFollowMouse.textContent = followMouse
     ? '🏃 Ruch za myszką: WŁ [Klawisz F]'
