@@ -586,70 +586,49 @@ function renderShopWeapons() {
     shopWeaponsGrid.appendChild(trackEl);
   });
 
-  // Tor Wzmocnienia Życia (HP)
-  const hpUpgrades = hpTrackConfig.upgrades || [];
-  let lastOwnedHpUpg = null;
-  let nextHpUpg = null;
-  for (let i = 0; i < hpUpgrades.length; i++) {
-    if (ownedUpgrades.includes(hpUpgrades[i].id)) {
-      lastOwnedHpUpg = hpUpgrades[i];
-    } else if (!nextHpUpg) {
-      nextHpUpg = hpUpgrades[i];
-    }
-  }
+  // Tor Wzmocnienia Życia (HP) — nieskończony: każdy poziom +5 max HP, cena rośnie ciągiem Fibonacciego (1, 2, 3, 5, 8...)
+  const hpNextLvl = hpLevel + 1;
+  const hpNextCost = getFibonacciCost(hpNextLvl);
 
   const hpCurrentNode = document.createElement('div');
   hpCurrentNode.className = 'tree-node owned last-owned';
   hpCurrentNode.innerHTML = `
     <div>
-      <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN</div>
-      <div class="lvl-title" style="font-size:15px;">${lastOwnedHpUpg ? lastOwnedHpUpg.name : hpTrackConfig.baseName}</div>
-      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${lastOwnedHpUpg ? lastOwnedHpUpg.desc : hpTrackConfig.baseDesc}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Aktualny start: ${getStartingMaxHp()} HP</div>
+      <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN (POZIOM ${hpLevel})</div>
+      <div class="lvl-title" style="font-size:15px;">❤️ Zdrowie: ${getStartingMaxHp()} HP</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${hpLevel === 0 ? hpTrackConfig.baseDesc : `Kupiono ${hpLevel} wzmocnień życia (+${hpLevel * 5} HP do bazowych 200 HP).`}</div>
     </div>
   `;
 
   const hpNextNode = document.createElement('div');
-  if (nextHpUpg) {
-    const isFirstHpUnlock = !lastOwnedHpUpg;
-    hpNextNode.className = 'tree-node next-unlock';
-    hpNextNode.innerHTML = `
-      <div>
-        <div style="font-size:10px;font-weight:900;color:#facc15;">${isFirstHpUnlock ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
-        <div class="lvl-title" style="font-size:15px;">${nextHpUpg.name}</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${nextHpUpg.desc}</div>
-        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${nextHpUpg.effectLabel}</div>
-      </div>
-      <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
-    `;
-    const btnWrap = hpNextNode.querySelector('.custom-card-btns');
-    const btnBuyHp = document.createElement('button');
-    btnBuyHp.className = 'btn-green';
-    btnBuyHp.disabled = diamonds < nextHpUpg.cost;
-    btnBuyHp.textContent = diamonds >= nextHpUpg.cost
-      ? `🛒 ${isFirstHpUnlock ? 'Odblokuj tor' : 'Kup wzmocnienie'} (${nextHpUpg.cost} 💎)`
-      : `🔒 Brak 💎 (${diamonds}/${nextHpUpg.cost})`;
-    btnBuyHp.onclick = () => {
-      if (diamonds < nextHpUpg.cost) return;
-      diamonds -= nextHpUpg.cost;
-      if (!ownedUpgrades.includes(nextHpUpg.id)) ownedUpgrades.push(nextHpUpg.id);
-      player.maxHp = getStartingMaxHp();
-      player.hp = Math.min(player.maxHp, player.hp + (nextHpUpg.bonusHp || 5));
-      saveProgress();
-      updateHud();
-      renderShopWeapons();
-    };
-    btnWrap.appendChild(btnBuyHp);
-  } else {
-    hpNextNode.className = 'tree-node owned';
-    hpNextNode.innerHTML = `
-      <div>
-        <div style="font-size:10px;font-weight:900;color:#4ade80;">🏆 MAKSYMALNY POZIOM</div>
-        <div class="lvl-title" style="font-size:15px;">Wszystkie wzmocnienia HP kupione!</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Twoje startowe zdrowie wynosi maksymalne ${getStartingMaxHp()} HP.</div>
-      </div>
-    `;
-  }
+  hpNextNode.className = 'tree-node next-unlock';
+  hpNextNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA</div>
+      <div class="lvl-title" style="font-size:15px;">🛡️ Wzmocnienie Życia ${hpNextLvl} (+5 HP)</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Kolejne +5 maksymalnego HP na start każdej rundy. Tor bez limitu!</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Startowe HP: ${getStartingMaxHp()} ➡️ ${getStartingMaxHp() + 5} HP</div>
+    </div>
+    <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+  `;
+  const hpBtnWrap = hpNextNode.querySelector('.custom-card-btns');
+  const btnBuyHp = document.createElement('button');
+  btnBuyHp.className = 'btn-green';
+  btnBuyHp.disabled = diamonds < hpNextCost;
+  btnBuyHp.textContent = diamonds >= hpNextCost
+    ? `🛒 Kup wzmocnienie (${hpNextCost} 💎)`
+    : `🔒 Brak 💎 (${diamonds}/${hpNextCost})`;
+  btnBuyHp.onclick = () => {
+    if (diamonds < hpNextCost) return;
+    diamonds -= hpNextCost;
+    hpLevel = hpNextLvl;
+    player.maxHp = getStartingMaxHp();
+    player.hp = Math.min(player.maxHp, player.hp + 5);
+    saveProgress();
+    updateHud();
+    renderShopWeapons();
+  };
+  hpBtnWrap.appendChild(btnBuyHp);
 
   shopWeaponsGrid.appendChild(
     renderHorizontalTrack(

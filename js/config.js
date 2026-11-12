@@ -112,8 +112,12 @@ function getAverageHealingPerSecond(maxLevel) {
   return sum;
 }
 
-// Ceny kolejnych poziomów leczenia rosną ciągiem Fibonacciego: 1, 2, 3, 5, 8, 13, 21...
+// Ceny kolejnych poziomów w torach nieskończonych rosną ciągiem Fibonacciego: 1, 2, 3, 5, 8, 13, 21...
 function getHealingUpgradeCost(targetLevel) {
+  return getFibonacciCost(targetLevel);
+}
+
+function getFibonacciCost(targetLevel) {
   let a = 1;
   let b = 2;
   if (targetLevel <= 1) return a;
