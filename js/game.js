@@ -313,7 +313,11 @@ function spawnEnemyAt(x, y, kind = 'normal', index = 0) {
     repositionTarget: null,
     orbitSign: Math.random() < 0.5 ? 1 : -1,
     shootTimer: stats.shootTimer,
-    mineTimer: 15 * 60
+    mineTimer: 15 * 60,
+    dodgeTimer: 0,
+    dodgeVx: 0,
+    dodgeVy: 0,
+    dodgeSign: Math.random() < 0.5 ? 1 : -1
   });
 }
 
@@ -500,11 +504,32 @@ function steerAwayFromMines(en) {
 
 // Profesjonalista unika wejścia na linię strzału gracza, jeśli punkt startu naboju wynosi co najmniej 25% ekranu
 function steerAwayFromPlayerBullets(en) {
+  // Jeśli przeciwnik jest już w trakcie zdecydowanego uniku w wybraną stronę, kontynuuj ten manewr bez drgania
+  if (en.dodgeTimer > 0) {
+    en.dodgeTimer--;
+    if (canMoveTo(en.x + en.dodgeVx, en.y + en.dodgeVy, en.radius)) {
+      en.vx = en.dodgeVx;
+      en.vy = en.dodgeVy;
+      return;
+    } else {
+      // Uderzył w ścianę podczas uniku — spróbuj odwrócić unik w przeciwną stronę
+      en.dodgeVx *= -1;
+      en.dodgeVy *= -1;
+      en.dodgeSign = -(en.dodgeSign || 1);
+      if (canMoveTo(en.x + en.dodgeVx, en.y + en.dodgeVy, en.radius)) {
+        en.vx = en.dodgeVx;
+        en.vy = en.dodgeVy;
+        return;
+      }
+      en.dodgeTimer = 0;
+    }
+  }
+
   const minStartDist = canvas.width * 0.25; // 25% szerokości ekranu (~235 px)
   let mostThreateningBullet = null;
   let minTimeToImpact = Infinity;
-  let threatNormalX = 0;
-  let threatNormalY = 0;
+  let chosenNormalX = 0;
+  let chosenNormalY = 0;
 
   for (const b of bullets) {
     if (!b.fromPlayer) continue;
@@ -527,40 +552,45 @@ function steerAwayFromPlayerBullets(en) {
     const closestY = b.y + (b.vy / bSpeed) * proj;
     const distToLine = Math.hypot(en.x - closestX, en.y - closestY);
 
-    const safeMargin = en.radius + 28; // Korytarz bezpieczeństwa od toru lotu
+    const safeMargin = en.radius + 30; // Korytarz bezpieczeństwa od toru lotu
     if (distToLine < safeMargin) {
       const timeToImpact = proj / bSpeed;
       if (timeToImpact < minTimeToImpact) {
         minTimeToImpact = timeToImpact;
         mostThreateningBullet = b;
-        // Wektor prostopadły do linii strzału (odsuwający z toru)
-        const cross = dx * b.vy - dy * b.vx;
+
+        // Wektor prostopadły do linii strzału (kierunek w bok)
         const nx = -b.vy / bSpeed;
         const ny = b.vx / bSpeed;
-        const sign = cross >= 0 ? 1 : -1;
-        threatNormalX = nx * sign;
-        threatNormalY = ny * sign;
+
+        const cross = dx * b.vy - dy * b.vx;
+        // Gdy strzał leci idealnie w niego (|cross| < 5), trzymaj się wybranej strony zamiast losowo drgać!
+        let side = en.dodgeSign || 1;
+        if (Math.abs(cross) >= 5) {
+          side = cross > 0 ? 1 : -1;
+        }
+
+        // Sprawdź czy wybrana strona nie jest zablokowana przez ścianę
+        if (!canMoveTo(en.x + (nx * side) * 26, en.y + (ny * side) * 26, en.radius)) {
+          side = -side;
+        }
+
+        en.dodgeSign = side;
+        chosenNormalX = nx * side;
+        chosenNormalY = ny * side;
       }
     }
   }
 
   if (!mostThreateningBullet) return;
 
-  // Sprawdź czy kierunek uniku nie prowadzi od razu w przeszkodę
-  let dodgeX = threatNormalX;
-  let dodgeY = threatNormalY;
-  const testDist = 24;
-  if (!canMoveTo(en.x + dodgeX * testDist, en.y + dodgeY * testDist, en.radius)) {
-    if (canMoveTo(en.x - dodgeX * testDist, en.y - dodgeY * testDist, en.radius)) {
-      dodgeX = -dodgeX;
-      dodgeY = -dodgeY;
-    }
-  }
-
-  const dodgeSpeed = Math.max(en.speed * 1.35, 2.5);
-  en.vx = dodgeX * dodgeSpeed;
-  en.vy = dodgeY * dodgeSpeed;
-  en.changeDirTimer = Math.max(en.changeDirTimer, 14);
+  const dodgeSpeed = Math.max(en.speed * 1.45, 2.7);
+  en.dodgeVx = chosenNormalX * dodgeSpeed;
+  en.dodgeVy = chosenNormalY * dodgeSpeed;
+  en.dodgeTimer = 22; // Trzymaj wybrany kierunek uniku przez 22 klatki (~0.37s)
+  en.vx = en.dodgeVx;
+  en.vy = en.dodgeVy;
+  en.changeDirTimer = Math.max(en.changeDirTimer, 24);
 }
 
 // Aktualizacja min podkładacza; zwraca true, jeśli gracz zginął (przerwij dalszą aktualizację klatki)
@@ -1803,13 +1833,13 @@ function update() {
     const ny = en.y + en.vy;
     if (canMoveTo(nx, en.y, en.radius)) {
       en.x = nx;
-    } else if (en.aiState !== 'repositioning') {
+    } else if (en.aiState !== 'repositioning' && (!en.dodgeTimer || en.dodgeTimer <= 0)) {
       en.vx *= -1;
       en.vy += (Math.random() - 0.5) * en.speed;
     }
     if (canMoveTo(en.x, ny, en.radius)) {
       en.y = ny;
-    } else if (en.aiState !== 'repositioning') {
+    } else if (en.aiState !== 'repositioning' && (!en.dodgeTimer || en.dodgeTimer <= 0)) {
       en.vy *= -1;
       en.vx += (Math.random() - 0.5) * en.speed;
     }
