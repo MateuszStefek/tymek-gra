@@ -553,6 +553,7 @@ function startLevel(targetLevel) {
   player.hp = player.maxHp;
   player.hpRegenTimer = 0;
   player.healTimers = [];
+  player.ammoRegenTimer = 0;
   player.ammo = getStartingAmmo(); // Zaczynamy poziom od 30 nabojów (lub 40 z ulepszeniem)
   player.rockets = getStartingRockets(); // Standardowa bazooka: 3 rakiety na starcie (5 po wzmocnieniu ze sklepu)
   player.emptyBazookaTries = 0;
@@ -637,6 +638,7 @@ function startCustomMap(idx) {
   player.hp = player.maxHp;
   player.hpRegenTimer = 0;
   player.healTimers = [];
+  player.ammoRegenTimer = 0;
   player.ammo = getStartingAmmo();
   player.rockets = getStartingRockets();
   player.emptyBazookaTries = 0;
@@ -1446,6 +1448,23 @@ function update() {
     }
   } else {
     player.healTimers = [];
+  }
+
+  // Tor uzupełniania nabojów: co 5 sekund gracz otrzymuje +ammoRegenLevel nabojów
+  if (ammoRegenLevel > 0) {
+    player.ammoRegenTimer = (player.ammoRegenTimer || 0) + 1;
+    if (player.ammoRegenTimer >= 5 * 60) {
+      player.ammoRegenTimer = 0;
+      player.ammo += ammoRegenLevel;
+      popups.push({
+        x: player.x,
+        y: player.y - 26,
+        text: `+${ammoRegenLevel} NABOJÓW! 🎨`,
+        color: '#38bdf8',
+        alpha: 1
+      });
+      updateHud();
+    }
   }
 
   if (player.hitFlash > 0) player.hitFlash--;

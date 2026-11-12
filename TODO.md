@@ -1,5 +1,5 @@
-Tor wzmocnienia zycia:wmocnienia zycia maksymalnego: Niech cena rosnie fibbonaccim. Za kazde 5 max hp kolejny fibonacci. Bez limitu.
-Nowy tor: uzupelnienia nabojow: nieskonczony tor z 1 naboj na 5 sekund. Ceny rosna fibonaccim
+[DONE] Tor wzmocnienia zycia:wmocnienia zycia maksymalnego: Niech cena rosnie fibbonaccim. Za kazde 5 max hp kolejny fibonacci. Bez limitu.
+[DONE] Nowy tor: uzupelnienia nabojow: nieskonczony tor z 1 naboj na 5 sekund. Ceny rosna fibonaccim
 Nowy przeciwnik: Powracajacy Przeciwnik: To samo co normalny przeciwnik, ale po zabiciu respawnuje sie po 10 sekundach. Respawn jest daleko od gracza. Warunek zakonczenia poziomu traktuje powracajacego jak martwego w trakcie czekania na respawn.
 Nowy przeciwnik: Powracajacy szybokostrzelny. Jak wyzej.
 Nowy przeciwnik: Powracajacy Pancerny przeciwnik. Powraca po 15 sekundach.

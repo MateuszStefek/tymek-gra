@@ -719,6 +719,71 @@ function renderShopWeapons() {
       healNextNode
     )
   );
+
+  // Tor Uzupełniania Nabojów — nieskończony: każdy poziom daje +1 nabój co 5 sekund, ceny Fibonacciego
+  const curAmmo = ammoRegenLevel;
+  const nextAmmoLvl = curAmmo + 1;
+  const nextAmmoCost = getFibonacciCost(nextAmmoLvl);
+
+  const ammoCurrentNode = document.createElement('div');
+  if (curAmmo <= 0) {
+    ammoCurrentNode.className = 'tree-node locked';
+    ammoCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
+        <div class="lvl-title" style="font-size:15px;color:#94a3b8;">🎨 Uzupełnianie Wyłączone (0 nab./5s)</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Brak automatycznego odnawiania amunicji w trakcie etapu. Odblokuj tor po prawej stronie!</div>
+      </div>
+    `;
+  } else {
+    ammoCurrentNode.className = 'tree-node owned last-owned';
+    ammoCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN (POZIOM ${curAmmo})</div>
+        <div class="lvl-title" style="font-size:15px;">🎨 +${curAmmo} nab. co 5 sekund</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Co 5 sekund otrzymujesz automatycznie ${curAmmo} nab. farby!</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Średnio: ${(curAmmo / 5).toFixed(2)} nab./s</div>
+      </div>
+    `;
+  }
+
+  const ammoNextNode = document.createElement('div');
+  ammoNextNode.className = 'tree-node next-unlock';
+  ammoNextNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#facc15;">${curAmmo === 0 ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
+      <div class="lvl-title" style="font-size:15px;">🎨 ${curAmmo === 0 ? '1 nabój co 5 sekund' : `+1 nabój co 5s (łącznie: ${nextAmmoLvl} nab./5s)`}</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Nieskończony tor amunicji! Każdy poziom zwiększa odnawianie o +1 nabój co 5 sekund.</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🎨 Średnio: ${(curAmmo / 5).toFixed(2)} ➡️ ${(nextAmmoLvl / 5).toFixed(2)} nab./s</div>
+    </div>
+    <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+  `;
+  const btnBuyAmmo = document.createElement('button');
+  btnBuyAmmo.className = 'btn-green';
+  btnBuyAmmo.disabled = diamonds < nextAmmoCost;
+  btnBuyAmmo.textContent = diamonds >= nextAmmoCost
+    ? `🛒 ${curAmmo === 0 ? 'Odblokuj tor' : 'Kup wzmocnienie'}: +1 nab./5s (${nextAmmoCost} 💎)`
+    : `🔒 Brak 💎 (${diamonds}/${nextAmmoCost})`;
+  btnBuyAmmo.onclick = () => {
+    if (diamonds < nextAmmoCost) return;
+    diamonds -= nextAmmoCost;
+    ammoRegenLevel = nextAmmoLvl;
+    saveProgress();
+    updateHud();
+    renderShopWeapons();
+  };
+  ammoNextNode.querySelector('.custom-card-btns').appendChild(btnBuyAmmo);
+
+  shopWeaponsGrid.appendChild(
+    renderHorizontalTrack(
+      '🎨 Tor Uzupełniania Nabojów (bez limitu)',
+      curAmmo > 0
+        ? `<span style="font-size:12px;color:#4ade80;">🎨 +${curAmmo} nab./5s (Poziom ${curAmmo})</span>`
+        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany</span>`,
+      ammoCurrentNode,
+      ammoNextNode
+    )
+  );
 }
 
 function openCustomMapsScreen(editIdx = null) {
