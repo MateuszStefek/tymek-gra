@@ -197,7 +197,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
   ctx.stroke();
 
   const isBossKind = enemyObj && (enemyObj.kind === 'boss' || enemyObj.kind === 'returning_boss');
-  const isProKind = enemyObj && enemyObj.kind === 'pro';
+  const isProKind = enemyObj && (enemyObj.kind === 'pro' || enemyObj.kind === 'returning_pro');
   const isRetKind = enemyObj && enemyObj.kind.startsWith('returning_');
 
   ctx.beginPath();
@@ -276,7 +276,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
       ctx.textAlign = 'center';
       ctx.fillText('👑', 0, enemyObj.maxHp > 1 ? -41 : -33);
     }
-    if (isRetKind) {
+    if (isRetKind && !isBossKind && !isProKind) {
       ctx.font = '12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('🔄', 12, enemyObj.maxHp > 1 ? -41 : -33);
@@ -284,7 +284,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     if (isProKind) {
       ctx.font = '12px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('🎯', 0, -41);
+      ctx.fillText(isRetKind ? '🎯🔄' : '🎯', 0, -41);
     }
   }
 

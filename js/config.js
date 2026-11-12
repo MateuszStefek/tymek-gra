@@ -270,6 +270,7 @@ const ENEMY_KIND_KEYS = [
   'returning_tough',
   'miner',
   'pro',
+  'returning_pro',
   'returning_boss'
 ];
 
@@ -364,6 +365,16 @@ const ENEMY_KIND_INFO = {
     desc: 'Taktyczny ciemnogranatowy strój. Strzela sprytnie z wyprzedzeniem i unika strzałów gracza z dystansu (≥25% ekranu)!',
     details: '2 HP. Widzi połowę Twoich min i je omija. Gdy strzelasz z odległości ≥25% ekranu, profesjonalista reaguje i natychmiast usuwa się z linii strzału!'
   },
+  returning_pro: {
+    key: 'returning_pro',
+    name: '🎯🔄 Powracający Profesjonalista',
+    shortName: 'Powracający Pro 🎯🔄',
+    icon: '🎯🔄',
+    badge: '❤️ 2 HP | 🧠 Wyprzedzenie | 💨 Unik | 🔄 Powraca po 15s',
+    badgeColor: '#818cf8',
+    desc: 'Taktyczny elitarny snajper z aureolą odrodzenia. Strzela z wyprzedzeniem, unika strzałów gracza i powraca po 15 sekundach!',
+    details: '2 HP. Posiada wszystkie zdolności Profesjonalisty (sprytne celowanie z wyprzedzeniem, unikanie linii strzału z dystansu, omijanie 50% min). Po eliminacji wraca po 15 sekundach z dala od gracza!'
+  },
   returning_boss: {
     key: 'returning_boss',
     name: '👑🔄 Powracający Boss',
@@ -382,7 +393,7 @@ function getEnemyKindStats(kind, index = 0) {
   const isTough = kind === 'tough' || kind === 'returning_tough';
   const isRapid = kind === 'rapid' || kind === 'returning_rapid';
   const isRetNorm = kind === 'returning_normal';
-  const isPro = kind === 'pro';
+  const isPro = kind === 'pro' || kind === 'returning_pro';
   const isMiner = kind === 'miner';
 
   let maxHits = 1;
@@ -444,9 +455,10 @@ function getLevelConfig(lvl) {
     15: { roster: ['miner'], label: '1x Podkładacz Min 💣 (Nowy wróg — dropuje miny!)', clouds: 0, civilians: 2 },
     16: { roster: ['miner', 'returning_normal'], label: '1x 💣 Podkładacz + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
     17: { roster: ['pro'], label: '1x Profesjonalista 🎯 (Nowy wróg — strzał z wyprzedzeniem!)', clouds: 0, civilians: 2 },
-    18: { roster: ['pro', 'miner'], label: '1x 🎯 Profesjonalista + 1x 💣 Podkładacz', clouds: 2, civilians: 2 },
-    19: { roster: ['tough', 'returning_boss'], label: '1x 🛡️ Pancerny + 1x 👑🔄 Powracający Boss (Nowy wróg — powraca po 20s!)', clouds: 0, civilians: 3 },
-    20: { roster: ['pro', 'miner', 'returning_boss'], label: '1x 🎯 Pro + 1x 💣 Podkładacz + 1x 👑🔄 Boss', clouds: 2, civilians: 3 }
+    18: { roster: ['pro', 'miner'], label: '1x 🎯 Profesjonalista + 1x 💣 Podkładacz', clouds: 1, civilians: 2 },
+    19: { roster: ['normal', 'returning_pro'], label: '1x Zwykły + 1x 🎯🔄 Powracający Pro (Nowy wróg — powraca po 15s!)', clouds: 0, civilians: 2 },
+    20: { roster: ['tough', 'returning_boss'], label: '1x 🛡️ Pancerny + 1x 👑🔄 Powracający Boss (Nowy wróg — powraca po 20s!)', clouds: 0, civilians: 3 },
+    21: { roster: ['pro', 'returning_pro', 'miner', 'returning_boss'], label: '1x 🎯 Pro + 1x 🎯🔄 Powracający Pro + 1x 💣 + 1x 👑🔄 Boss', clouds: 2, civilians: 3 }
   };
   if (presets[lvl]) {
     const p = presets[lvl];
@@ -464,12 +476,14 @@ function getLevelConfig(lvl) {
   const rapidCnt = 1 + ((lvl + 1) % 2);
   const retNormCnt = lvl % 2;
   const proCnt = 1 + (lvl % 3 === 0 ? 1 : 0);
+  const retProCnt = (lvl >= 19 && lvl % 2 === 1) ? 1 : 0;
   const minerCnt = 1 + Math.floor((lvl - 15) / 5);
 
   for (let i = 0; i < retNormCnt; i++) roster.push('returning_normal');
   for (let i = 0; i < rapidCnt; i++) roster.push('rapid');
   for (let i = 0; i < toughCnt; i++) roster.push('tough');
   for (let i = 0; i < proCnt; i++) roster.push('pro');
+  for (let i = 0; i < retProCnt; i++) roster.push('returning_pro');
   for (let i = 0; i < minerCnt; i++) roster.push('miner');
   for (let i = 0; i < bossCnt; i++) roster.push(lvl % 2 === 0 ? 'returning_boss' : 'boss');
 

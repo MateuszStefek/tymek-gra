@@ -102,7 +102,7 @@ function eliminateEnemy(j, en, splatColor) {
   // Obsługa powracających przeciwników (Punkty 3, 4, 5, 6)
   if (en.kind && en.kind.startsWith('returning_')) {
     let delaySec = 10;
-    if (en.kind === 'returning_tough') delaySec = 15;
+    if (en.kind === 'returning_tough' || en.kind === 'returning_pro') delaySec = 15;
     else if (en.kind === 'returning_boss') delaySec = 20;
     enemyRespawnQueue.push({
       kind: en.kind,
@@ -478,7 +478,7 @@ function steerAwayFromMines(en) {
   for (const m of enemyMines) consider(m);
   if (en.kind === 'miner') {
     for (const m of placedMines) consider(m);
-  } else if (en.kind === 'pro') {
+  } else if (en.kind === 'pro' || en.kind === 'returning_pro') {
     for (const m of placedMines) {
       if (m.visibleToPro) consider(m);
     }
@@ -1823,7 +1823,7 @@ function update() {
       }
     }
 
-    if (en.kind === 'pro') {
+    if (en.kind === 'pro' || en.kind === 'returning_pro') {
       steerAwayFromPlayerBullets(en); // Profesjonalista unika wejścia na linię strzału gracza (gdy nabój wystrzelono z odległości >= 25% ekranu)
     }
 
@@ -1858,7 +1858,7 @@ function update() {
     en.shootTimer--;
     // Punkt 13: Uwaga: gdy gracz nie żyje, przeciwnicy nie strzelają
     if (en.shootTimer <= 0 && distToPlayer < 480 && player.hp > 0) {
-      if (en.kind === 'pro') {
+      if (en.kind === 'pro' || en.kind === 'returning_pro') {
         // Punkt 7: Profesjonalista bierze pod uwagę kierunek ruchu gracza i celuje z wyprzedzeniem
         const t = distToPlayer / 5.2; // prędkość pocisku przeciwnika to 5.2
         const leadX = player.x + (player.vx || 0) * t;

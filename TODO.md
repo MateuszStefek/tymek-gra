@@ -14,3 +14,4 @@
 [DONE] Jesli gracz zgnie, to chmury znikaja.
 [DONE] Jesli gracz zabije ostatniego przeciwnika, to chmury znikaja. Chmury nie wracaja po resecie w trakcie czekania na ostatni pocisk (jesli kto powróci)
 [DONE] podswietlenie celownika: domyslny kursor nie jest widoczny. Niech bedzie male kółko pod kursorem, które podswietla.
+[DONE] Nowy przeciwnik: Powracający Profesjonalista (2 HP, strzał z wyprzedzeniem, unikanie strzałów gracza z dystansu, omijanie 50% min, powraca po 15 sekundach).
