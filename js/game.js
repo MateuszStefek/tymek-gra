@@ -262,6 +262,8 @@ function spawnClouds(count) {
   }
 }
 
+let enemyIdCounter = 0;
+
 function spawnEnemyAt(x, y, kind = 'normal', index = 0) {
   const stats = typeof getEnemyKindStats === 'function' ? getEnemyKindStats(kind, index) : {
     maxHits: 1, radius: 16, shirtColor: '#ef4444', speed: 1.7, shootTimer: 60, mineImmune: false
@@ -287,6 +289,7 @@ function spawnEnemyAt(x, y, kind = 'normal', index = 0) {
   }
 
   enemies.push({
+    id: ++enemyIdCounter,
     x: ex,
     y: ey,
     vx: 0,
@@ -487,6 +490,14 @@ function steerAwayFromMines(en) {
   const safeDist = nearest.triggerRadius + en.radius + 30;
   if (nearestDist >= safeDist) return;
 
+  if (en.dodgeTimer > 0) {
+    // Jeśli profesjonalista wykonuje manewr uniku przed pociskiem gracza,
+    // nie pozwól minie przerwać uniku, chyba że wróg jest o krok od detonacji
+    if (nearestDist > nearest.triggerRadius + en.radius + 6) {
+      return;
+    }
+  }
+
   let away = Math.atan2(en.y - nearest.y, en.x - nearest.x);
   // Jeśli kierunek ucieczki prowadzi w ścianę, szukaj wolnego kierunku obok
   for (let step = 0; step <= 8; step++) {
@@ -535,8 +546,15 @@ function steerAwayFromPlayerBullets(en) {
     if (!b.fromPlayer) continue;
     const startX = typeof b.startX === 'number' ? b.startX : b.x;
     const startY = typeof b.startY === 'number' ? b.startY : b.y;
-    const startDist = Math.hypot(startX - en.x, startY - en.y);
-    if (startDist < minStartDist) continue;
+
+    // Zapamiętaj odległość punktu startowego od wroga w momencie wystrzału / pierwszego wykrycia,
+    // aby podbiegnięcie wroga w locie nie wyłączało nagle reguły uniku
+    if (!b.distToPro) b.distToPro = {};
+    const proKey = en.id || 1;
+    if (typeof b.distToPro[proKey] !== 'number') {
+      b.distToPro[proKey] = Math.hypot(startX - en.x, startY - en.y);
+    }
+    if (b.distToPro[proKey] < minStartDist) continue;
 
     const bSpeed = Math.hypot(b.vx, b.vy);
     if (bSpeed < 0.1) continue;
@@ -545,52 +563,84 @@ function steerAwayFromPlayerBullets(en) {
     const dy = en.y - b.y;
     // Rzut pozycji przeciwnika na wektor lotu pocisku
     const proj = (dx * b.vx + dy * b.vy) / bSpeed;
-    if (proj <= 0 || proj > 480) continue; // Pocisk nie leci w stronę wroga lub jest zbyt daleko
+    if (proj <= 0 || proj > 950) continue; // Pocisk nie leci w stronę wroga lub jest zbyt daleko
+
+    const ux = b.vx / bSpeed;
+    const uy = b.vy / bSpeed;
 
     // Najbliższy punkt na linii strzału
-    const closestX = b.x + (b.vx / bSpeed) * proj;
-    const closestY = b.y + (b.vy / bSpeed) * proj;
-    const distToLine = Math.hypot(en.x - closestX, en.y - closestY);
+    const closestX = b.x + ux * proj;
+    const closestY = b.y + uy * proj;
+    const perpX = en.x - closestX;
+    const perpY = en.y - closestY;
+    const distToLine = Math.hypot(perpX, perpY);
 
-    const safeMargin = en.radius + 30; // Korytarz bezpieczeństwa od toru lotu
-    if (distToLine < safeMargin) {
-      const timeToImpact = proj / bSpeed;
+    const timeToImpact = proj / bSpeed; // Czas dolotu pocisku w klatkach
+
+    // Wektor prostopadły oddalający od linii strzału (w stronę, po której stoi wróg)
+    let outX = 0;
+    let outY = 0;
+    if (distToLine > 0.5) {
+      outX = perpX / distToLine;
+      outY = perpY / distToLine;
+    } else {
+      const nx = -uy;
+      const ny = ux;
+      const side = en.dodgeSign || 1;
+      outX = nx * side;
+      outY = ny * side;
+    }
+
+    // 1. ZAKAZ WCHODZENIA POD STRZAŁ Z DALEKA:
+    // Jeśli marker leci z daleka, a wróg idzie W STRONĘ linii strzału (en.vx, en.vy zbliża go do linii),
+    // Profesjonalista zatrzymuje się przed linią lub skręca z dala od toru lotu!
+    const approachSpeed = -(en.vx * outX + en.vy * outY); // Dodatnie, jeśli prędkość zmierza do linii
+    if (distToLine < en.radius + 80 && approachSpeed > 0) {
+      en.vx += outX * (approachSpeed + 1.2);
+      en.vy += outY * (approachSpeed + 1.2);
+      en.changeDirTimer = Math.max(en.changeDirTimer, 18);
+    }
+
+    // 2. PRZEWIDYWANIE KOLIZJI I UNIK (DODGE):
+    // Gdzie wróg znajdzie się za timeToImpact klatek, jeśli zachowa obecny wektor:
+    const futureX = en.x + en.vx * timeToImpact;
+    const futureY = en.y + en.vy * timeToImpact;
+    const futureDistToLine = Math.hypot(futureX - closestX, futureY - closestY);
+
+    const dangerZone = en.radius + 36;
+    if (distToLine < dangerZone || futureDistToLine < dangerZone) {
       if (timeToImpact < minTimeToImpact) {
         minTimeToImpact = timeToImpact;
         mostThreateningBullet = b;
 
-        // Wektor prostopadły do linii strzału (kierunek w bok)
-        const nx = -b.vy / bSpeed;
-        const ny = b.vx / bSpeed;
-
-        const cross = dx * b.vy - dy * b.vx;
-        // Gdy strzał leci idealnie w niego (|cross| < 5), trzymaj się wybranej strony zamiast losowo drgać!
-        let side = en.dodgeSign || 1;
-        if (Math.abs(cross) >= 5) {
-          side = cross > 0 ? 1 : -1;
-        }
-
         // Sprawdź czy wybrana strona nie jest zablokowana przez ścianę
-        if (!canMoveTo(en.x + (nx * side) * 26, en.y + (ny * side) * 26, en.radius)) {
-          side = -side;
+        let testOutX = outX;
+        let testOutY = outY;
+        if (!canMoveTo(en.x + testOutX * 28, en.y + testOutY * 28, en.radius)) {
+          if (canMoveTo(en.x - testOutX * 28, en.y - testOutY * 28, en.radius)) {
+            testOutX = -testOutX;
+            testOutY = -testOutY;
+          }
         }
 
-        en.dodgeSign = side;
-        chosenNormalX = nx * side;
-        chosenNormalY = ny * side;
+        // Zapamiętaj stronę uniku, by nie oscylować
+        en.dodgeSign = (testOutX * (-uy) + testOutY * ux) >= 0 ? 1 : -1;
+        chosenNormalX = testOutX;
+        chosenNormalY = testOutY;
       }
     }
   }
 
   if (!mostThreateningBullet) return;
 
-  const dodgeSpeed = Math.max(en.speed * 1.45, 2.7);
+  // Szybki, zdecydowany odskok z toru lotu pocisku
+  const dodgeSpeed = Math.max(en.speed * 1.9, 3.8);
   en.dodgeVx = chosenNormalX * dodgeSpeed;
   en.dodgeVy = chosenNormalY * dodgeSpeed;
-  en.dodgeTimer = 22; // Trzymaj wybrany kierunek uniku przez 22 klatki (~0.37s)
+  en.dodgeTimer = Math.min(Math.max(18, Math.round(minTimeToImpact + 8)), 32);
   en.vx = en.dodgeVx;
   en.vy = en.dodgeVy;
-  en.changeDirTimer = Math.max(en.changeDirTimer, 24);
+  en.changeDirTimer = Math.max(en.changeDirTimer, en.dodgeTimer + 10);
 }
 
 // Aktualizacja min podkładacza; zwraca true, jeśli gracz zginął (przerwij dalszą aktualizację klatki)
