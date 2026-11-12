@@ -1166,7 +1166,7 @@ function checkTouchSupport() {
     !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   if (isPureTouch) {
     isTouchDevice = true;
-    if (touchControls) touchControls.classList.remove('hidden');
+    if (touchActionGroup) touchActionGroup.classList.remove('hidden');
   }
 }
 checkTouchSupport();
@@ -1175,7 +1175,7 @@ checkTouchSupport();
 window.addEventListener('touchstart', () => {
   ensureAudio();
   isTouchDevice = true;
-  if (touchControls) touchControls.classList.remove('hidden');
+  if (touchActionGroup) touchActionGroup.classList.remove('hidden');
 }, { passive: true });
 
 // Przyciski akcji na ekranie dotykowym
@@ -1210,7 +1210,7 @@ function handleCanvasTouchStart(e) {
   ensureAudio();
   if (!isTouchDevice) {
     isTouchDevice = true;
-    if (touchControls) touchControls.classList.remove('hidden');
+    if (touchActionGroup) touchActionGroup.classList.remove('hidden');
   }
 
   // Nie przechwytuj dotknięć w przyciski górnego paska, nakładki menu, przyciski akcji ani formularze
@@ -1319,10 +1319,10 @@ function handleCanvasTouchEnd(e) {
   }
 }
 
-window.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
-window.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
-window.addEventListener('touchend', handleCanvasTouchEnd, { passive: false });
-window.addEventListener('touchcancel', handleCanvasTouchEnd, { passive: false });
+document.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
+document.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
+document.addEventListener('touchend', handleCanvasTouchEnd, { passive: false });
+document.addEventListener('touchcancel', handleCanvasTouchEnd, { passive: false });
 
 btnRetry.addEventListener('click', () => {
   if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);

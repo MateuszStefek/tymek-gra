@@ -6,6 +6,11 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+html, body {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
 body {
   background-color: #0f172a;
   color: #ffffff;
@@ -552,7 +557,7 @@ button:disabled, .level-card.guard-wait {
   pointer-events: none;
   z-index: 900;
 }
-.touch-controls.hidden {
+.touch-action-group.hidden {
   display: none !important;
 }
 

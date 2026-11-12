@@ -35,6 +35,7 @@ const topbarEl = document.querySelector('.topbar');
 
 // Elementy sterowania dotykowego (tablety / telefony)
 const touchControls = document.getElementById('touchControls');
+const touchActionGroup = document.getElementById('touchActionGroup');
 const joystickBase = document.getElementById('joystickBase');
 const joystickThumb = document.getElementById('joystickThumb');
 const touchBtnWeapon = document.getElementById('touchBtnWeapon');
