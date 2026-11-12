@@ -317,6 +317,7 @@ function spawnEnemyAt(x, y, kind = 'normal', index = 0) {
     orbitSign: Math.random() < 0.5 ? 1 : -1,
     shootTimer: stats.shootTimer,
     mineTimer: 15 * 60,
+    shieldAngle: Math.PI / 2,
     dodgeTimer: 0,
     dodgeVx: 0,
     dodgeVy: 0,
@@ -1895,7 +1896,23 @@ function update() {
     }
 
     en.walkCycle += 0.22;
-    en.angle = Math.atan2(player.y - en.y, player.x - en.x);
+    if (en.kind === 'shield') {
+      if (typeof en.shieldAngle !== 'number') en.shieldAngle = en.angle || 0;
+      const targetShieldAngle = Math.atan2(player.y - en.y, player.x - en.x);
+      // Obrót o 180 stopni zajmuje 4 sekundy (240 klatek przy 60 fps -> PI / 240 radiana na klatkę)
+      const maxTurnRate = Math.PI / (4 * 60);
+      let diff = targetShieldAngle - en.shieldAngle;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      if (Math.abs(diff) <= maxTurnRate) {
+        en.shieldAngle = targetShieldAngle;
+      } else {
+        en.shieldAngle += Math.sign(diff) * maxTurnRate;
+      }
+      en.angle = en.shieldAngle;
+    } else {
+      en.angle = Math.atan2(player.y - en.y, player.x - en.x);
+    }
 
     if (en.kind === 'miner' && player.hp > 0) {
       en.mineTimer--;
@@ -2142,6 +2159,43 @@ function update() {
         const en = enemies[j];
         if (Math.hypot(b.x - en.x, b.y - en.y) < en.radius + 7) {
           hitEnemy = true;
+
+          // Przeciwnik z tarczą taktyczną: 50% obwodu (łuk 180°) osłonięte tarczą taktyczną
+          if (en.kind === 'shield') {
+            const hitAngle = Math.atan2(b.y - en.y, b.x - en.x);
+            let angleDiff = Math.abs(hitAngle - en.shieldAngle);
+            while (angleDiff > Math.PI * 2) angleDiff -= Math.PI * 2;
+            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+            // Uderzenie od strony tarczy (kąt odchylenia do 90° w obie strony = 180° = 50% obwodu)
+            if (angleDiff <= Math.PI / 2) {
+              // Uderzenie markerem od strony tarczy nic mu nie robi!
+              playShieldBlockSound();
+              addPaintSplat(b.x, b.y, b.color, 12);
+              for (let k = 0; k < 8; k++) {
+                const a = hitAngle + (Math.random() - 0.5) * 1.2;
+                const s = 1.5 + Math.random() * 3.5;
+                particles.push({
+                  x: b.x,
+                  y: b.y,
+                  vx: Math.cos(a) * s,
+                  vy: Math.sin(a) * s,
+                  r: 3 + Math.random() * 2,
+                  color: '#67e8f9',
+                  alpha: 1
+                });
+              }
+              popups.push({
+                x: en.x,
+                y: en.y - 24,
+                text: '🛡️ BLOK TARCZY!',
+                color: '#38bdf8',
+                alpha: 1
+              });
+              break;
+            }
+          }
+
           en.hp--;
           en.splatColor = b.color;
           addPaintSplat(en.x, en.y, b.color, en.hp <= 0 ? 28 : 16);

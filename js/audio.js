@@ -158,3 +158,22 @@ function playReloadSound() {
     osc2.stop(now + 0.19);
   } catch (e) {}
 }
+
+function playShieldBlockSound() {
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(840, now);
+    osc.frequency.exponentialRampToValueAtTime(310, now + 0.11);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.11);
+  } catch (e) {}
+}

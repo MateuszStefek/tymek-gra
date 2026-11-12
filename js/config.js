@@ -264,6 +264,7 @@ const ENEMY_KIND_KEYS = [
   'normal',
   'rapid',
   'tough',
+  'shield',
   'boss',
   'returning_normal',
   'returning_rapid',
@@ -304,6 +305,16 @@ const ENEMY_KIND_INFO = {
     badgeColor: '#fb923c',
     desc: 'Brązowy pancerz i podwyższona wytrzymałość — posiada 3 punkty życia.',
     details: 'Wymaga 3 trafień z markera lub 1 bezpośredniego wybuchu miny.'
+  },
+  shield: {
+    key: 'shield',
+    name: '🛡️ Tarcza Taktyczna',
+    shortName: 'Tarcza 🛡️',
+    icon: '🛡️',
+    badge: '❤️ 3 HP | 🛡️ Tarcza 180° | 🐢 Wolny obrót 4s',
+    badgeColor: '#06b6d4',
+    desc: 'Przeciwnik wyposażony w potężną tarczę zasłaniającą 50% obwodu (180°). Strzały markerem w tarczę nic mu nie robią!',
+    details: 'Posiada 3 HP i porusza się jak zwykły przeciwnik. Obrót tarczy o 180° zajmuje mu aż 4 sekundy! Aby go zranić, zajdź go od nieosłoniętej strony (plecy / flanka) lub użyj min.'
   },
   boss: {
     key: 'boss',
@@ -395,16 +406,17 @@ function getEnemyKindStats(kind, index = 0) {
   const isRetNorm = kind === 'returning_normal';
   const isPro = kind === 'pro' || kind === 'returning_pro';
   const isMiner = kind === 'miner';
+  const isShield = kind === 'shield';
 
   let maxHits = 1;
   if (isBoss) maxHits = 5;
   else if (isMiner) maxHits = 8;
-  else if (isTough) maxHits = 3;
+  else if (isTough || isShield) maxHits = 3;
   else if (isPro) maxHits = 2;
 
   let radius = 16;
   if (isBoss) radius = 21;
-  else if (isMiner || isTough) radius = 18;
+  else if (isMiner || isTough || isShield) radius = 18;
 
   let shirtColor = shirtColors[index % shirtColors.length];
   if (isBoss) shirtColor = '#9333ea';
@@ -413,8 +425,9 @@ function getEnemyKindStats(kind, index = 0) {
   else if (isRapid) shirtColor = '#eab308';
   else if (isRetNorm) shirtColor = '#38bdf8';
   else if (isPro) shirtColor = '#1e1b4b';
+  else if (isShield) shirtColor = '#0e7490';
 
-  let speed = 1.7 + Math.random() * 0.35;
+  let speed = 1.7 + Math.random() * 0.35; // Tarcza taktyczna rusza się jak zwykły przeciwnik
   if (isMiner) speed = 0.7 + Math.random() * 0.15;
   else if (isBoss) speed = 1.45 + Math.random() * 0.3;
   else if (isTough) speed = 1.6 + Math.random() * 0.3;
@@ -425,6 +438,7 @@ function getEnemyKindStats(kind, index = 0) {
   if (isMiner) shootTimer = 180 + Math.random() * 120;
   else if (isRapid) shootTimer = 16 + Math.random() * 14;
   else if (isPro) shootTimer = 42 + Math.random() * 30;
+  else if (isShield) shootTimer = 60 + Math.random() * 60;
 
   return {
     maxHits,
@@ -445,20 +459,23 @@ function getLevelConfig(lvl) {
     5:  { roster: ['tough'], label: '1x Pancerny 🛡️ (Nowy wróg — 3 HP!)', clouds: 0, civilians: 2 },
     6:  { roster: ['normal', 'tough'], label: '1x Zwykły + 1x 🛡️ Pancerny', clouds: 1, civilians: 2 },
     7:  { roster: ['boss'], label: '1x Boss 👑 (Odporny na miny! Nowy wróg!)', clouds: 0, civilians: 2 },
-    8:  { roster: ['normal', 'rapid', 'tough'], label: '1x Zwykły + 1x ⚡ + 1x 🛡️', clouds: 2, civilians: 2 },
-    9:  { roster: ['normal', 'returning_normal'], label: '1x Zwykły + 1x 🔄 Powracający (Nowy wróg — powraca po 10s!)', clouds: 0, civilians: 1 },
-    10: { roster: ['tough', 'returning_normal'], label: '1x 🛡️ Pancerny + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
-    11: { roster: ['normal', 'returning_rapid'], label: '1x Zwykły + 1x ⚡🔄 Powracający Szybki (Nowy wróg!)', clouds: 0, civilians: 1 },
-    12: { roster: ['rapid', 'returning_rapid'], label: '1x ⚡ Szybki + 1x ⚡🔄 Powracający', clouds: 1, civilians: 2 },
-    13: { roster: ['normal', 'returning_tough'], label: '1x Zwykły + 1x 🛡️🔄 Powracający Pancerny (Nowy wróg — 15s!)', clouds: 0, civilians: 2 },
-    14: { roster: ['tough', 'returning_tough'], label: '1x 🛡️ Pancerny + 1x 🛡️🔄 Powracający', clouds: 2, civilians: 2 },
-    15: { roster: ['miner'], label: '1x Podkładacz Min 💣 (Nowy wróg — dropuje miny!)', clouds: 0, civilians: 2 },
-    16: { roster: ['miner', 'returning_normal'], label: '1x 💣 Podkładacz + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
-    17: { roster: ['pro'], label: '1x Profesjonalista 🎯 (Nowy wróg — strzał z wyprzedzeniem!)', clouds: 0, civilians: 2 },
-    18: { roster: ['pro', 'miner'], label: '1x 🎯 Profesjonalista + 1x 💣 Podkładacz', clouds: 1, civilians: 2 },
-    19: { roster: ['normal', 'returning_pro'], label: '1x Zwykły + 1x 🎯🔄 Powracający Pro (Nowy wróg — powraca po 15s!)', clouds: 0, civilians: 2 },
-    20: { roster: ['tough', 'returning_boss'], label: '1x 🛡️ Pancerny + 1x 👑🔄 Powracający Boss (Nowy wróg — powraca po 20s!)', clouds: 0, civilians: 3 },
-    21: { roster: ['pro', 'returning_pro', 'miner', 'returning_boss'], label: '1x 🎯 Pro + 1x 🎯🔄 Powracający Pro + 1x 💣 + 1x 👑🔄 Boss', clouds: 2, civilians: 3 }
+    8:  { roster: ['shield'], label: '1x Tarcza Taktyczna 🛡️ (Nowy wróg — osłona 180°, 3 HP!)', clouds: 0, civilians: 1 },
+    9:  { roster: ['normal', 'shield'], label: '1x Zwykły + 1x 🛡️ Tarcza Taktyczna', clouds: 1, civilians: 2 },
+    10: { roster: ['normal', 'rapid', 'tough'], label: '1x Zwykły + 1x ⚡ + 1x 🛡️ Pancerny', clouds: 2, civilians: 2 },
+    11: { roster: ['normal', 'returning_normal'], label: '1x Zwykły + 1x 🔄 Powracający (Nowy wróg — powraca po 10s!)', clouds: 0, civilians: 1 },
+    12: { roster: ['shield', 'returning_normal'], label: '1x 🛡️ Tarcza + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
+    13: { roster: ['normal', 'returning_rapid'], label: '1x Zwykły + 1x ⚡🔄 Powracający Szybki (Nowy wróg!)', clouds: 0, civilians: 1 },
+    14: { roster: ['rapid', 'returning_rapid'], label: '1x ⚡ Szybki + 1x ⚡🔄 Powracający', clouds: 1, civilians: 2 },
+    15: { roster: ['normal', 'returning_tough'], label: '1x Zwykły + 1x 🛡️🔄 Powracający Pancerny (Nowy wróg — 15s!)', clouds: 0, civilians: 2 },
+    16: { roster: ['shield', 'returning_tough'], label: '1x 🛡️ Tarcza + 1x 🛡️🔄 Powracający Pancerny', clouds: 2, civilians: 2 },
+    17: { roster: ['miner'], label: '1x Podkładacz Min 💣 (Nowy wróg — dropuje miny!)', clouds: 0, civilians: 2 },
+    18: { roster: ['miner', 'returning_normal'], label: '1x 💣 Podkładacz + 1x 🔄 Powracający', clouds: 1, civilians: 2 },
+    19: { roster: ['pro'], label: '1x Profesjonalista 🎯 (Nowy wróg — strzał z wyprzedzeniem!)', clouds: 0, civilians: 2 },
+    20: { roster: ['pro', 'shield'], label: '1x 🎯 Profesjonalista + 1x 🛡️ Tarcza Taktyczna', clouds: 1, civilians: 2 },
+    21: { roster: ['normal', 'returning_pro'], label: '1x Zwykły + 1x 🎯🔄 Powracający Pro (Nowy wróg — powraca po 15s!)', clouds: 0, civilians: 2 },
+    22: { roster: ['tough', 'returning_boss'], label: '1x 🛡️ Pancerny + 1x 👑🔄 Powracający Boss (Nowy wróg — powraca po 20s!)', clouds: 0, civilians: 3 },
+    23: { roster: ['pro', 'returning_pro', 'miner', 'returning_boss'], label: '1x 🎯 Pro + 1x 🎯🔄 Powracający Pro + 1x 💣 + 1x 👑🔄 Boss', clouds: 2, civilians: 3 },
+    24: { roster: ['shield', 'returning_pro', 'miner', 'returning_boss'], label: '1x 🛡️ Tarcza + 1x 🎯🔄 Pro + 1x 💣 + 1x 👑🔄 Boss', clouds: 2, civilians: 3 }
   };
   if (presets[lvl]) {
     const p = presets[lvl];
@@ -477,11 +494,13 @@ function getLevelConfig(lvl) {
   const retNormCnt = lvl % 2;
   const proCnt = 1 + (lvl % 3 === 0 ? 1 : 0);
   const retProCnt = (lvl >= 19 && lvl % 2 === 1) ? 1 : 0;
+  const shieldCnt = (lvl % 2 === 0) ? 1 : 0;
   const minerCnt = 1 + Math.floor((lvl - 15) / 5);
 
   for (let i = 0; i < retNormCnt; i++) roster.push('returning_normal');
   for (let i = 0; i < rapidCnt; i++) roster.push('rapid');
   for (let i = 0; i < toughCnt; i++) roster.push('tough');
+  for (let i = 0; i < shieldCnt; i++) roster.push('shield');
   for (let i = 0; i < proCnt; i++) roster.push('pro');
   for (let i = 0; i < retProCnt; i++) roster.push('returning_pro');
   for (let i = 0; i < minerCnt; i++) roster.push('miner');

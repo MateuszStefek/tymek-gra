@@ -198,6 +198,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
 
   const isBossKind = enemyObj && (enemyObj.kind === 'boss' || enemyObj.kind === 'returning_boss');
   const isProKind = enemyObj && (enemyObj.kind === 'pro' || enemyObj.kind === 'returning_pro');
+  const isShieldKind = enemyObj && enemyObj.kind === 'shield';
   const isRetKind = enemyObj && enemyObj.kind.startsWith('returning_');
 
   ctx.beginPath();
@@ -249,6 +250,53 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
 
   ctx.restore();
 
+  // Rysowanie Tarczy Taktycznej (osłona 180° = 50% obwodu)
+  if (isShieldKind) {
+    ctx.save();
+    const sAngle = typeof enemyObj.shieldAngle === 'number' ? enemyObj.shieldAngle : aimAngle;
+    ctx.rotate(sAngle);
+
+    const shieldR = 21;
+    // Cień krawędzi tarczy
+    ctx.beginPath();
+    ctx.arc(0, 0, shieldR + 1, -Math.PI / 2, Math.PI / 2);
+    ctx.lineWidth = 9;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Masywna balistyczna osłona kompozytowa
+    ctx.beginPath();
+    ctx.arc(0, 0, shieldR, -Math.PI / 2, Math.PI / 2);
+    ctx.lineWidth = 7.5;
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Pancerz w kolorze taktycznego błękitu
+    ctx.beginPath();
+    ctx.arc(0, 0, shieldR, -Math.PI / 2, Math.PI / 2);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Pancerny przezierny wizjer taktyczny w centrum tarczy
+    ctx.beginPath();
+    ctx.arc(0, 0, shieldR, -Math.PI / 6, Math.PI / 6);
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = '#67e8f9';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Znaczniki taktyczne po bokach osłony
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(shieldR - 3.5, -13, 3, 3.5);
+    ctx.fillRect(shieldR - 3.5, 9.5, 3, 3.5);
+
+    ctx.restore();
+  }
+
   if (isPlayer) {
     const pct = Math.max(0, player.hp) / player.maxHp;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
@@ -265,7 +313,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     const pct = Math.max(0, enemyObj.hp) / enemyObj.maxHp;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     ctx.fillRect(-20, -37, 40, 6);
-    ctx.fillStyle = isBossKind ? '#c084fc' : (isProKind ? '#818cf8' : '#f59e0b');
+    ctx.fillStyle = isBossKind ? '#c084fc' : (isProKind ? '#818cf8' : (isShieldKind ? '#06b6d4' : '#f59e0b'));
     ctx.fillRect(-19, -36, 38 * pct, 4);
   }
 
@@ -285,6 +333,11 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
       ctx.font = '12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(isRetKind ? '🎯🔄' : '🎯', 0, -41);
+    }
+    if (isShieldKind) {
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('🛡️', 0, -41);
     }
   }
 
