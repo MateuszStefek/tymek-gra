@@ -113,7 +113,6 @@ let defaultWeapon = 'pistol';
 let bazookaUpgraded = false;
 let ownedUpgrades = [];
 let hpLevel = 0; // Nieskończony tor życia: każdy poziom = +5 max HP
-let ammoRegenLevel = 0; // Nieskończony tor uzupełniania nabojów
 let healingLevel = 0; // Zaczynamy od 0 HP / 5s (pierwszy poziom leczenia również kupuje się w sklepie)
 let lastDiamondsEarned = 0;
 
@@ -181,8 +180,6 @@ try {
     if (ownedUpgrades.includes('hp_boost_3')) oldBonus += 15;
     hpLevel = oldBonus / 5;
   }
-  const savedAmmoRegen = parseInt(localStorage.getItem('tymek_paintball_ammo_regen_level') || '0', 10);
-  if (!isNaN(savedAmmoRegen) && savedAmmoRegen >= 0) ammoRegenLevel = savedAmmoRegen;
   const savedHealing = parseInt(localStorage.getItem('tymek_paintball_healing_level') || '0', 10);
   if (!isNaN(savedHealing) && savedHealing >= 0) {
     healingLevel = savedHealing;
@@ -275,7 +272,6 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_upgrades', JSON.stringify(ownedUpgrades));
     localStorage.setItem('tymek_paintball_healing_level', String(healingLevel));
     localStorage.setItem('tymek_paintball_hp_level', String(hpLevel));
-    localStorage.setItem('tymek_paintball_ammo_regen_level', String(ammoRegenLevel));
   } catch (e) {}
 }
 
@@ -293,7 +289,6 @@ function resetAllProgress() {
     localStorage.removeItem('tymek_paintball_upgrades');
     localStorage.removeItem('tymek_paintball_healing_level');
     localStorage.removeItem('tymek_paintball_hp_level');
-    localStorage.removeItem('tymek_paintball_ammo_regen_level');
   } catch (e) {}
 
   level = 1;
@@ -309,7 +304,6 @@ function resetAllProgress() {
   ownedUpgrades = [];
   healingLevel = 0;
   hpLevel = 0;
-  ammoRegenLevel = 0;
   lastDiamondsEarned = 0;
 
   customMaps = [
