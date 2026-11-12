@@ -772,14 +772,23 @@ function renderCustomMapsList() {
     const civsCnt = typeof cm.civilians === 'number' ? cm.civilians : 1;
     const lockedKinds = getLockedKindsInCustomMap(cm);
     const card = document.createElement('div');
-    card.className = 'level-card completed' + (activeCustomMapIndex === idx ? ' current' : '');
+    card.className = 'custom-map-card' + (activeCustomMapIndex === idx ? ' current' : '');
     card.style.cursor = 'default';
     card.innerHTML = `
-      <div class="lvl-title" style="color:#e9d5ff;">🛠️ ${cm.name}</div>
-      <div class="lvl-enemies">🎯 ${formatCustomMapSummary(cm)}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🗺️ ${arenaObj.name} | ☁️ ${cloudsCnt} | 🏥 Cywile: ${civsCnt}</div>
-      <div class="lvl-status" style="color:${lockedKinds.length ? '#ef4444' : '#4ade80'};">${lockedKinds.length ? `🔒 Zablokowani przeciwnicy: ${lockedKinds.join(', ')}` : '🔓 Zawsze odblokowana'}</div>
-      <div class="custom-card-btns" style="margin-top:6px;">
+      <div>
+        <div class="lvl-title">
+          <span>🛠️ ${cm.name}</span>
+          <span class="lvl-status" style="color:${lockedKinds.length ? '#ef4444' : '#4ade80'};">${lockedKinds.length ? `🔒 Zablokowani wrogowie` : '🔓 Odblokowana'}</span>
+        </div>
+        <div class="lvl-enemies" style="margin-top:3px;">🎯 ${formatCustomMapSummary(cm)}</div>
+        <div class="lvl-meta" style="margin-top:4px;">
+          <span>🗺️ ${arenaObj.name}</span>
+          <span>☁️ ${cloudsCnt}</span>
+          <span>🏥 Cywile: ${civsCnt}</span>
+        </div>
+        ${lockedKinds.length ? `<div style="color:#ef4444;font-size:11px;font-weight:700;margin-top:2px;">Wymaga odblokowania: ${lockedKinds.join(', ')}</div>` : ''}
+      </div>
+      <div class="custom-card-btns">
         <button class="btn-green" id="playCustom_${idx}" ${lockedKinds.length ? 'disabled' : ''}>${lockedKinds.length ? '🔒 Zablokowana' : '▶️ Graj'}</button>
         <button class="btn-purple" id="editCustom_${idx}">✏️ Edytuj</button>
       </div>
