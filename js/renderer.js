@@ -88,13 +88,13 @@ function drawMine(mine) {
   ctx.fillStyle = mine.armed ? (blink ? '#ef4444' : '#7f1d1d') : (blink ? '#fde047' : '#854d0e');
   ctx.fill();
 
-  // Napis odliczania 5s "PIK!" podczas uzbrajania
+  // Napis "Uzbrajanie" z odliczaniem podczas uzbrajania
   if (!mine.armed) {
     const secs = Math.ceil(mine.armFrames / 60);
     ctx.font = 'bold 13px system-ui';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fde047';
-    ctx.fillText(`PIK! ${secs}s`, 0, -18);
+    ctx.fillText(`Uzbrajanie ${secs}s`, 0, -18);
   }
 
   ctx.restore();

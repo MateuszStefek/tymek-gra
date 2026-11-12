@@ -1120,7 +1120,6 @@ btnNextLevel.addEventListener('click', () => {
 });
 
 btnPlaceMine.addEventListener('click', placeMine);
-btnFollowMouse.addEventListener('click', toggleFollowMouse);
 if (btnTheme) btnTheme.addEventListener('click', cycleGraphicTheme);
 
 btnRetry.addEventListener('click', () => {
@@ -1136,8 +1135,6 @@ window.addEventListener('keydown', e => {
   }
   if (e.code === 'KeyP' || e.code === 'Pause') {
     togglePause();
-  } else if (e.code === 'KeyF') {
-    toggleFollowMouse();
   } else if (e.code === 'KeyT') {
     cycleGraphicTheme();
   } else if (e.code === 'KeyQ') {
@@ -1273,14 +1270,6 @@ function update() {
   if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
   if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
-
-  if (dx === 0 && dy === 0 && followMouse && mouse.active) {
-    const distToMouse = Math.hypot(mouse.x - player.x, mouse.y - player.y);
-    if (distToMouse > 45) {
-      dx = (mouse.x - player.x) / distToMouse;
-      dy = (mouse.y - player.y) / distToMouse;
-    }
-  }
 
   if (dx !== 0 || dy !== 0) {
     const len = Math.hypot(dx, dy);
