@@ -359,10 +359,10 @@ const ENEMY_KIND_INFO = {
     name: '🎯 Profesjonalista',
     shortName: 'Profesjonalista 🎯',
     icon: '🎯',
-    badge: '❤️ 2 HP | 🧠 Strzał z wyprzedzeniem | 🕶️ Widzi 50% min',
+    badge: '❤️ 2 HP | 🧠 Wyprzedzenie | 🕶️ 50% min | 💨 Unika strzałów z daleka',
     badgeColor: '#818cf8',
-    desc: 'Taktyczny ciemnogranatowy strój. Strzela sprytnie — bierze pod uwagę kierunek biegu gracza i celuje z wyprzedzeniem!',
-    details: '2 HP. Widzi połowę Twoich min i je omija, pozostałe może jednak niechcący zdetonować!'
+    desc: 'Taktyczny ciemnogranatowy strój. Strzela sprytnie z wyprzedzeniem i unika strzałów gracza z dystansu (≥25% ekranu)!',
+    details: '2 HP. Widzi połowę Twoich min i je omija. Gdy strzelasz z odległości ≥25% ekranu, profesjonalista reaguje i natychmiast usuwa się z linii strzału!'
   },
   returning_boss: {
     key: 'returning_boss',

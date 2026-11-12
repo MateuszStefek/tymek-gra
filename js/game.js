@@ -498,6 +498,71 @@ function steerAwayFromMines(en) {
   en.changeDirTimer = Math.min(en.changeDirTimer, 12);
 }
 
+// Profesjonalista unika wejścia na linię strzału gracza, jeśli punkt startu naboju wynosi co najmniej 25% ekranu
+function steerAwayFromPlayerBullets(en) {
+  const minStartDist = canvas.width * 0.25; // 25% szerokości ekranu (~235 px)
+  let mostThreateningBullet = null;
+  let minTimeToImpact = Infinity;
+  let threatNormalX = 0;
+  let threatNormalY = 0;
+
+  for (const b of bullets) {
+    if (!b.fromPlayer) continue;
+    const startX = typeof b.startX === 'number' ? b.startX : b.x;
+    const startY = typeof b.startY === 'number' ? b.startY : b.y;
+    const startDist = Math.hypot(startX - en.x, startY - en.y);
+    if (startDist < minStartDist) continue;
+
+    const bSpeed = Math.hypot(b.vx, b.vy);
+    if (bSpeed < 0.1) continue;
+
+    const dx = en.x - b.x;
+    const dy = en.y - b.y;
+    // Rzut pozycji przeciwnika na wektor lotu pocisku
+    const proj = (dx * b.vx + dy * b.vy) / bSpeed;
+    if (proj <= 0 || proj > 480) continue; // Pocisk nie leci w stronę wroga lub jest zbyt daleko
+
+    // Najbliższy punkt na linii strzału
+    const closestX = b.x + (b.vx / bSpeed) * proj;
+    const closestY = b.y + (b.vy / bSpeed) * proj;
+    const distToLine = Math.hypot(en.x - closestX, en.y - closestY);
+
+    const safeMargin = en.radius + 28; // Korytarz bezpieczeństwa od toru lotu
+    if (distToLine < safeMargin) {
+      const timeToImpact = proj / bSpeed;
+      if (timeToImpact < minTimeToImpact) {
+        minTimeToImpact = timeToImpact;
+        mostThreateningBullet = b;
+        // Wektor prostopadły do linii strzału (odsuwający z toru)
+        const cross = dx * b.vy - dy * b.vx;
+        const nx = -b.vy / bSpeed;
+        const ny = b.vx / bSpeed;
+        const sign = cross >= 0 ? 1 : -1;
+        threatNormalX = nx * sign;
+        threatNormalY = ny * sign;
+      }
+    }
+  }
+
+  if (!mostThreateningBullet) return;
+
+  // Sprawdź czy kierunek uniku nie prowadzi od razu w przeszkodę
+  let dodgeX = threatNormalX;
+  let dodgeY = threatNormalY;
+  const testDist = 24;
+  if (!canMoveTo(en.x + dodgeX * testDist, en.y + dodgeY * testDist, en.radius)) {
+    if (canMoveTo(en.x - dodgeX * testDist, en.y - dodgeY * testDist, en.radius)) {
+      dodgeX = -dodgeX;
+      dodgeY = -dodgeY;
+    }
+  }
+
+  const dodgeSpeed = Math.max(en.speed * 1.35, 2.5);
+  en.vx = dodgeX * dodgeSpeed;
+  en.vy = dodgeY * dodgeSpeed;
+  en.changeDirTimer = Math.max(en.changeDirTimer, 14);
+}
+
 // Aktualizacja min podkładacza; zwraca true, jeśli gracz zginął (przerwij dalszą aktualizację klatki)
 function updateEnemyMines() {
   for (let m = enemyMines.length - 1; m >= 0; m--) {
@@ -808,6 +873,8 @@ function firePaintball(fromX, fromY, angle, fromPlayer) {
   bullets.push({
     x: fromX + Math.cos(angle) * 24,
     y: fromY + Math.sin(angle) * 24,
+    startX: fromX,
+    startY: fromY,
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
     color,
@@ -1724,6 +1791,10 @@ function update() {
         en.vy = Math.sin(targetAngle) * en.speed;
         en.changeDirTimer = 25 + Math.random() * 45;
       }
+    }
+
+    if (en.kind === 'pro') {
+      steerAwayFromPlayerBullets(en); // Profesjonalista unika wejścia na linię strzału gracza (gdy nabój wystrzelono z odległości >= 25% ekranu)
     }
 
     steerAwayFromMines(en); // Przeciwnicy widzą miny (podkładacza oraz — w jego przypadku — także Twoje) i je omijają
