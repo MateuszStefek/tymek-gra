@@ -226,6 +226,7 @@ function getHealingPer5Sec() {
 
 let enemyRespawnQueue = [];
 let levelClearPending = false;
+let levelVictoryDelay = 0;
 let playerDeadPending = false;
 
 // Typy przeciwników, które występują na którymkolwiek z odblokowanych poziomów kampanii (1..unlockedLevel)

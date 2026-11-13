@@ -116,11 +116,7 @@ function eliminateEnemy(j, en, splatColor) {
   if (enemies.length === 0) {
     clouds = [];
     levelClearPending = true;
-    if (bullets.length === 0 && homingRockets.length === 0 && gameState === 'playing') {
-      levelClearPending = false;
-      handleLevelVictory();
-      return;
-    }
+    levelVictoryDelay = 30; // Po zabiciu ostatniego przeciwnika gra trwa jeszcze pół sekundy niezależnie od lecących pocisków
   }
   updateHud();
 }
@@ -823,6 +819,9 @@ function startLevel(targetLevel) {
   eliminatedHumans = [];
   gameState = 'playing';
   levelBannerTimer = 85;
+  levelClearPending = false;
+  levelVictoryDelay = 0;
+  playerDeadPending = false;
 
   totalEnemiesInLevel = cfg.roster.length;
   for (let i = 0; i < cfg.roster.length; i++) {
@@ -913,6 +912,9 @@ function startCustomMap(idx) {
   eliminatedHumans = [];
   gameState = 'playing';
   levelBannerTimer = 85;
+  levelClearPending = false;
+  levelVictoryDelay = 0;
+  playerDeadPending = false;
 
   const roster = [];
   for (const k of ENEMY_KIND_KEYS) {
@@ -2529,17 +2531,32 @@ function update() {
   // Obsługa oczekiwania na zakończenie lotu pocisków (Punkty 12, 13, 14, 15)
   const flyingProjectiles = bullets.length + homingRockets.length;
 
+  if (enemies.length > 0) {
+    // Jeśli powracający przeciwnik powrócił na planszę, resetujemy stan zakończenia
+    levelClearPending = false;
+    levelVictoryDelay = 0;
+  }
+
   if (player.hp <= 0 || playerDeadPending) {
     clouds = [];
+    levelClearPending = false;
+    levelVictoryDelay = 0;
     if (flyingProjectiles === 0) {
       playerDeadPending = false;
-      levelClearPending = false;
       openMenu('dead');
       return;
     }
   } else if (levelClearPending || (enemies.length === 0 && gameState === 'playing')) {
     clouds = [];
-    if (flyingProjectiles === 0) {
+    if (!levelClearPending) {
+      levelClearPending = true;
+      levelVictoryDelay = 30;
+    }
+    if (levelVictoryDelay > 0) {
+      levelVictoryDelay--;
+    }
+    // Po zabiciu ostatniego przeciwnika gra trwa jeszcze pół sekundy (30 klatek) niezależnie od lecących pocisków
+    if (levelVictoryDelay <= 0 && flyingProjectiles === 0) {
       levelClearPending = false;
       handleLevelVictory();
       return;
