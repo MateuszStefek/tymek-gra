@@ -531,6 +531,10 @@ function firePlayerWeapon(fromX, fromY, angle) {
       life: 480
     });
     player.cooldown = 28;
+  } else if (player.weapon === 'minigun') {
+    const spread = (Math.random() - 0.5) * 0.14;
+    firePaintball(fromX, fromY, angle + spread, true);
+    player.cooldown = 3; // Ponad 3x szybciej niż standardowy marker (20 strzałów/s)!
   } else {
     firePaintball(fromX, fromY, angle, true);
     player.cooldown = 10;
@@ -650,7 +654,7 @@ function update() {
   // Strzał (mysz lub spust/przycisk kontrolera Xbox)
   const shouldShoot = (mouse.down || (gpInput && gpInput.isShooting)) && player.cooldown <= 0;
   if (shouldShoot) {
-    const spread = player.weapon === 'bazooka' ? 0 : (Math.random() - 0.5) * 0.08;
+    const spread = player.weapon === 'bazooka' ? 0 : (player.weapon === 'minigun' ? (Math.random() - 0.5) * 0.16 : (Math.random() - 0.5) * 0.08);
     firePlayerWeapon(player.x, player.y, player.angle + spread);
   }
 

@@ -139,7 +139,7 @@ function updateHud() {
   if (btnSwitchWeapon) {
     const wObj = weaponsCatalog.find(w => w.id === player.weapon) || weaponsCatalog[0];
     btnSwitchWeapon.textContent = `${wObj.shortName} [Q]`;
-    btnSwitchWeapon.classList.toggle('active', player.weapon === 'bazooka');
+    btnSwitchWeapon.classList.toggle('active', player.weapon !== 'pistol');
   }
   minesText.textContent = minesCount;
   btnPlaceMine.textContent = `💣 Postaw minę: ${minesCount} [PPM / SPACJA]`;
@@ -147,7 +147,7 @@ function updateHud() {
   if (touchMineBadge) touchMineBadge.textContent = minesCount;
   if (touchBtnMine) touchBtnMine.disabled = minesCount <= 0;
   if (touchBtnWeapon) {
-    touchBtnWeapon.textContent = player.weapon === 'bazooka' ? '🚀' : '🔫';
+    touchBtnWeapon.textContent = player.weapon === 'bazooka' ? '🚀' : (player.weapon === 'minigun' ? '🔥' : '🔫');
   }
   hpText.textContent = `${hp}/${player.maxHp}`;
   hpFill.style.width = pct + '%';

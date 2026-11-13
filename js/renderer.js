@@ -240,6 +240,24 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.stroke();
     ctx.fillStyle = '#f97316';
     ctx.fillRect(24, -6, 6, 12);
+  } else if (isPlayer && player.weapon === 'minigun') {
+    // Rysuj Minigun z obrotową lufą
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(4, -6, 15, 12, 2);
+    ctx.fill();
+    ctx.stroke();
+    // Potrójne lufy miniguna
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(19, -5, 14, 2.5);
+    ctx.fillRect(19, -1, 15, 2.5);
+    ctx.fillRect(19, 3, 14, 2.5);
+    // Pierścienie stabilizujące lufy
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(25, -6, 2.5, 12);
+    ctx.fillRect(31, -6, 2.5, 12);
   } else {
     ctx.fillStyle = isProKind ? '#0f172a' : '#334155';
     ctx.fillRect(10, -2, 18, 6);

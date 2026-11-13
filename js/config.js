@@ -70,6 +70,15 @@ const weaponsCatalog = [
         requiresUpgrade: 'bazooka_rockets_7'
       }
     ]
+  },
+  {
+    id: 'minigun',
+    name: '🔥 Minigun',
+    shortName: '🔥 Minigun',
+    cost: 1,
+    desc: 'Ciężki minigun o potężnej szybkostrzelności! Strzela bardzo szybko i korzysta ze zwykłych nabojów farby.',
+    ammoLabel: '🎨 Zwykłe naboje farby (wysoka szybkostrzelność)',
+    upgrades: []
   }
 ];
 
