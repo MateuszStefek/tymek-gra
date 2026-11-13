@@ -539,6 +539,10 @@ function firePlayerWeapon(fromX, fromY, angle) {
 
 function update() {
   if (levelBannerTimer > 0) levelBannerTimer--;
+
+  // Obsługa kontrolera Xbox (gamepad) — działa również w menu i na ekranach zakończenia poziomu!
+  const gpInput = typeof updateGamepadInput === 'function' ? updateGamepadInput() : null;
+
   if (gameState !== 'playing') return;
 
   survivalSeconds = (performance.now() - startTime) / 1000;
@@ -592,9 +596,6 @@ function update() {
   }
 
   if (player.hitFlash > 0) player.hitFlash--;
-
-  // Obsługa kontrolera Xbox (gamepad)
-  const gpInput = typeof updateGamepadInput === 'function' ? updateGamepadInput() : null;
 
   let dx = 0;
   let dy = 0;

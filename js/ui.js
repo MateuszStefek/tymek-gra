@@ -1141,7 +1141,8 @@ function openResultPopup(mode) {
     const nextCfg = getLevelConfig(level + 1);
     const btnNext = document.createElement('button');
     btnNext.className = 'btn-green';
-    btnNext.dataset.label = `▶️ Następny (Poziom ${level + 1} — ${nextCfg.label})`;
+    btnNext.dataset.label = `▶️ Następny poziom (Poziom ${level + 1} — ${nextCfg.label})`;
+    btnNext.dataset.padHint = 'A';
     btnNext.onclick = () => {
       if (!canActivateMenuAction()) return;
       resultPopupOverlay.classList.add('hidden');
@@ -1155,6 +1156,7 @@ function openResultPopup(mode) {
   const btnReplay = document.createElement('button');
   btnReplay.className = isWin && activeCustomMapIndex === null ? 'btn-blue' : 'btn-green';
   btnReplay.dataset.label = `🔄 Zagraj jeszcze raz (${stageName})`;
+  btnReplay.dataset.padHint = 'X';
   btnReplay.onclick = () => {
     if (!canActivateMenuAction()) return;
     resultPopupOverlay.classList.add('hidden');
@@ -1164,10 +1166,11 @@ function openResultPopup(mode) {
   resultPopupActions.appendChild(btnReplay);
   popupButtons.push(btnReplay);
 
-  // 3. Guzik "Wróć do głównego ekranu"
+  // 3. Guzik "Wróć do ekranu"
   const btnMainScreen = document.createElement('button');
   btnMainScreen.className = 'btn-purple';
-  btnMainScreen.dataset.label = '🏠 Wróć do głównego ekranu';
+  btnMainScreen.dataset.label = '🏠 Wróć do ekranu';
+  btnMainScreen.dataset.padHint = 'B';
   btnMainScreen.onclick = () => {
     if (!canActivateMenuAction()) return;
     resultPopupOverlay.classList.add('hidden');
@@ -1182,12 +1185,15 @@ function openResultPopup(mode) {
     const locked = remMs > 0 || !pointerReleasedAfterMenuOpen;
     popupButtons.forEach(b => {
       b.disabled = locked;
+      const hint = b.dataset.padHint
+        ? `<span class="gamepad-badge gamepad-badge-${b.dataset.padHint.toLowerCase()}">${b.dataset.padHint}</span>`
+        : '';
       if (remMs > 0) {
-        b.textContent = `${b.dataset.label} (⏳ ${(remMs / 1000).toFixed(1)}s)`;
+        b.innerHTML = `${b.dataset.label}${hint} (⏳ ${(remMs / 1000).toFixed(1)}s)`;
       } else if (!pointerReleasedAfterMenuOpen) {
-        b.textContent = `🖱️ Puść przycisk myszy...`;
+        b.innerHTML = `🖱️ Puść przycisk myszy...`;
       } else {
-        b.textContent = b.dataset.label;
+        b.innerHTML = `${b.dataset.label}${hint}`;
       }
     });
     if (!locked && menuCountdownInterval) {

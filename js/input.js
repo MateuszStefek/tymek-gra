@@ -492,6 +492,7 @@ let isGamepadConnected = false;
 window.addEventListener('gamepadconnected', (e) => {
   gamepadIndex = e.gamepad.index;
   isGamepadConnected = true;
+  document.body.classList.add('gamepad-active');
   const gpName = (e.gamepad.id || 'Kontroler Xbox').split('(')[0].trim();
   popups.push({
     x: player.x,
@@ -506,6 +507,7 @@ window.addEventListener('gamepaddisconnected', (e) => {
   if (gamepadIndex === e.gamepad.index) {
     gamepadIndex = null;
     isGamepadConnected = false;
+    document.body.classList.remove('gamepad-active');
     popups.push({
       x: player.x,
       y: player.y - 36,
@@ -532,10 +534,69 @@ function updateGamepadInput() {
     }
   }
 
-  if (!gp || !gp.connected) return null;
+  if (!gp || !gp.connected) {
+    if (isGamepadConnected) {
+      isGamepadConnected = false;
+      document.body.classList.remove('gamepad-active');
+    }
+    return null;
+  }
+
+  isGamepadConnected = true;
+  document.body.classList.add('gamepad-active');
 
   // Martwa strefa gałek analogowych (deadzone)
   const deadzone = 0.18;
+
+  // Pomocnicze funkcje do sprawdzania przycisków
+  const isDown = (idx) => {
+    const btn = gp.buttons[idx];
+    if (!btn) return false;
+    return typeof btn === 'object' ? (btn.pressed || btn.value > 0.35) : btn > 0.35;
+  };
+  const isJustPressed = (idx) => {
+    const down = isDown(idx);
+    const wasDown = !!lastGamepadButtons[idx];
+    return down && !wasDown;
+  };
+
+  // Obsługa przycisków kontrolera na ekranie ukończenia poziomu (oraz ekranie przegranej)
+  if (gameState === 'level_clear' || gameState === 'dead') {
+    const ready = performance.now() >= menuReadyAt;
+    if (ready) {
+      // Przycisk A [0]: Następny poziom (jeśli dostępny po ukończeniu poziomu)
+      if (isJustPressed(0)) {
+        if (activeCustomMapIndex === null && level < unlockedLevel) {
+          resultPopupOverlay.classList.add('hidden');
+          startLevel(level + 1);
+          for (let b = 0; b < gp.buttons.length; b++) lastGamepadButtons[b] = isDown(b);
+          return null;
+        }
+      }
+
+      // Przycisk X [2]: Zagraj jeszcze raz
+      if (isJustPressed(2)) {
+        resultPopupOverlay.classList.add('hidden');
+        if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);
+        else startLevel(level);
+        for (let b = 0; b < gp.buttons.length; b++) lastGamepadButtons[b] = isDown(b);
+        return null;
+      }
+
+      // Przycisk B [1]: Wróć do ekranu głównego / wyboru poziomów
+      if (isJustPressed(1)) {
+        resultPopupOverlay.classList.add('hidden');
+        openMenu('select');
+        for (let b = 0; b < gp.buttons.length; b++) lastGamepadButtons[b] = isDown(b);
+        return null;
+      }
+    }
+
+    for (let b = 0; b < gp.buttons.length; b++) {
+      lastGamepadButtons[b] = isDown(b);
+    }
+    return null;
+  }
 
   // Lewa gałka (ruch postaci)
   let moveX = gp.axes[0] || 0;
@@ -561,18 +622,6 @@ function updateGamepadInput() {
   let aimY = gp.axes[3] || 0;
   const aimDistSq = aimX * aimX + aimY * aimY;
   const hasAim = aimDistSq > (deadzone * deadzone);
-
-  // Pomocnicze funkcje do sprawdzania przycisków
-  const isDown = (idx) => {
-    const btn = gp.buttons[idx];
-    if (!btn) return false;
-    return typeof btn === 'object' ? (btn.pressed || btn.value > 0.35) : btn > 0.35;
-  };
-  const isJustPressed = (idx) => {
-    const down = isDown(idx);
-    const wasDown = !!lastGamepadButtons[idx];
-    return down && !wasDown;
-  };
 
   // Start / Menu [przycisk 9]: pauza
   if (isJustPressed(9)) {
