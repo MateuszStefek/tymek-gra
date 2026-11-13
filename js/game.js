@@ -1,88 +1,4 @@
-// Główna pętla rozgrywki, fizyka kolizji, logika min, amunicji, przeciwników oraz obsługa wejścia
-
-function rectCircleColliding(circleX, circleY, radius, rect) {
-  const distX = Math.abs(circleX - rect.x - rect.w / 2);
-  const distY = Math.abs(circleY - rect.y - rect.h / 2);
-  if (distX > (rect.w / 2 + radius)) return false;
-  if (distY > (rect.h / 2 + radius)) return false;
-  if (distX <= (rect.w / 2)) return true;
-  if (distY <= (rect.h / 2)) return true;
-  const dx = distX - rect.w / 2;
-  const dy = distY - rect.h / 2;
-  return (dx * dx + dy * dy <= (radius * radius));
-}
-
-function canMoveTo(x, y, radius) {
-  if (x < radius + 12 || x > canvas.width - radius - 12) return false;
-  if (y < radius + 12 || y > canvas.height - radius - 12) return false;
-  for (const ob of obstacles) {
-    if (rectCircleColliding(x, y, radius, ob)) return false;
-  }
-  return true;
-}
-
-function spawnAmmoPickup(x, y, amount) {
-  ammoPickups.push({
-    x: Math.max(30, Math.min(canvas.width - 30, x)),
-    y: Math.max(30, Math.min(canvas.height - 30, y)),
-    amount,
-    radius: 15,
-    pulse: Math.random() * Math.PI * 2
-  });
-}
-
-function spawnRandomMapAmmo() {
-  for (let tries = 0; tries < 20; tries++) {
-    const rx = 60 + Math.random() * (canvas.width - 120);
-    const ry = 60 + Math.random() * (canvas.height - 120);
-    if (canMoveTo(rx, ry, 22) && Math.hypot(rx - player.x, ry - player.y) > 90) {
-      spawnAmmoPickup(rx, ry, 10);
-      popups.push({ x: rx, y: ry - 15, text: '📦 +10 NABOJÓW!', color: '#38bdf8', alpha: 1 });
-      return;
-    }
-  }
-}
-
-function spawnRocketPickup(x, y) {
-  rocketPickups.push({
-    x: Math.max(35, Math.min(canvas.width - 35, x)),
-    y: Math.max(35, Math.min(canvas.height - 35, y)),
-    radius: 16,
-    pulse: Math.random() * Math.PI * 2
-  });
-}
-
-function spawnRandomMapRocket() {
-  for (let tries = 0; tries < 20; tries++) {
-    const rx = 65 + Math.random() * (canvas.width - 130);
-    const ry = 65 + Math.random() * (canvas.height - 130);
-    if (canMoveTo(rx, ry, 22) && Math.hypot(rx - player.x, ry - player.y) > 90) {
-      spawnRocketPickup(rx, ry);
-      popups.push({ x: rx, y: ry - 16, text: '🚀 +1 RAKIETA DO BAZOOKI!', color: '#fb923c', alpha: 1 });
-      return;
-    }
-  }
-}
-
-function placeMine() {
-  if (gameState !== 'playing' || player.hp <= 0 || minesCount <= 0) return;
-  minesCount--;
-  playMineBeep(false);
-  placedMines.push({
-    x: player.x,
-    y: player.y,
-    triggerRadius: 48,
-    blastRadius: 105,
-    pulse: 0,
-    armFrames: 300, // 5 sekund uzbrajania (60 fps * 5 = 300 klatek)
-    armed: false,
-    color: '#f97316',
-    visibleToPro: Math.random() < 0.5 // Profesjonalista widzi 50% min
-  });
-  saveProgress();
-  updateHud();
-  canvas.focus();
-}
+// ==================== GŁÓWNA LOGIKA ROZGRYWKI I PĘTLA GRY ====================
 
 function eliminateEnemy(j, en, splatColor) {
   addPaintSplat(en.x, en.y, splatColor, 34);
@@ -112,91 +28,13 @@ function eliminateEnemy(j, en, splatColor) {
 
   enemies.splice(j, 1);
 
-  // Punkt 15: Jeśli gracz zabije ostatniego przeciwnika, to chmury znikają
+  // Jeśli gracz zabije ostatniego przeciwnika, to chmury znikają
   if (enemies.length === 0) {
     clouds = [];
     levelClearPending = true;
-    levelVictoryDelay = 30; // Po zabiciu ostatniego przeciwnika gra trwa jeszcze pół sekundy niezależnie od lecących pocisków
+    levelVictoryDelay = 30; // Po zabiciu ostatniego przeciwnika gra trwa jeszcze pół sekundy
   }
   updateHud();
-}
-
-function triggerMineExplosion(mine) {
-  playExplosionSound();
-  const blastColor = colors[Math.floor(Math.random() * colors.length)];
-  addPaintSplat(mine.x, mine.y, blastColor, 52);
-  explosions.push({
-    x: mine.x,
-    y: mine.y,
-    radius: 10,
-    maxRadius: mine.blastRadius,
-    color: blastColor,
-    alpha: 1
-  });
-
-  for (let k = 0; k < 42; k++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = 2 + Math.random() * 7;
-    particles.push({
-      x: mine.x,
-      y: mine.y,
-      vx: Math.cos(a) * s,
-      vy: Math.sin(a) * s,
-      r: 4 + Math.random() * 5,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      alpha: 1
-    });
-  }
-
-  // Sprawdź, czy gracz jest w polu rażenia własnej miny!
-  if (Math.hypot(player.x - mine.x, player.y - mine.y) <= mine.blastRadius) {
-    player.hp = Math.max(0, player.hp - 80);
-    player.hitFlash = 24;
-    player.splatColor = blastColor;
-    addPaintSplat(player.x, player.y, blastColor, 34);
-    if (player.hp <= 0) {
-      updateHud();
-      clouds = [];
-      playerDeadPending = true;
-      if (bullets.length === 0 && homingRockets.length === 0) {
-        openMenu('dead');
-        return;
-      }
-    }
-  }
-
-  // Eliminate enemies inside blastRadius (chyba że przeciwnik jest odporny na miny - 'boss' / 'returning_boss'!)
-  for (let j = enemies.length - 1; j >= 0; j--) {
-    const en = enemies[j];
-    if (Math.hypot(en.x - mine.x, en.y - mine.y) <= mine.blastRadius) {
-      if (en.mineImmune) {
-        popups.push({
-          x: en.x,
-          y: en.y - 24,
-          text: '👑 ODPORNY NA MINY!',
-          color: '#facc15',
-          alpha: 1
-        });
-        continue;
-      }
-      eliminateEnemy(j, en, blastColor);
-    }
-  }
-
-  // Miny ranią również cywili będących w promieniu wybuchu!
-  for (let c = civilians.length - 1; c >= 0; c--) {
-    const civ = civilians[c];
-    if (Math.hypot(civ.x - mine.x, civ.y - mine.y) <= mine.blastRadius) {
-      damageCivilian(c, 2, blastColor);
-      if (gameState !== 'playing') return;
-    }
-  }
-
-  if (enemies.length === 0 && gameState === 'playing' && bullets.length === 0 && homingRockets.length === 0) {
-    handleLevelVictory();
-  } else {
-    updateHud();
-  }
 }
 
 function handleLevelVictory() {
@@ -222,292 +60,6 @@ function handleLevelVictory() {
   saveProgress();
   updateHud();
   openMenu('level_clear');
-}
-
-function spawnClouds(count) {
-  clouds = [];
-  const w = Math.round(canvas.width * 0.20);  // ok. 20% szerokości mapy (~188 px)
-  const h = Math.round(canvas.height * 0.20); // ok. 20% wysokości mapy (~112 px)
-  const presetCenters = [
-    { x: canvas.width * 0.34, y: canvas.height * 0.38 },
-    { x: canvas.width * 0.68, y: canvas.height * 0.56 },
-    { x: canvas.width * 0.48, y: canvas.height * 0.26 }
-  ];
-  for (let i = 0; i < count; i++) {
-    const base = presetCenters[i % presetCenters.length];
-    const cx = base.x + (Math.random() - 0.5) * 60;
-    const cy = base.y + (Math.random() - 0.5) * 45;
-    const puffs = [
-      { ox: -w * 0.28, oy: -h * 0.12, rx: w * 0.26, ry: h * 0.32, phaseOffset: 0 },
-      { ox: w * 0.28,  oy: -h * 0.10, rx: w * 0.27, ry: h * 0.32, phaseOffset: 1.5 },
-      { ox: -w * 0.20, oy: h * 0.18,  rx: w * 0.28, ry: h * 0.28, phaseOffset: 3.0 },
-      { ox: w * 0.22,  oy: h * 0.16,  rx: w * 0.28, ry: h * 0.29, phaseOffset: 4.5 },
-      { ox: 0,         oy: -h * 0.22, rx: w * 0.31, ry: h * 0.30, phaseOffset: 2.2 }
-    ];
-    const driftAngle = Math.random() * Math.PI * 2;
-    clouds.push({
-      x: cx,
-      y: cy,
-      w,
-      h,
-      vx: Math.cos(driftAngle) * 0.28,
-      vy: Math.sin(driftAngle) * 0.22,
-      phase: Math.random() * Math.PI * 2,
-      puffs
-    });
-  }
-}
-
-let enemyIdCounter = 0;
-
-function spawnEnemyAt(x, y, kind = 'normal', index = 0) {
-  const stats = typeof getEnemyKindStats === 'function' ? getEnemyKindStats(kind, index) : {
-    maxHits: 1, radius: 16, shirtColor: '#ef4444', speed: 1.7, shootTimer: 60, mineImmune: false
-  };
-
-  let ex = x;
-  let ey = y;
-  if (!canMoveTo(ex, ey, stats.radius)) {
-    for (let r = 12; r <= 90; r += 16) {
-      let found = false;
-      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-        const tx = ex + Math.cos(a) * r;
-        const ty = ey + Math.sin(a) * r;
-        if (canMoveTo(tx, ty, stats.radius)) {
-          ex = tx;
-          ey = ty;
-          found = true;
-          break;
-        }
-      }
-      if (found) break;
-    }
-  }
-
-  enemies.push({
-    id: ++enemyIdCounter,
-    x: ex,
-    y: ey,
-    vx: 0,
-    vy: 0,
-    kind,
-    hp: stats.maxHits,
-    maxHp: stats.maxHits,
-    mineImmune: stats.mineImmune,
-    speed: stats.speed,
-    radius: stats.radius,
-    angle: Math.PI / 2,
-    walkCycle: Math.random() * 10,
-    shirtColor: stats.shirtColor,
-    splatColor: null,
-    changeDirTimer: 0,
-    boxMinX: ex,
-    boxMaxX: ex,
-    boxMinY: ey,
-    boxMaxY: ey,
-    stuckFrames: 0,
-    aiState: 'normal',
-    aiStateTimer: 0,
-    repositionCooldown: 0,
-    repositionTarget: null,
-    orbitSign: Math.random() < 0.5 ? 1 : -1,
-    shootTimer: stats.shootTimer,
-    mineTimer: 15 * 60,
-    shieldAngle: Math.PI / 2,
-    dodgeTimer: 0,
-    dodgeVx: 0,
-    dodgeVy: 0,
-    dodgeSign: Math.random() < 0.5 ? 1 : -1
-  });
-}
-
-function getFarSpawnSpot(px, py) {
-  const candidateSpots = [
-    { x: 470, y: 65 },
-    { x: 95, y: 75 },
-    { x: 845, y: 75 },
-    { x: 80, y: 260 },
-    { x: 860, y: 260 },
-    { x: 260, y: 65 },
-    { x: 680, y: 65 },
-    { x: 95, y: 490 },
-    { x: 845, y: 490 },
-    { x: 470, y: 495 }
-  ];
-  let bestSpot = null;
-  let bestDist = -1;
-
-  for (const s of candidateSpots) {
-    const d = Math.hypot(s.x - px, s.y - py);
-    if (d > bestDist && canMoveTo(s.x, s.y, 22)) {
-      bestDist = d;
-      bestSpot = s;
-    }
-  }
-
-  for (let tries = 0; tries < 45; tries++) {
-    const rx = 80 + Math.random() * (canvas.width - 160);
-    const ry = 70 + Math.random() * (canvas.height - 140);
-    const d = Math.hypot(rx - px, ry - py);
-    if (d >= 340 && canMoveTo(rx, ry, 22)) {
-      let onMine = false;
-      for (const m of placedMines) {
-        if (Math.hypot(rx - m.x, ry - m.y) < m.blastRadius + 25) { onMine = true; break; }
-      }
-      if (!onMine) return { x: rx, y: ry };
-    }
-  }
-
-  return bestSpot || { x: 470, y: 65 };
-}
-
-function spawnEnemy(index, kind = 'normal') {
-  const spots = [
-    { x: 470, y: 65 },
-    { x: 95, y: 75 },
-    { x: 845, y: 75 },
-    { x: 80, y: 260 },
-    { x: 860, y: 260 },
-    { x: 260, y: 65 },
-    { x: 680, y: 65 },
-    { x: 95, y: 345 },
-    { x: 845, y: 345 }
-  ];
-  const spot = spots[index % spots.length];
-  const ex = spot.x + (Math.random() - 0.5) * 24;
-  const ey = spot.y + (Math.random() - 0.5) * 24;
-  spawnEnemyAt(ex, ey, kind, index);
-}
-
-function spawnCivilian(index = 0) {
-  const radius = 15;
-  let cx = 470;
-  let cy = 280;
-  let found = false;
-
-  for (let tries = 0; tries < 50; tries++) {
-    const rx = 70 + Math.random() * (canvas.width - 140);
-    const ry = 70 + Math.random() * (canvas.height - 140);
-    if (!canMoveTo(rx, ry, radius + 8)) continue;
-    if (Math.hypot(rx - player.x, ry - player.y) < 110) continue;
-
-    let nearArmedMine = false;
-    for (const m of placedMines) {
-      if (m.armed && Math.hypot(rx - m.x, ry - m.y) < m.blastRadius + 35) {
-        nearArmedMine = true;
-        break;
-      }
-    }
-    if (nearArmedMine) continue;
-
-    cx = rx;
-    cy = ry;
-    found = true;
-    break;
-  }
-
-  if (!found) {
-    const fallbackSpots = [
-      { x: 240, y: 170 },
-      { x: 700, y: 170 },
-      { x: 240, y: 390 },
-      { x: 700, y: 390 }
-    ];
-    const spot = fallbackSpots[index % fallbackSpots.length];
-    if (canMoveTo(spot.x, spot.y, radius)) {
-      cx = spot.x;
-      cy = spot.y;
-    }
-  }
-
-  const initAngle = Math.random() * Math.PI * 2;
-  const speed = 1.35 + Math.random() * 0.25;
-  civilians.push({
-    x: cx,
-    y: cy,
-    vx: Math.cos(initAngle) * speed,
-    vy: Math.sin(initAngle) * speed,
-    isCivilian: true,
-    hp: 2, // Przetrwa dokładnie 1 strzał (ma 2 HP)
-    maxHp: 2,
-    speed,
-    radius,
-    angle: initAngle,
-    walkCycle: Math.random() * 10,
-    splatColor: null,
-    changeDirTimer: 35 + Math.random() * 55
-  });
-}
-
-// Podkładacz min po zabiciu dropuje nową minę dla gracza
-function dropEnemyLoot(en) {
-  if (en.kind !== 'miner') return;
-  minesCount += 1;
-  saveProgress();
-  playPickupSound();
-  popups.push({ x: en.x, y: en.y - 28, text: '💣 +1 MINA!', color: '#facc15', alpha: 1 });
-  updateHud();
-}
-
-// Podkładacz min kładzie nową minę dokładnie w swojej pozycji (maks. 12 min naraz)
-function plantEnemyMine(en) {
-  if (enemyMines.length >= 12) enemyMines.shift();
-  enemyMines.push({
-    x: en.x,
-    y: en.y,
-    triggerRadius: 42,
-    blastRadius: 85,
-    pulse: 0,
-    armFrames: 180, // 3 sekundy uzbrajania
-    armed: false
-  });
-  playMineBeep(false);
-}
-
-// Omijanie min przez przeciwników: wszyscy widzą miny podkładacza, podkładacz widzi także miny gracza, a Profesjonalista widzi 50% min gracza
-function steerAwayFromMines(en) {
-  let nearest = null;
-  let nearestDist = Infinity;
-  const consider = (m) => {
-    const d = Math.hypot(en.x - m.x, en.y - m.y);
-    if (d < nearestDist) {
-      nearestDist = d;
-      nearest = m;
-    }
-  };
-  for (const m of enemyMines) consider(m);
-  if (en.kind === 'miner') {
-    for (const m of placedMines) consider(m);
-  } else if (en.kind === 'pro' || en.kind === 'returning_pro') {
-    for (const m of placedMines) {
-      if (m.visibleToPro) consider(m);
-    }
-  }
-  if (!nearest) return;
-  const safeDist = nearest.triggerRadius + en.radius + 30;
-  if (nearestDist >= safeDist) return;
-
-  if (en.dodgeTimer > 0) {
-    // Jeśli profesjonalista wykonuje manewr uniku przed pociskiem gracza,
-    // nie pozwól minie przerwać uniku, chyba że wróg jest o krok od detonacji
-    if (nearestDist > nearest.triggerRadius + en.radius + 6) {
-      return;
-    }
-  }
-
-  let away = Math.atan2(en.y - nearest.y, en.x - nearest.x);
-  // Jeśli kierunek ucieczki prowadzi w ścianę, szukaj wolnego kierunku obok
-  for (let step = 0; step <= 8; step++) {
-    const delta = (step * Math.PI) / 10;
-    const c1 = away + delta;
-    if (canMoveTo(en.x + Math.cos(c1) * 20, en.y + Math.sin(c1) * 20, en.radius)) { away = c1; break; }
-    const c2 = away - delta;
-    if (canMoveTo(en.x + Math.cos(c2) * 20, en.y + Math.sin(c2) * 20, en.radius)) { away = c2; break; }
-  }
-  const spd = Math.max(en.speed, 0.9);
-  en.vx = Math.cos(away) * spd;
-  en.vy = Math.sin(away) * spd;
-  en.changeDirTimer = Math.min(en.changeDirTimer, 12);
 }
 
 // Profesjonalista unika wejścia na linię strzału gracza, jeśli punkt startu naboju wynosi co najmniej 25% ekranu
@@ -544,8 +96,6 @@ function steerAwayFromPlayerBullets(en) {
     const startX = typeof b.startX === 'number' ? b.startX : b.x;
     const startY = typeof b.startY === 'number' ? b.startY : b.y;
 
-    // Zapamiętaj odległość punktu startowego od wroga w momencie wystrzału / pierwszego wykrycia,
-    // aby podbiegnięcie wroga w locie nie wyłączało nagle reguły uniku
     if (!b.distToPro) b.distToPro = {};
     const proKey = en.id || 1;
     if (typeof b.distToPro[proKey] !== 'number') {
@@ -558,23 +108,20 @@ function steerAwayFromPlayerBullets(en) {
 
     const dx = en.x - b.x;
     const dy = en.y - b.y;
-    // Rzut pozycji przeciwnika na wektor lotu pocisku
     const proj = (dx * b.vx + dy * b.vy) / bSpeed;
-    if (proj <= 0 || proj > 950) continue; // Pocisk nie leci w stronę wroga lub jest zbyt daleko
+    if (proj <= 0 || proj > 950) continue;
 
     const ux = b.vx / bSpeed;
     const uy = b.vy / bSpeed;
 
-    // Najbliższy punkt na linii strzału
     const closestX = b.x + ux * proj;
     const closestY = b.y + uy * proj;
     const perpX = en.x - closestX;
     const perpY = en.y - closestY;
     const distToLine = Math.hypot(perpX, perpY);
 
-    const timeToImpact = proj / bSpeed; // Czas dolotu pocisku w klatkach
+    const timeToImpact = proj / bSpeed;
 
-    // Wektor prostopadły oddalający od linii strzału (w stronę, po której stoi wróg)
     let outX = 0;
     let outY = 0;
     if (distToLine > 0.5) {
@@ -588,18 +135,15 @@ function steerAwayFromPlayerBullets(en) {
       outY = ny * side;
     }
 
-    // 1. ZAKAZ WCHODZENIA POD STRZAŁ Z DALEKA:
-    // Jeśli marker leci z daleka, a wróg idzie W STRONĘ linii strzału (en.vx, en.vy zbliża go do linii),
-    // Profesjonalista zatrzymuje się przed linią lub skręca z dala od toru lotu!
-    const approachSpeed = -(en.vx * outX + en.vy * outY); // Dodatnie, jeśli prędkość zmierza do linii
+    // 1. ZAKAZ WCHODZENIA POD STRZAŁ Z DALEKA
+    const approachSpeed = -(en.vx * outX + en.vy * outY);
     if (distToLine < en.radius + 80 && approachSpeed > 0) {
       en.vx += outX * (approachSpeed + 1.2);
       en.vy += outY * (approachSpeed + 1.2);
       en.changeDirTimer = Math.max(en.changeDirTimer, 18);
     }
 
-    // 2. PRZEWIDYWANIE KOLIZJI I UNIK (DODGE):
-    // Gdzie wróg znajdzie się za timeToImpact klatek, jeśli zachowa obecny wektor:
+    // 2. PRZEWIDYWANIE KOLIZJI I UNIK (DODGE)
     const futureX = en.x + en.vx * timeToImpact;
     const futureY = en.y + en.vy * timeToImpact;
     const futureDistToLine = Math.hypot(futureX - closestX, futureY - closestY);
@@ -610,7 +154,6 @@ function steerAwayFromPlayerBullets(en) {
         minTimeToImpact = timeToImpact;
         mostThreateningBullet = b;
 
-        // Sprawdź czy wybrana strona nie jest zablokowana przez ścianę
         let testOutX = outX;
         let testOutY = outY;
         if (!canMoveTo(en.x + testOutX * 28, en.y + testOutY * 28, en.radius)) {
@@ -620,7 +163,6 @@ function steerAwayFromPlayerBullets(en) {
           }
         }
 
-        // Zapamiętaj stronę uniku, by nie oscylować
         en.dodgeSign = (testOutX * (-uy) + testOutY * ux) >= 0 ? 1 : -1;
         chosenNormalX = testOutX;
         chosenNormalY = testOutY;
@@ -630,7 +172,6 @@ function steerAwayFromPlayerBullets(en) {
 
   if (!mostThreateningBullet) return;
 
-  // Szybki, zdecydowany odskok z toru lotu pocisku
   const dodgeSpeed = Math.max(en.speed * 1.9, 3.8);
   en.dodgeVx = chosenNormalX * dodgeSpeed;
   en.dodgeVy = chosenNormalY * dodgeSpeed;
@@ -638,54 +179,6 @@ function steerAwayFromPlayerBullets(en) {
   en.vx = en.dodgeVx;
   en.vy = en.dodgeVy;
   en.changeDirTimer = Math.max(en.changeDirTimer, en.dodgeTimer + 10);
-}
-
-// Aktualizacja min podkładacza; zwraca true, jeśli gracz zginął (przerwij dalszą aktualizację klatki)
-function updateEnemyMines() {
-  for (let m = enemyMines.length - 1; m >= 0; m--) {
-    const mine = enemyMines[m];
-    mine.pulse += 0.14;
-    if (!mine.armed) {
-      mine.armFrames--;
-      if (mine.armFrames <= 0) {
-        mine.armed = true;
-        playMineBeep(true);
-      }
-      continue;
-    }
-    if (Math.hypot(player.x - mine.x, player.y - mine.y) <= mine.triggerRadius) {
-      enemyMines.splice(m, 1);
-      playExplosionSound();
-      const blastColor = '#a855f7';
-      addPaintSplat(mine.x, mine.y, blastColor, 50);
-      explosions.push({ x: mine.x, y: mine.y, radius: 10, maxRadius: mine.blastRadius, color: blastColor, alpha: 1 });
-      for (let k = 0; k < 36; k++) {
-        const a = Math.random() * Math.PI * 2;
-        const s = 2 + Math.random() * 6;
-        particles.push({
-          x: mine.x, y: mine.y,
-          vx: Math.cos(a) * s, vy: Math.sin(a) * s,
-          r: 4 + Math.random() * 4,
-          color: blastColor,
-          alpha: 1
-        });
-      }
-      player.hp = Math.max(0, player.hp - 60);
-      player.hitFlash = 24;
-      player.splatColor = blastColor;
-      popups.push({ x: player.x, y: player.y - 30, text: '💥 MINA PODKŁADACZA! -60 HP', color: '#c084fc', alpha: 1 });
-      updateHud();
-      if (player.hp <= 0) {
-        clouds = [];
-        playerDeadPending = true;
-        if (bullets.length === 0 && homingRockets.length === 0) {
-          openMenu('dead');
-          return true;
-        }
-      }
-    }
-  }
-  return false;
 }
 
 function damageCivilian(civIdx, dmg, splatColor) {
@@ -730,11 +223,8 @@ function damageCivilian(civIdx, dmg, splatColor) {
     timer: 50
   });
   civilians.splice(civIdx, 1);
-
-  // Zabity cywil respawnuje się po 5 sekundach (300 klatek)
   civilianRespawnQueue.push({ timer: 5 * 60 });
 
-  // Kara za zabicie cywila: zmniejsza HP oraz maksymalne HP o 50 (maksymalne HP wraca do domyślnego po zakończeniu poziomu)
   player.maxHp = Math.max(1, player.maxHp - 50);
   player.hp = Math.max(0, player.hp - 50);
   player.hitFlash = 28;
@@ -754,408 +244,11 @@ function damageCivilian(civIdx, dmg, splatColor) {
   }
 }
 
-// ==================== SOJUSZNICZY POMOCNIK (PUNKTY 3 & 4) ====================
-
-function initHelper() {
-  if (!helperUnlocked) {
-    helper = null;
-    return;
-  }
-  let hx = player.x + 36;
-  let hy = player.y + 36;
-  if (!canMoveTo(hx, hy, 15)) {
-    hx = player.x - 36;
-    hy = player.y - 36;
-    if (!canMoveTo(hx, hy, 15)) {
-      hx = player.x;
-      hy = player.y;
-    }
-  }
-  helper = {
-    x: hx,
-    y: hy,
-    vx: 0,
-    vy: 0,
-    radius: 15,
-    speed: 2.15,
-    hp: 5,
-    maxHp: 5,
-    alive: true,
-    respawnTimer: 0,
-    walkCycle: 0,
-    angle: 0,
-    shootTimer: 45 + Math.random() * 30,
-    changeDirTimer: 0,
-    splatColor: null,
-    hitFlash: 0,
-    healTimer: 0,
-    stuckFrames: 0,
-    boxMinX: hx,
-    boxMaxX: hx,
-    boxMinY: hy,
-    boxMaxY: hy,
-    aiState: 'normal',
-    aiStateTimer: 0,
-    repositionTarget: null
-  };
-}
-
-function damageHelper(dmg, splatColor) {
-  if (!helper || !helper.alive) return;
-  helper.hp = Math.max(0, helper.hp - dmg);
-  helper.hitFlash = 14;
-  helper.splatColor = splatColor;
-  addPaintSplat(helper.x, helper.y, splatColor, helper.hp <= 0 ? 32 : 16);
-  for (let k = 0; k < (helper.hp <= 0 ? 22 : 10); k++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = 1.5 + Math.random() * 4.5;
-    particles.push({
-      x: helper.x,
-      y: helper.y,
-      vx: Math.cos(a) * s,
-      vy: Math.sin(a) * s,
-      r: 4 + Math.random() * 3,
-      color: splatColor,
-      alpha: 1
-    });
-  }
-  if (helper.hp > 0) {
-    popups.push({
-      x: helper.x,
-      y: helper.y - 24,
-      text: `🤝 POMOCNIK: ${helper.hp}/${helper.maxHp} ❤️`,
-      color: '#38bdf8',
-      alpha: 1
-    });
-  } else {
-    helper.alive = false;
-    helper.respawnTimer = 12 * 60; // 12 sekund do powrotu
-    eliminatedHumans.push({
-      x: helper.x,
-      y: helper.y,
-      shirtColor: '#0284c7',
-      splatColor,
-      timer: 48
-    });
-    popups.push({
-      x: helper.x,
-      y: helper.y - 30,
-      text: '⚠️ POMOCNIK ZGINĄŁ! (WRÓCI ZA 12s)',
-      color: '#ef4444',
-      alpha: 1
-    });
-  }
-}
-
-// Sprawdza, czy na linii strzału (od pomocnika do wroga) znajduje się cywil
-function isCivilianInLineOfFire(fromX, fromY, toX, toY) {
-  const lineDist = Math.hypot(toX - fromX, toY - fromY);
-  if (lineDist < 1) return false;
-  const ux = (toX - fromX) / lineDist;
-  const uy = (toY - fromY) / lineDist;
-
-  for (const civ of civilians) {
-    if (civ.hp <= 0) continue;
-    const dx = civ.x - fromX;
-    const dy = civ.y - fromY;
-    const proj = dx * ux + dy * uy;
-    if (proj > 0 && proj < lineDist + 15) {
-      const perpX = civ.x - (fromX + ux * proj);
-      const perpY = civ.y - (fromY + uy * proj);
-      const distToLine = Math.hypot(perpX, perpY);
-      if (distToLine < civ.radius + 24) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-// Pomocnik w stanie normalnym omija miny
-function steerHelperAwayFromMines(h) {
-  let nearest = null;
-  let nearestDist = Infinity;
-  const consider = (m) => {
-    const d = Math.hypot(h.x - m.x, h.y - m.y);
-    if (d < nearestDist) {
-      nearestDist = d;
-      nearest = m;
-    }
-  };
-  for (const m of placedMines) {
-    if (m.armed) consider(m);
-  }
-  for (const m of enemyMines) consider(m);
-
-  if (!nearest) return;
-  const safeDist = nearest.triggerRadius + h.radius + 28;
-  if (nearestDist >= safeDist) return;
-
-  let away = Math.atan2(h.y - nearest.y, h.x - nearest.x);
-  for (let step = 0; step <= 8; step++) {
-    const delta = (step * Math.PI) / 10;
-    const c1 = away + delta;
-    if (canMoveTo(h.x + Math.cos(c1) * 20, h.y + Math.sin(c1) * 20, h.radius)) { away = c1; break; }
-    const c2 = away - delta;
-    if (canMoveTo(h.x + Math.cos(c2) * 20, h.y + Math.sin(c2) * 20, h.radius)) { away = c2; break; }
-  }
-  h.vx = Math.cos(away) * h.speed;
-  h.vy = Math.sin(away) * h.speed;
-  h.changeDirTimer = Math.min(h.changeDirTimer, 12);
-}
-
-// Kolizje pomocnika z minami (w trakcie repositioning nie widzi min, więc może na nie wejść!)
-function checkHelperMineCollisions() {
-  if (!helper || !helper.alive) return;
-
-  // Miny podkładacza
-  for (let m = enemyMines.length - 1; m >= 0; m--) {
-    const mine = enemyMines[m];
-    if (!mine.armed) continue;
-    if (Math.hypot(helper.x - mine.x, helper.y - mine.y) <= mine.triggerRadius) {
-      enemyMines.splice(m, 1);
-      playExplosionSound();
-      const blastColor = '#a855f7';
-      addPaintSplat(mine.x, mine.y, blastColor, 50);
-      explosions.push({ x: mine.x, y: mine.y, radius: 10, maxRadius: mine.blastRadius, color: blastColor, alpha: 1 });
-      for (let k = 0; k < 30; k++) {
-        const a = Math.random() * Math.PI * 2;
-        const s = 2 + Math.random() * 5;
-        particles.push({
-          x: mine.x, y: mine.y,
-          vx: Math.cos(a) * s, vy: Math.sin(a) * s,
-          r: 4 + Math.random() * 3,
-          color: blastColor,
-          alpha: 1
-        });
-      }
-      damageHelper(5, blastColor);
-      return;
-    }
-  }
-
-  // W trakcie repositioning NIE widzi min -> może wejść na minę gracza
-  if (helper.aiState === 'repositioning') {
-    for (let p = placedMines.length - 1; p >= 0; p--) {
-      const pm = placedMines[p];
-      if (!pm.armed) continue;
-      if (Math.hypot(helper.x - pm.x, helper.y - pm.y) <= pm.triggerRadius) {
-        placedMines.splice(p, 1);
-        triggerMineExplosion(pm);
-        damageHelper(5, '#fb923c');
-        return;
-      }
-    }
-  }
-}
-
-// Strzelanie pomocnika: celuje w najbliższego wroga, jeśli nie ma cywila na linii strzału
-function updateHelperShooting() {
-  if (!helper || !helper.alive) return;
-  helper.shootTimer--;
-  if (helper.shootTimer > 0) return;
-
-  let bestEnemy = null;
-  let bestDist = Infinity;
-  for (const en of enemies) {
-    if (en.hp <= 0) continue;
-    const d = Math.hypot(en.x - helper.x, en.y - helper.y);
-    if (d < 460 && d < bestDist) {
-      if (!isCivilianInLineOfFire(helper.x, helper.y, en.x, en.y)) {
-        bestDist = d;
-        bestEnemy = en;
-      }
-    }
-  }
-
-  if (bestEnemy) {
-    const angle = Math.atan2(bestEnemy.y - helper.y, bestEnemy.x - helper.x) + (Math.random() - 0.5) * 0.12;
-    helper.angle = angle;
-    bullets.push({
-      x: helper.x + Math.cos(angle) * 22,
-      y: helper.y + Math.sin(angle) * 22,
-      startX: helper.x,
-      startY: helper.y,
-      vx: Math.cos(angle) * 9.2,
-      vy: Math.sin(angle) * 9.2,
-      color: '#38bdf8',
-      fromPlayer: false,
-      fromHelper: true,
-      life: 90
-    });
-    playShootSound();
-    helper.shootTimer = 45 + Math.random() * 30;
-  } else {
-    helper.shootTimer = 16;
-  }
-}
-
-function updateHelper() {
-  if (!helperUnlocked || !helper) return;
-
-  if (!helper.alive) {
-    helper.respawnTimer--;
-    if (helper.respawnTimer <= 0) {
-      helper.alive = true;
-      helper.hp = helper.maxHp;
-      helper.aiState = 'normal';
-      helper.stuckFrames = 0;
-      helper.healTimer = 0;
-      let placed = false;
-      for (let r = 40; r <= 130; r += 20) {
-        for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-          const tx = player.x + Math.cos(a) * r;
-          const ty = player.y + Math.sin(a) * r;
-          if (canMoveTo(tx, ty, helper.radius)) {
-            helper.x = tx;
-            helper.y = ty;
-            placed = true;
-            break;
-          }
-        }
-        if (placed) break;
-      }
-      if (!placed) {
-        helper.x = player.x;
-        helper.y = player.y;
-      }
-      helper.boxMinX = helper.x;
-      helper.boxMaxX = helper.x;
-      helper.boxMinY = helper.y;
-      helper.boxMaxY = helper.y;
-      playReloadSound();
-      popups.push({
-        x: helper.x,
-        y: helper.y - 30,
-        text: '🤝 POMOCNIK POWRÓCIŁ!',
-        color: '#38bdf8',
-        alpha: 1
-      });
-    }
-    return;
-  }
-
-  if (helper.hitFlash > 0) helper.hitFlash--;
-
-  // Tor leczenia pomocnika: 1HP/5s, 2HP/5s, 3HP/5s... (300 klatek przy 60 fps)
-  if (helperHealingLevel > 0 && helper.hp < helper.maxHp) {
-    helper.healTimer = (helper.healTimer || 0) + 1;
-    if (helper.healTimer >= 5 * 60) {
-      helper.healTimer = 0;
-      const healed = Math.min(helper.maxHp - helper.hp, helperHealingLevel);
-      helper.hp += healed;
-      popups.push({
-        x: helper.x,
-        y: helper.y - 28,
-        text: `💚 +${healed} HP POMOCNIKA (${helper.hp}/${helper.maxHp})`,
-        color: '#4ade80',
-        alpha: 1
-      });
-    }
-  } else {
-    helper.healTimer = 0;
-  }
-
-  // Śledzenie zablokowania przez dłużej niż 10 sekund (600 klatek)
-  helper.boxMinX = Math.min(helper.boxMinX, helper.x);
-  helper.boxMaxX = Math.max(helper.boxMaxX, helper.x);
-  helper.boxMinY = Math.min(helper.boxMinY, helper.y);
-  helper.boxMaxY = Math.max(helper.boxMaxY, helper.y);
-
-  if ((helper.boxMaxX - helper.boxMinX) <= 24 && (helper.boxMaxY - helper.boxMinY) <= 24) {
-    helper.stuckFrames++;
-  } else {
-    helper.boxMinX = helper.x;
-    helper.boxMaxX = helper.x;
-    helper.boxMinY = helper.y;
-    helper.boxMaxY = helper.y;
-    helper.stuckFrames = 0;
-  }
-
-  // Zablokowany >10s -> trick z mózgiem 🧠 i repositioning przez 3 sekundy
-  if (helper.stuckFrames >= 10 * 60 && helper.aiState !== 'repositioning') {
-    helper.stuckFrames = 0;
-    helper.aiState = 'repositioning';
-    helper.aiStateTimer = 3 * 60;
-    let targetSpot = null;
-    for (let r = 90; r <= 220; r += 30) {
-      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-        const tx = player.x + Math.cos(a) * r;
-        const ty = player.y + Math.sin(a) * r;
-        if (canMoveTo(tx, ty, helper.radius) && Math.hypot(tx - helper.x, ty - helper.y) > 70) {
-          targetSpot = { x: tx, y: ty };
-          break;
-        }
-      }
-      if (targetSpot) break;
-    }
-    helper.repositionTarget = targetSpot || { x: player.x, y: player.y };
-  }
-
-  const distToPlayer = Math.hypot(player.x - helper.x, player.y - helper.y);
-
-  if (helper.aiState === 'repositioning' && helper.repositionTarget) {
-    helper.aiStateTimer--;
-    const distToGoal = Math.hypot(helper.repositionTarget.x - helper.x, helper.repositionTarget.y - helper.y);
-    if (distToGoal <= 28 || helper.aiStateTimer <= 0) {
-      helper.aiState = 'normal';
-      helper.repositionTarget = null;
-      helper.stuckFrames = 0;
-      helper.boxMinX = helper.x;
-      helper.boxMaxX = helper.x;
-      helper.boxMinY = helper.y;
-      helper.boxMaxY = helper.y;
-    } else {
-      const moveAngle = computeEnemyPathAngle(helper, helper.repositionTarget.x, helper.repositionTarget.y);
-      helper.vx = Math.cos(moveAngle) * (helper.speed * 1.25);
-      helper.vy = Math.sin(moveAngle) * (helper.speed * 1.25);
-    }
-    // W trakcie repositioning NIE WIDZI MIN!
-  } else {
-    // Stan normalny: chodzi losowo, blisko gracza
-    helper.changeDirTimer--;
-    if (helper.changeDirTimer <= 0) {
-      let moveAngle;
-      if (distToPlayer > 180) {
-        moveAngle = Math.atan2(player.y - helper.y, player.x - helper.x) + (Math.random() - 0.5) * 0.8;
-      } else if (distToPlayer < 65) {
-        moveAngle = Math.atan2(helper.y - player.y, helper.x - player.x) + (Math.random() - 0.5) * 1.0;
-      } else {
-        moveAngle = Math.random() * Math.PI * 2;
-      }
-      helper.vx = Math.cos(moveAngle) * helper.speed;
-      helper.vy = Math.sin(moveAngle) * helper.speed;
-      helper.changeDirTimer = 30 + Math.random() * 40;
-    }
-
-    // Unika min w stanie normalnym
-    steerHelperAwayFromMines(helper);
-  }
-
-  const nx = helper.x + helper.vx;
-  const ny = helper.y + helper.vy;
-  if (canMoveTo(nx, helper.y, helper.radius)) {
-    helper.x = nx;
-  } else {
-    helper.vx *= -1;
-  }
-  if (canMoveTo(helper.x, ny, helper.radius)) {
-    helper.y = ny;
-  } else {
-    helper.vy *= -1;
-  }
-
-  helper.walkCycle += 0.22;
-  checkHelperMineCollisions();
-  updateHelperShooting();
-}
-
 function startLevel(targetLevel) {
   if (menuCountdownInterval) {
     clearInterval(menuCountdownInterval);
     menuCountdownInterval = null;
   }
-  // Jeśli na planszy zostały niewykorzystane miny z poprzedniej próby, wracają do puli
   if (placedMines.length > 0) {
     minesCount += placedMines.length;
     placedMines = [];
@@ -1186,8 +279,8 @@ function startLevel(targetLevel) {
   player.hpRegenTimer = 0;
   player.healTimers = [];
   player.ammoRegenTimer = 0;
-  player.ammo = getStartingAmmo(); // Zaczynamy poziom od 30 nabojów (lub 40 z ulepszeniem)
-  player.rockets = getStartingRockets(); // Standardowa bazooka: 3 rakiety na starcie (5 po wzmocnieniu ze sklepu)
+  player.ammo = getStartingAmmo();
+  player.rockets = getStartingRockets();
   player.emptyBazookaTries = 0;
   player.weapon = ownedWeapons.includes(defaultWeapon) ? defaultWeapon : 'pistol';
   player.hitFlash = 0;
@@ -1235,7 +328,6 @@ function startLevel(targetLevel) {
 }
 
 function startCustomMap(idx) {
-  // Mapa z zablokowanymi (jeszcze nieodkrytymi) przeciwnikami nie może zostać uruchomiona
   const lockedKinds = getLockedKindsInCustomMap(customMaps[idx]);
   if (lockedKinds.length > 0) {
     popups.push({
@@ -1364,7 +456,6 @@ function firePaintball(fromX, fromY, angle, fromPlayer) {
   });
 }
 
-// Bazooka śledzi najbliższego przeciwnika LUB cywila (jeśli pechowo jest najbliżej kursora myszy!)
 function findNearestEnemy(fromX, fromY) {
   let best = null;
   let bestDist = Infinity;
@@ -1385,136 +476,7 @@ function findNearestEnemy(fromX, fromY) {
   return best;
 }
 
-function normalizeAngleDiff(a) {
-  while (a > Math.PI) a -= Math.PI * 2;
-  while (a < -Math.PI) a += Math.PI * 2;
-  return a;
-}
-
-function computeObstacleAvoidingAngle(rx, ry, currentAngle, targetX, targetY) {
-  const desiredAngle = Math.atan2(targetY - ry, targetX - rx);
-  const distToTarget = Math.hypot(targetX - rx, targetY - ry);
-
-  // Sprawdź czy linia prosta do celu jest wolna od przeszkód
-  let directClear = true;
-  const checkSteps = Math.min(8, Math.ceil(distToTarget / 22));
-  for (let s = 1; s <= checkSteps; s++) {
-    const d = Math.min(distToTarget, s * 22);
-    const tx = rx + Math.cos(desiredAngle) * d;
-    const ty = ry + Math.sin(desiredAngle) * d;
-    if (!canMoveTo(tx, ty, 8)) {
-      directClear = false;
-      break;
-    }
-  }
-  if (directClear) {
-    return desiredAngle;
-  }
-
-  // Jeśli na drodze jest przeszkoda, oceń 20 kierunków wokół rakiety (steering feelers)
-  let bestAngle = currentAngle;
-  let bestScore = -Infinity;
-  const numDirs = 20;
-  for (let i = 0; i < numDirs; i++) {
-    const candAngle = -Math.PI + (i / numDirs) * Math.PI * 2;
-    let clearDist = 0;
-    const maxLook = 110;
-    for (let d = 16; d <= maxLook; d += 16) {
-      const tx = rx + Math.cos(candAngle) * d;
-      const ty = ry + Math.sin(candAngle) * d;
-      if (canMoveTo(tx, ty, 9)) {
-        clearDist = d;
-      } else {
-        break;
-      }
-    }
-    if (clearDist < 16) continue;
-
-    const diffToGoal = Math.abs(normalizeAngleDiff(candAngle - desiredAngle));
-    const diffToCurrent = Math.abs(normalizeAngleDiff(candAngle - currentAngle));
-    const score = clearDist * 1.6 - diffToGoal * 55 - diffToCurrent * 18;
-    if (score > bestScore) {
-      bestScore = score;
-      bestAngle = candAngle;
-    }
-  }
-  return bestAngle;
-}
-
-// Wyznacza kąt ruchu dla wroga idącego do punktu docelowego z omijaniem przeszkód (przez rogi przeszkód)
-function computeEnemyPathAngle(en, targetX, targetY) {
-  const pad = en.radius + 16;
-  const distToTarget = Math.hypot(targetX - en.x, targetY - en.y);
-  const directAngle = Math.atan2(targetY - en.y, targetX - en.x);
-
-  // Sprawdź pierwszą przeszkodę na linii do celu
-  let blockingOb = null;
-  const steps = Math.max(4, Math.ceil(distToTarget / 14));
-  for (let s = 1; s <= steps; s++) {
-    const d = Math.min(distToTarget, s * 14);
-    const tx = en.x + Math.cos(directAngle) * d;
-    const ty = en.y + Math.sin(directAngle) * d;
-    for (const ob of obstacles) {
-      if (rectCircleColliding(tx, ty, en.radius + 4, ob)) {
-        blockingOb = ob;
-        break;
-      }
-    }
-    if (blockingOb) break;
-  }
-
-  let aimX = targetX;
-  let aimY = targetY;
-
-  if (blockingOb) {
-    // Wybierz najlepszy róg przeszkody, przez który można ją ominąć
-    const corners = [
-      { x: blockingOb.x - pad, y: blockingOb.y - pad },
-      { x: blockingOb.x + blockingOb.w + pad, y: blockingOb.y - pad },
-      { x: blockingOb.x - pad, y: blockingOb.y + blockingOb.h + pad },
-      { x: blockingOb.x + blockingOb.w + pad, y: blockingOb.y + blockingOb.h + pad }
-    ];
-    let bestCorner = null;
-    let bestCost = Infinity;
-    for (const c of corners) {
-      if (!canMoveTo(c.x, c.y, en.radius)) continue;
-      const d1 = Math.hypot(c.x - en.x, c.y - en.y);
-      const d2 = Math.hypot(targetX - c.x, targetY - c.y);
-      if (d1 < 12) continue;
-      const cost = d1 + d2;
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestCorner = c;
-      }
-    }
-    if (bestCorner) {
-      aimX = bestCorner.x;
-      aimY = bestCorner.y;
-    }
-  }
-
-  const desiredAngle = Math.atan2(aimY - en.y, aimX - en.x);
-  if (canMoveTo(en.x + Math.cos(desiredAngle) * 18, en.y + Math.sin(desiredAngle) * 18, en.radius)) {
-    return desiredAngle;
-  }
-
-  // Jeśli bezpośrednio przed wrogiem jest ściana, szukaj wolnego kierunku z preferencją orbitSign
-  for (let step = 1; step <= 16; step++) {
-    const delta = (step * Math.PI) / 16;
-    const cand1 = desiredAngle + delta * en.orbitSign;
-    if (canMoveTo(en.x + Math.cos(cand1) * 20, en.y + Math.sin(cand1) * 20, en.radius)) {
-      return cand1;
-    }
-    const cand2 = desiredAngle - delta * en.orbitSign;
-    if (canMoveTo(en.x + Math.cos(cand2) * 20, en.y + Math.sin(cand2) * 20, en.radius)) {
-      return cand2;
-    }
-  }
-  return desiredAngle;
-}
-
 function getBestFallbackWeapon() {
-  // Zwraca najlepszą posiadaną broń bez limitu rakiet (np. Marker Paintballowy)
   let best = weaponsCatalog[0];
   for (const w of weaponsCatalog) {
     if (w.id !== 'bazooka' && ownedWeapons.includes(w.id) && w.cost >= best.cost) {
@@ -1529,23 +491,28 @@ function firePlayerWeapon(fromX, fromY, angle) {
   if (player.weapon === 'bazooka') {
     if (player.rockets <= 0) {
       player.emptyBazookaTries = (player.emptyBazookaTries || 0) + 1;
-      player.cooldown = 18;
+      playEmptyAmmoSound();
       if (player.emptyBazookaTries >= 2) {
-        player.emptyBazookaTries = 0;
         const fallback = getBestFallbackWeapon();
         player.weapon = fallback.id;
-        playReloadSound();
+        player.emptyBazookaTries = 0;
+        updateHud();
+        playSwitchWeaponSound();
         popups.push({
           x: player.x,
           y: player.y - 30,
-          text: `🔄 PRZEŁADOWANIE: ${fallback.shortName}!`,
-          color: '#fde047',
+          text: `BRAK RAKIET! PRZEŁĄCZONO NA: ${fallback.name.toUpperCase()} 🔫`,
+          color: '#fb923c',
           alpha: 1
         });
-        updateHud();
       } else {
-        playEmptyAmmoSound();
-        popups.push({ x: player.x, y: player.y - 28, text: 'BRAK RAKIET! 🚀 (1/2)', color: '#ef4444', alpha: 1 });
+        popups.push({
+          x: player.x,
+          y: player.y - 30,
+          text: 'BRAK RAKIET W BAZOOCE! (KLIKNIJ PONOWNIE, ABY ZMIENIĆ BROŃ)',
+          color: '#ef4444',
+          alpha: 1
+        });
       }
       return;
     }
@@ -1553,7 +520,6 @@ function firePlayerWeapon(fromX, fromY, angle) {
     player.rockets--;
     updateHud();
     playRocketLaunchSound();
-    // Celuj w przeciwnika najbliższego do wskaźnika myszy (mouse.x, mouse.y)
     const target = findNearestEnemy(mouse.x, mouse.y);
     homingRockets.push({
       x: fromX + Math.cos(angle) * 26,
@@ -1570,498 +536,6 @@ function firePlayerWeapon(fromX, fromY, angle) {
     player.cooldown = 10;
   }
 }
-// Event listenery przycisków i wejścia
-btnPause.addEventListener('click', togglePause);
-
-let diamondCheatClicks = 0;
-if (diamondStatBox) {
-  diamondStatBox.addEventListener('click', () => {
-    diamondCheatClicks++;
-    if (diamondCheatClicks >= 7) {
-      diamondCheatClicks = 0;
-      diamonds += 10;
-      playPickupSound();
-      saveProgress();
-      updateHud();
-      popups.push({
-        x: player.x,
-        y: player.y - 32,
-        text: '💎 +10 DIAMENTÓW!',
-        color: '#38bdf8',
-        alpha: 1
-      });
-      if (gameState === 'shop') {
-        renderShopWeapons();
-      } else if (gameState === 'menu' || gameState === 'level_clear' || gameState === 'dead') {
-        openMenu(gameState === 'menu' ? 'select' : gameState);
-      }
-    }
-  });
-}
-
-if (btnOpenShop) {
-  btnOpenShop.addEventListener('click', () => {
-    if (gameState === 'shop') {
-      shopOverlay.classList.add('hidden');
-      startTime = performance.now() - survivalSeconds * 1000;
-      gameState = 'playing';
-      updatePauseButtonUI();
-      canvas.focus();
-    } else {
-      openShopScreen();
-      updatePauseButtonUI();
-    }
-  });
-}
-
-if (btnSwitchWeapon) {
-  btnSwitchWeapon.addEventListener('click', switchWeaponInStage);
-}
-
-if (btnShopToLevels) {
-  btnShopToLevels.addEventListener('click', () => openMenu('select'));
-}
-
-if (btnCloseShop) {
-  btnCloseShop.addEventListener('click', () => {
-    shopOverlay.classList.add('hidden');
-    if (!hasStartedAnyGame) {
-      startLevel(level);
-    } else {
-      startTime = performance.now() - survivalSeconds * 1000;
-      gameState = 'playing';
-      updatePauseButtonUI();
-      canvas.focus();
-    }
-  });
-}
-
-if (btnOpenSettings) {
-  btnOpenSettings.addEventListener('click', () => {
-    if (gameState === 'settings') {
-      settingsOverlay.classList.add('hidden');
-      if (!hasStartedAnyGame) {
-        openMenu('select');
-      } else {
-        startTime = performance.now() - survivalSeconds * 1000;
-        gameState = 'playing';
-        updatePauseButtonUI();
-        canvas.focus();
-      }
-    } else {
-      openSettingsScreen();
-      updatePauseButtonUI();
-    }
-  });
-}
-
-if (btnSettingsToLevels) {
-  btnSettingsToLevels.addEventListener('click', () => openMenu('select'));
-}
-
-if (btnCloseSettings) {
-  btnCloseSettings.addEventListener('click', () => {
-    settingsOverlay.classList.add('hidden');
-    if (!hasStartedAnyGame) {
-      startLevel(level);
-    } else {
-      startTime = performance.now() - survivalSeconds * 1000;
-      gameState = 'playing';
-      updatePauseButtonUI();
-      canvas.focus();
-    }
-  });
-}
-
-if (btnOpenEnemies) {
-  btnOpenEnemies.addEventListener('click', () => {
-    if (gameState === 'enemies') {
-      enemiesOverlay.classList.add('hidden');
-      if (!hasStartedAnyGame) {
-        openMenu('select');
-      } else {
-        startTime = performance.now() - survivalSeconds * 1000;
-        gameState = 'playing';
-        updatePauseButtonUI();
-        canvas.focus();
-      }
-    } else {
-      openEnemiesScreen();
-      updatePauseButtonUI();
-    }
-  });
-}
-
-if (btnEnemiesToLevels) {
-  btnEnemiesToLevels.addEventListener('click', () => openMenu('select'));
-}
-
-if (btnCloseEnemies) {
-  btnCloseEnemies.addEventListener('click', () => {
-    enemiesOverlay.classList.add('hidden');
-    if (!hasStartedAnyGame) {
-      startLevel(level);
-    } else {
-      startTime = performance.now() - survivalSeconds * 1000;
-      gameState = 'playing';
-      updatePauseButtonUI();
-      canvas.focus();
-    }
-  });
-}
-
-btnOpenMenu.addEventListener('click', () => {
-  if (gameState === 'menu') {
-    menuOverlay.classList.add('hidden');
-    resizeGameLayout();
-    startTime = performance.now() - survivalSeconds * 1000;
-    gameState = 'playing';
-    updatePauseButtonUI();
-    canvas.focus();
-  } else {
-    openMenu('select');
-    updatePauseButtonUI();
-  }
-});
-
-btnOpenCustom.addEventListener('click', () => {
-  if (gameState === 'custom_maps') {
-    customOverlay.classList.add('hidden');
-    startTime = performance.now() - survivalSeconds * 1000;
-    gameState = 'playing';
-    updatePauseButtonUI();
-    canvas.focus();
-  } else {
-    openCustomMapsScreen(null);
-    updatePauseButtonUI();
-  }
-});
-
-btnAddCustomMap.addEventListener('click', () => {
-  customMaps.push({
-    name: `Własna Mapa ${customMaps.length + 1}`,
-    arenaIndex: customMaps.length % arenaLayouts.length,
-    clouds: 1,
-    civilians: 1,
-    normal: 1,
-    tough: getUnlockedEnemyKinds().has('tough') ? 1 : 0,
-    rapid: getUnlockedEnemyKinds().has('rapid') ? 1 : 0,
-    boss: 0
-  });
-  saveProgress();
-  openCustomMapsScreen(customMaps.length - 1);
-});
-
-btnCustomToLevels.addEventListener('click', () => {
-  openMenu('select');
-});
-
-btnCloseCustom.addEventListener('click', () => {
-  customOverlay.classList.add('hidden');
-  startTime = performance.now() - survivalSeconds * 1000;
-  gameState = 'playing';
-  updatePauseButtonUI();
-  canvas.focus();
-});
-
-btnPrevLevel.addEventListener('click', () => {
-  if (level > 1) startLevel(level - 1);
-});
-
-btnNextLevel.addEventListener('click', () => {
-  if (level < unlockedLevel) startLevel(level + 1);
-});
-
-btnPlaceMine.addEventListener('click', placeMine);
-if (btnTheme) btnTheme.addEventListener('click', cycleGraphicTheme);
-
-function toggleFullscreen() {
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-  if (!isFs) {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch(() => {});
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-      elem.mozRequestFullScreen();
-    } else if (elem.msRequestFullscreen) {
-      elem.msRequestFullscreen();
-    }
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen().catch(() => {});
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.mozCancelFullScreen) {
-      document.mozCancelFullScreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
-  }
-}
-
-function updateFullscreenButton() {
-  if (!btnFullscreen) return;
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-  btnFullscreen.textContent = isFs ? '🗗 Wyjdź z pełnego ekranu' : '⛶ Pełny ekran';
-  btnFullscreen.classList.toggle('active', isFs);
-}
-
-if (btnFullscreen) {
-  btnFullscreen.addEventListener('click', toggleFullscreen);
-}
-document.addEventListener('fullscreenchange', updateFullscreenButton);
-document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-
-// Wykrywanie urządzeń dotykowych i inicjalizacja kontrolek
-function checkTouchSupport() {
-  const isPureTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) &&
-    !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  if (isPureTouch) {
-    isTouchDevice = true;
-    if (touchActionGroup) touchActionGroup.classList.remove('hidden');
-  }
-}
-checkTouchSupport();
-
-// Odblokowanie Web Audio API na iOS Safari przy pierwszym dotknięciu
-window.addEventListener('touchstart', () => {
-  ensureAudio();
-  isTouchDevice = true;
-  if (touchActionGroup) touchActionGroup.classList.remove('hidden');
-}, { passive: true });
-
-// Przyciski akcji na ekranie dotykowym
-if (touchBtnMine) {
-  touchBtnMine.addEventListener('touchstart', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    ensureAudio();
-    if (gameState === 'playing') placeMine();
-  }, { passive: false });
-  touchBtnMine.addEventListener('click', e => {
-    e.preventDefault();
-    if (gameState === 'playing') placeMine();
-  });
-}
-
-if (touchBtnWeapon) {
-  touchBtnWeapon.addEventListener('touchstart', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    ensureAudio();
-    switchWeaponInStage();
-  }, { passive: false });
-  touchBtnWeapon.addEventListener('click', e => {
-    e.preventDefault();
-    switchWeaponInStage();
-  });
-}
-
-// Obsługa multi-touch (lewa ręka: joystick, prawa ręka: celowanie i strzelanie)
-function handleCanvasTouchStart(e) {
-  ensureAudio();
-  if (!isTouchDevice) {
-    isTouchDevice = true;
-    if (touchActionGroup) touchActionGroup.classList.remove('hidden');
-  }
-
-  // Nie przechwytuj dotknięć w przyciski górnego paska, nakładki menu, przyciski akcji ani formularze
-  if (e.target.closest('button, .topbar, .overlay, .popup-backdrop, input, a, .touch-action-btn')) {
-    return;
-  }
-
-  if (gameState === 'paused') {
-    togglePause();
-    e.preventDefault();
-    return;
-  }
-  if (gameState !== 'playing') return;
-  e.preventDefault();
-
-  const rect = canvas.getBoundingClientRect();
-  const screenMidX = Math.max(rect.left + rect.width * 0.45, window.innerWidth * 0.48);
-
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    const t = e.changedTouches[i];
-    const clientX = t.clientX;
-    const clientY = t.clientY;
-
-    // Lewa strona ekranu (także w marginesie poza planszą!) steruje ruchem gracza (joystick)
-    if (clientX < screenMidX && touchJoystick.identifier === null) {
-      touchJoystick.active = true;
-      touchJoystick.identifier = t.identifier;
-      touchJoystick.baseX = clientX;
-      touchJoystick.baseY = clientY;
-      touchJoystick.dx = 0;
-      touchJoystick.dy = 0;
-
-      if (joystickBase && joystickThumb) {
-        joystickBase.style.left = touchJoystick.baseX + 'px';
-        joystickBase.style.top = touchJoystick.baseY + 'px';
-        joystickThumb.style.left = '50%';
-        joystickThumb.style.top = '50%';
-        joystickBase.style.display = 'block';
-      }
-    } else if (touchAimId === null) {
-      // Prawa strona ekranu: celowanie i strzał
-      touchAimId = t.identifier;
-      const canvasX = (clientX - rect.left) * (canvas.width / rect.width);
-      const canvasY = (clientY - rect.top) * (canvas.height / rect.height);
-      mouse.x = Math.max(0, Math.min(canvas.width, canvasX));
-      mouse.y = Math.max(0, Math.min(canvas.height, canvasY));
-      mouse.active = true;
-      mouse.down = true;
-      const angle = Math.atan2(canvasY - player.y, canvasX - player.x);
-      firePlayerWeapon(player.x, player.y, angle);
-    }
-  }
-}
-
-function handleCanvasTouchMove(e) {
-  if (touchJoystick.identifier === null && touchAimId === null) return;
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    const t = e.changedTouches[i];
-    if (t.identifier === touchJoystick.identifier) {
-      const curX = t.clientX;
-      const curY = t.clientY;
-      const diffX = curX - touchJoystick.baseX;
-      const diffY = curY - touchJoystick.baseY;
-      const dist = Math.hypot(diffX, diffY);
-      const maxR = touchJoystick.radius;
-      const clampedDist = Math.min(dist, maxR);
-      const angle = Math.atan2(diffY, diffX);
-      const defX = Math.cos(angle) * clampedDist;
-      const defY = Math.sin(angle) * clampedDist;
-
-      touchJoystick.dx = defX / maxR;
-      touchJoystick.dy = defY / maxR;
-
-      if (joystickThumb) {
-        joystickThumb.style.left = `calc(50% + ${defX}px)`;
-        joystickThumb.style.top = `calc(50% + ${defY}px)`;
-      }
-    } else if (t.identifier === touchAimId) {
-      const canvasX = (t.clientX - rect.left) * (canvas.width / rect.width);
-      const canvasY = (t.clientY - rect.top) * (canvas.height / rect.height);
-      mouse.x = Math.max(0, Math.min(canvas.width, canvasX));
-      mouse.y = Math.max(0, Math.min(canvas.height, canvasY));
-      mouse.active = true;
-    }
-  }
-}
-
-function handleCanvasTouchEnd(e) {
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    const t = e.changedTouches[i];
-    if (t.identifier === touchJoystick.identifier) {
-      touchJoystick.active = false;
-      touchJoystick.identifier = null;
-      touchJoystick.dx = 0;
-      touchJoystick.dy = 0;
-      if (joystickBase) joystickBase.style.display = 'none';
-    }
-    if (t.identifier === touchAimId) {
-      touchAimId = null;
-      mouse.down = false;
-      pointerReleasedAfterMenuOpen = true;
-    }
-  }
-}
-
-document.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
-document.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
-document.addEventListener('touchend', handleCanvasTouchEnd, { passive: false });
-document.addEventListener('touchcancel', handleCanvasTouchEnd, { passive: false });
-
-btnRetry.addEventListener('click', () => {
-  if (activeCustomMapIndex !== null) startCustomMap(activeCustomMapIndex);
-  else startLevel(level);
-});
-
-window.addEventListener('keydown', e => {
-  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-  keys[e.code] = true;
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
-    e.preventDefault();
-  }
-  if (e.code === 'KeyP' || e.code === 'Pause') {
-    togglePause();
-  } else if (e.code === 'KeyT') {
-    cycleGraphicTheme();
-  } else if (e.code === 'KeyQ') {
-    switchWeaponInStage();
-  } else if (e.code === 'KeyE' || (e.code === 'Space' && gameState === 'playing')) {
-    placeMine();
-  } else if (e.code === 'Escape' || e.code === 'KeyM') {
-    if (gameState === 'playing' || gameState === 'paused') openMenu('select');
-    else if (gameState === 'menu' || gameState === 'custom_maps' || gameState === 'shop' || gameState === 'settings' || gameState === 'enemies') {
-      menuOverlay.classList.add('hidden');
-      customOverlay.classList.add('hidden');
-      if (shopOverlay) shopOverlay.classList.add('hidden');
-      if (settingsOverlay) settingsOverlay.classList.add('hidden');
-      if (enemiesOverlay) enemiesOverlay.classList.add('hidden');
-      resizeGameLayout();
-      startTime = performance.now() - survivalSeconds * 1000;
-      gameState = 'playing';
-      updatePauseButtonUI();
-    }
-  }
-});
-
-window.addEventListener('keyup', e => {
-  keys[e.code] = false;
-});
-
-// Całkowita blokada menu kontekstowego pod prawym przyciskiem myszy (nic się nie dzieje)
-window.addEventListener('contextmenu', e => {
-  e.preventDefault();
-});
-
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
-  mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
-  mouse.active = true;
-});
-
-canvas.addEventListener('mousedown', e => {
-  window.focus();
-  canvas.focus();
-  const rect = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
-  mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
-  mouse.active = true;
-  if (e.button === 2) {
-    e.preventDefault();
-    if (gameState === 'playing') {
-      placeMine();
-    }
-    return;
-  }
-  if (e.button !== 0) {
-    e.preventDefault();
-    return;
-  }
-  if (gameState === 'paused') {
-    togglePause();
-    return;
-  }
-  if (gameState !== 'playing') return;
-  mouse.down = true;
-  mouse.active = true;
-  const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-  firePlayerWeapon(player.x, player.y, angle);
-});
-
-window.addEventListener('mouseup', () => {
-  mouse.down = false;
-  pointerReleasedAfterMenuOpen = true;
-});
 
 function update() {
   if (levelBannerTimer > 0) levelBannerTimer--;
@@ -2069,14 +543,14 @@ function update() {
 
   survivalSeconds = (performance.now() - startTime) / 1000;
 
-  // Tor leczenia: dyskretne impulsy (+1 HP co 5s, +1 HP co 6s, +1 HP co 7s, +1 HP co 8s...)
+  // Tor leczenia gracza
   if (healingLevel > 0 && player.hp > 0 && player.hp < player.maxHp) {
     if (!Array.isArray(player.healTimers)) player.healTimers = [];
     let totalHealedThisFrame = 0;
     for (let k = 1; k <= healingLevel; k++) {
       const idx = k - 1;
       player.healTimers[idx] = (player.healTimers[idx] || 0) + 1;
-      const requiredFrames = getHealingIntervalSeconds(k) * 60; // 5s=300, 6s=360, 7s=420, 8s=480...
+      const requiredFrames = getHealingIntervalSeconds(k) * 60;
       if (player.healTimers[idx] >= requiredFrames) {
         player.healTimers[idx] = 0;
         totalHealedThisFrame += 1;
@@ -2100,7 +574,7 @@ function update() {
     player.healTimers = [];
   }
 
-  // Tor uzupełniania nabojów: co 5 sekund gracz otrzymuje +ammoRegenLevel nabojów
+  // Tor uzupełniania nabojów gracza
   if (ammoRegenLevel > 0) {
     player.ammoRegenTimer = (player.ammoRegenTimer || 0) + 1;
     if (player.ammoRegenTimer >= 5 * 60) {
@@ -2119,6 +593,9 @@ function update() {
 
   if (player.hitFlash > 0) player.hitFlash--;
 
+  // Obsługa kontrolera Xbox (gamepad)
+  const gpInput = typeof updateGamepadInput === 'function' ? updateGamepadInput() : null;
+
   let dx = 0;
   let dy = 0;
   if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
@@ -2126,9 +603,17 @@ function update() {
   if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
 
+  let speedFactor = 1;
   if (touchJoystick.active) {
     dx += touchJoystick.dx;
     dy += touchJoystick.dy;
+    if (!keys['KeyW'] && !keys['KeyS'] && !keys['KeyA'] && !keys['KeyD']) {
+      speedFactor = Math.min(1, Math.hypot(touchJoystick.dx, touchJoystick.dy));
+    }
+  } else if (gpInput && (Math.abs(gpInput.moveX) > 0 || Math.abs(gpInput.moveY) > 0)) {
+    dx = gpInput.moveX;
+    dy = gpInput.moveY;
+    speedFactor = Math.min(1, Math.hypot(gpInput.moveX, gpInput.moveY));
   }
 
   const curPlayerX = player.x;
@@ -2136,7 +621,6 @@ function update() {
 
   if (dx !== 0 || dy !== 0) {
     const len = Math.hypot(dx, dy);
-    const speedFactor = touchJoystick.active && !keys['KeyW'] && !keys['KeyS'] && !keys['KeyA'] && !keys['KeyD'] ? Math.min(1, len) : 1;
     const nx = player.x + (dx / len) * player.speed * speedFactor;
     const ny = player.y + (dy / len) * player.speed * speedFactor;
     if (canMoveTo(nx, player.y, player.radius)) player.x = nx;
@@ -2147,23 +631,32 @@ function update() {
   player.vx = player.x - curPlayerX;
   player.vy = player.y - curPlayerY;
 
-  if (touchAimId !== null || !touchJoystick.active || mouse.down) {
+  // Celowanie: kontroler Xbox, dotyk lub mysz
+  if (gpInput && gpInput.hasAim) {
+    const gpAngle = Math.atan2(gpInput.aimY, gpInput.aimX);
+    player.angle = gpAngle;
+    mouse.x = player.x + Math.cos(gpAngle) * 200;
+    mouse.y = player.y + Math.sin(gpAngle) * 200;
+    mouse.active = true;
+  } else if (touchAimId !== null || !touchJoystick.active || mouse.down) {
     player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
   } else if (touchJoystick.active && (touchJoystick.dx !== 0 || touchJoystick.dy !== 0)) {
     player.angle = Math.atan2(touchJoystick.dy, touchJoystick.dx);
   }
 
   if (player.cooldown > 0) player.cooldown--;
-  if (mouse.down && player.cooldown <= 0) {
+
+  // Strzał (mysz lub spust/przycisk kontrolera Xbox)
+  const shouldShoot = (mouse.down || (gpInput && gpInput.isShooting)) && player.cooldown <= 0;
+  if (shouldShoot) {
     const spread = player.weapon === 'bazooka' ? 0 : (Math.random() - 0.5) * 0.08;
     firePlayerWeapon(player.x, player.y, player.angle + spread);
   }
 
   // Update enemies
-  // Lekko powiększony prostokąt wykrywania utknięcia (~26% szerokości i wysokości mapy: ok. 244x145 px)
   const maxStuckW = canvas.width * 0.26;
   const maxStuckH = canvas.height * 0.26;
-  const STUCK_TRIGGER_FRAMES = 12 * 60; // 12 sekund (720 klatek) przebywania w małym prostokącie uruchamia stan zagubienia
+  const STUCK_TRIGGER_FRAMES = 12 * 60;
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     const en = enemies[i];
@@ -2173,15 +666,13 @@ function update() {
     const distToPlayer = Math.hypot(player.x - en.x, player.y - en.y);
 
     if (en.aiState === 'confused') {
-      // Przez 2 sekundy (120 klatek) ma nad sobą ikonkę pytajnika ❓ (zagubiony)
       en.aiStateTimer--;
       en.vx *= 0.85;
       en.vy *= 0.85;
 
       if (en.aiStateTimer <= 0) {
-        // Po 2 sekundach: ikonka mózgu 🧠 i wybór nowej pozycji daleko od gracza ORAZ z dala od przeszkód
         let chosenTarget = null;
-        const safeClearance = en.radius + 28; // Duży zapas od przeszkód i ścian, aby pozycja zawsze była łatwo osiągalna
+        const safeClearance = en.radius + 28;
         for (let tries = 0; tries < 60; tries++) {
           const gx = 70 + Math.random() * (canvas.width - 140);
           const gy = 70 + Math.random() * (canvas.height - 140);
@@ -2192,7 +683,6 @@ function update() {
             break;
           }
         }
-        // Fallback jeśli gracz stoi na środku i trudno o 250px: wybierz najdalszy bezpieczny punkt od gracza z dużym odstępem od przeszkód
         if (!chosenTarget) {
           let bestDist = -1;
           for (let tries = 0; tries < 40; tries++) {
@@ -2210,21 +700,19 @@ function update() {
         if (chosenTarget) {
           en.aiState = 'repositioning';
           en.repositionTarget = chosenTarget;
-          en.aiStateTimer = 3 * 60; // Maksymalnie 3 sekundy (180 klatek) na manewr zmiany pozycji
+          en.aiStateTimer = 3 * 60;
           en.orbitSign = Math.random() < 0.5 ? 1 : -1;
         } else {
           en.aiState = 'normal';
         }
       }
     } else if (en.aiState === 'repositioning' && en.repositionTarget) {
-      // Stan 🧠: idzie prosto do nowej pozycji (komenda ruchu w stronę gracza NIE nadpisuje tego stanu!)
       en.aiStateTimer--;
       const distToGoal = Math.hypot(en.repositionTarget.x - en.x, en.repositionTarget.y - en.y);
       if (distToGoal <= 32 || en.aiStateTimer <= 0) {
-        // Doszedł na pozycję — wraca do normalnego stanu!
         en.aiState = 'normal';
         en.repositionTarget = null;
-        en.repositionCooldown = 30 * 60; // Kolejna decyzja najwcześniej za 30 sekund (1800 klatek)
+        en.repositionCooldown = 30 * 60;
         en.boxMinX = en.x;
         en.boxMaxX = en.x;
         en.boxMinY = en.y;
@@ -2237,7 +725,6 @@ function update() {
         en.vy = Math.sin(moveAngle) * (en.speed * 1.25);
       }
     } else {
-      // Stan normalny: śledź prostokąt przebywania
       en.boxMinX = Math.min(en.boxMinX, en.x);
       en.boxMaxX = Math.max(en.boxMaxX, en.x);
       en.boxMinY = Math.min(en.boxMinY, en.y);
@@ -2254,7 +741,6 @@ function update() {
       }
 
       if (en.stuckFrames >= STUCK_TRIGGER_FRAMES && en.repositionCooldown <= 0) {
-        // Wykryto utknięcie w prostokącie -> przejdź w stan ❓ (zagubiony) na 2 sekundy (120 klatek)
         en.aiState = 'confused';
         en.aiStateTimer = 120;
         en.stuckFrames = 0;
@@ -2275,10 +761,10 @@ function update() {
     }
 
     if (en.kind === 'pro' || en.kind === 'returning_pro') {
-      steerAwayFromPlayerBullets(en); // Profesjonalista unika wejścia na linię strzału gracza (gdy nabój wystrzelono z odległości >= 25% ekranu)
+      steerAwayFromPlayerBullets(en);
     }
 
-    steerAwayFromMines(en); // Przeciwnicy widzą miny (podkładacza oraz — w jego przypadku — także Twoje) i je omijają
+    steerAwayFromMines(en);
 
     const nx = en.x + en.vx;
     const ny = en.y + en.vy;
@@ -2299,7 +785,6 @@ function update() {
     if (en.kind === 'shield') {
       if (typeof en.shieldAngle !== 'number') en.shieldAngle = en.angle || 0;
       const targetShieldAngle = Math.atan2(player.y - en.y, player.x - en.x);
-      // Wolniejszy obrót tarczy: obrót o 180 stopni zajmuje ok. 5.2 sekundy (312 klatek przy 60 fps)
       const maxTurnRate = Math.PI / (5.2 * 60);
       let diff = targetShieldAngle - en.shieldAngle;
       while (diff < -Math.PI) diff += Math.PI * 2;
@@ -2318,14 +803,12 @@ function update() {
       en.mineTimer--;
       if (en.mineTimer <= 0) {
         plantEnemyMine(en);
-        en.mineTimer = 30 * 60; // Nowa mina raz na 30 sekund
+        en.mineTimer = 30 * 60;
       }
     }
 
     en.shootTimer--;
-    // Punkt 13: Uwaga: gdy gracz nie żyje, przeciwnicy nie strzelają
     if (en.shootTimer <= 0 && distToPlayer < 480 && player.hp > 0) {
-      // Wybór celu: gracz lub pomocnik (jeśli żyje i jest bliżej)
       let target = player;
       let targetDist = distToPlayer;
       if (helper && helper.alive) {
@@ -2337,8 +820,7 @@ function update() {
       }
 
       if (en.kind === 'pro' || en.kind === 'returning_pro') {
-        // Punkt 7: Profesjonalista bierze pod uwagę kierunek ruchu celu i celuje z wyprzedzeniem
-        const t = targetDist / 5.2; // prędkość pocisku przeciwnika to 5.2
+        const t = targetDist / 5.2;
         const leadX = target.x + (target.vx || 0) * t;
         const leadY = target.y + (target.vy || 0) * t;
         const aimAngle = Math.atan2(leadY - en.y, leadX - en.x) + (Math.random() - 0.5) * 0.08;
@@ -2349,9 +831,9 @@ function update() {
         const aimAngle = Math.atan2(target.y - en.y, target.x - en.x) + (Math.random() - 0.5) * spread;
         firePaintball(en.x, en.y, aimAngle, false);
         if (en.kind === 'rapid' || en.kind === 'returning_rapid') {
-          en.shootTimer = 14 + Math.random() * 10; // Strzela około 4 razy częściej!
+          en.shootTimer = 14 + Math.random() * 10;
         } else if (en.kind === 'miner') {
-          en.shootTimer = 200 + Math.random() * 150; // Mały pistolecik — strzela całkiem rzadko
+          en.shootTimer = 200 + Math.random() * 150;
         } else {
           en.shootTimer = Math.max(35, 85 - level * 4) + Math.random() * 55;
         }
@@ -2359,10 +841,10 @@ function update() {
     }
   }
 
-  // Miny podkładacza: uzbrajanie i wybuch przy wejściu gracza
+  // Miny podkładacza
   if (updateEnemyMines()) return;
 
-  // Odradzanie powracających przeciwników (Punkty 3, 4, 5, 6, 12)
+  // Odradzanie powracających przeciwników
   for (let q = enemyRespawnQueue.length - 1; q >= 0; q--) {
     enemyRespawnQueue[q].timer--;
     if (enemyRespawnQueue[q].timer <= 0) {
@@ -2370,7 +852,6 @@ function update() {
       enemyRespawnQueue.splice(q, 1);
       const spot = getFarSpawnSpot(player.x, player.y);
       spawnEnemyAt(spot.x, spot.y, item.kind, enemies.length);
-      // Punkt 12: Jeżeli w tym czasie nie-cywil powróci na planszę, to gra wraca do normalnego stanu!
       levelClearPending = false;
       const newest = enemies[enemies.length - 1];
       if (newest) {
@@ -2385,7 +866,7 @@ function update() {
     }
   }
 
-  // Odradzanie zabitych cywili po 5 sekundach (300 klatek)
+  // Odradzanie zabitych cywili po 5 sekundach
   for (let q = civilianRespawnQueue.length - 1; q >= 0; q--) {
     civilianRespawnQueue[q].timer--;
     if (civilianRespawnQueue[q].timer <= 0) {
@@ -2404,23 +885,21 @@ function update() {
     }
   }
 
-  // Ruch cywili (chodzą losowo po mapie i omijają UZBROJONE miny; nie widzą min w trakcie uzbrajania!)
+  // Ruch cywili
   for (let c = civilians.length - 1; c >= 0; c--) {
     const civ = civilians[c];
     civ.changeDirTimer--;
 
-    // Sprawdź czy w pobliżu znajduje się uzbrojona mina (mine.armed === true)
     let closestArmedMine = null;
     let closestMineDist = Infinity;
     for (const m of placedMines) {
-      if (!m.armed) continue; // Cywil NIE widzi min w trakcie uzbrajania!
+      if (!m.armed) continue;
       const d = Math.hypot(civ.x - m.x, civ.y - m.y);
       if (d < closestMineDist) {
         closestMineDist = d;
         closestArmedMine = m;
       }
     }
-
     for (const m of enemyMines) {
       const d = Math.hypot(civ.x - m.x, civ.y - m.y);
       if (d < closestMineDist) {
@@ -2429,50 +908,17 @@ function update() {
       }
     }
 
-    const safeMineDistance = closestArmedMine ? (closestArmedMine.triggerRadius + 95) : 0;
-    if (closestArmedMine && closestMineDist < safeMineDistance) {
-      // Wybierz ścieżkę ucieczki daleko od uzbrojonej miny
-      const awayAngle = Math.atan2(civ.y - closestArmedMine.y, civ.x - closestArmedMine.x);
-      let chosenAngle = awayAngle;
-      for (let step = 0; step <= 8; step++) {
-        const delta = (step * Math.PI) / 10;
-        const c1 = awayAngle + delta;
-        if (canMoveTo(civ.x + Math.cos(c1) * 20, civ.y + Math.sin(c1) * 20, civ.radius)) {
-          chosenAngle = c1;
-          break;
-        }
-        const c2 = awayAngle - delta;
-        if (canMoveTo(civ.x + Math.cos(c2) * 20, civ.y + Math.sin(c2) * 20, civ.radius)) {
-          chosenAngle = c2;
-          break;
-        }
-      }
-      civ.vx = Math.cos(chosenAngle) * (civ.speed * 1.15);
-      civ.vy = Math.sin(chosenAngle) * (civ.speed * 1.15);
+    const safeDist = closestArmedMine ? (closestArmedMine.triggerRadius + civ.radius + 24) : 0;
+    if (closestArmedMine && closestMineDist < safeDist) {
+      const away = Math.atan2(civ.y - closestArmedMine.y, civ.x - closestArmedMine.x);
+      civ.vx = Math.cos(away) * civ.speed;
+      civ.vy = Math.sin(away) * civ.speed;
       civ.changeDirTimer = 18;
     } else if (civ.changeDirTimer <= 0) {
-      // Losowy kierunek marszu z dala od uzbrojonych min
-      let bestAngle = Math.random() * Math.PI * 2;
-      for (let tries = 0; tries < 10; tries++) {
-        const cand = Math.random() * Math.PI * 2;
-        const testX = civ.x + Math.cos(cand) * 48;
-        const testY = civ.y + Math.sin(cand) * 48;
-        if (!canMoveTo(testX, testY, civ.radius)) continue;
-        let nearArmed = false;
-        for (const m of placedMines) {
-          if (m.armed && Math.hypot(testX - m.x, testY - m.y) < m.triggerRadius + 85) {
-            nearArmed = true;
-            break;
-          }
-        }
-        if (!nearArmed) {
-          bestAngle = cand;
-          break;
-        }
-      }
-      civ.vx = Math.cos(bestAngle) * civ.speed;
-      civ.vy = Math.sin(bestAngle) * civ.speed;
-      civ.changeDirTimer = 40 + Math.random() * 65;
+      const ang = Math.random() * Math.PI * 2;
+      civ.vx = Math.cos(ang) * civ.speed;
+      civ.vy = Math.sin(ang) * civ.speed;
+      civ.changeDirTimer = 35 + Math.random() * 55;
     }
 
     const cnx = civ.x + civ.vx;
@@ -2499,7 +945,7 @@ function update() {
   // Aktualizacja sojuszniczego pomocnika
   updateHelper();
 
-  // Uzbrajanie min (5 sekund pik-pik-pik) oraz detekcja wrogów, cywili i gracza!
+  // Uzbrajanie min oraz detekcja wrogów, cywili i gracza
   for (let m = placedMines.length - 1; m >= 0; m--) {
     const mine = placedMines[m];
     mine.pulse += 0.14;
@@ -2516,7 +962,6 @@ function update() {
     }
 
     let triggered = false;
-    // Sprawdź, czy gracz wpadł na własną uzbrojoną minę
     if (Math.hypot(player.x - mine.x, player.y - mine.y) <= mine.triggerRadius) {
       triggered = true;
     } else {
@@ -2574,17 +1019,14 @@ function update() {
         if (Math.hypot(b.x - en.x, b.y - en.y) < en.radius + 7) {
           hitEnemy = true;
 
-          // Przeciwnik z tarczą taktyczną: 45% obwodu (łuk 162°: od -81° do +81° od osi) osłonięte tarczą taktyczną
           if (en.kind === 'shield') {
             const hitAngle = Math.atan2(b.y - en.y, b.x - en.x);
             let angleDiff = Math.abs(hitAngle - en.shieldAngle);
             while (angleDiff > Math.PI * 2) angleDiff -= Math.PI * 2;
             if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
-            // Uderzenie od strony tarczy (45% obwodu = Math.PI * 0.45 radianów = 81° w każdą stronę)
             const shieldHalfAngle = Math.PI * 0.45;
             if (angleDiff <= shieldHalfAngle) {
-              // Uderzenie markerem od strony tarczy nic mu nie robi!
               playShieldBlockSound();
               addPaintSplat(b.x, b.y, b.color, 12);
               for (let k = 0; k < 8; k++) {
@@ -2648,7 +1090,7 @@ function update() {
         continue;
       }
 
-      // Strzały gracza ranią cywila (strzały pomocnika i przeciwnika go NIE ranią!)
+      // Strzały gracza ranią cywila (strzały pomocnika i wrogów ich nie ranią)
       if (b.fromPlayer) {
         let hitCivilian = false;
         for (let c = civilians.length - 1; c >= 0; c--) {
@@ -2702,7 +1144,7 @@ function update() {
     }
   }
 
-  // Aktualizacja rakiet samonaprowadzających (Bazooka) z omijaniem przeszkód
+  // Rakiety samonaprowadzające (Bazooka)
   for (let i = homingRockets.length - 1; i >= 0; i--) {
     const r = homingRockets[i];
     r.life--;
@@ -2728,7 +1170,6 @@ function update() {
       r.x = nx;
       r.y = ny;
     } else {
-      // Ślizganie wzdłuż krawędzi przeszkody (omijanie bez utknięcia)
       let moved = false;
       if (canMoveTo(nx, r.y, 6)) {
         r.x = nx;
@@ -2800,7 +1241,6 @@ function update() {
         });
       }
 
-      // Zadaj obrażenia trafionemu wrogowi (3 HP) oraz pobliskim w promieniu wybuchu
       for (let j = enemies.length - 1; j >= 0; j--) {
         const en = enemies[j];
         const dist = Math.hypot(r.x - en.x, r.y - en.y);
@@ -2822,7 +1262,6 @@ function update() {
         }
       }
 
-      // Rakiety z Bazooki ranią również cywili (bezpośrednie trafienie zabija na miejscu: 2 obrażenia)
       for (let c = civilians.length - 1; c >= 0; c--) {
         const civ = civilians[c];
         const dist = Math.hypot(r.x - civ.x, r.y - civ.y);
@@ -2841,25 +1280,25 @@ function update() {
     }
   }
 
-  // Co jakiś czas na mapie pojawia się paczka 10 nowych nabojów!
+  // Spawnowanie losowych nabojów na mapie
   ammoSpawnTimer--;
   if (ammoSpawnTimer <= 0) {
     if (ammoPickups.length < 6) {
       spawnRandomMapAmmo();
     }
-    ammoSpawnTimer = 420; // Co 7 sekund
+    ammoSpawnTimer = 420;
   }
 
-  // Bardzo rzadko na mapie pojawia się nowa rakieta do bazooki!
+  // Spawnowanie losowych rakiet do bazooki
   rocketSpawnTimer--;
   if (rocketSpawnTimer <= 0) {
     if (rocketPickups.length < 2) {
       spawnRandomMapRocket();
     }
-    rocketSpawnTimer = 1500; // Co ok. 25 sekund
+    rocketSpawnTimer = 1500;
   }
 
-  // Zbieranie rakiet po najechaniu postacią
+  // Zbieranie rakiet
   for (let i = rocketPickups.length - 1; i >= 0; i--) {
     const rpack = rocketPickups[i];
     rpack.pulse += 0.1;
@@ -2878,7 +1317,7 @@ function update() {
     }
   }
 
-  // Zbieranie nabojów po najechaniu / najściu na nie postacią
+  // Zbieranie nabojów
   for (let i = ammoPickups.length - 1; i >= 0; i--) {
     const pack = ammoPickups[i];
     pack.pulse += 0.1;
@@ -2897,6 +1336,7 @@ function update() {
     }
   }
 
+  // Popupy
   for (let i = popups.length - 1; i >= 0; i--) {
     const pop = popups[i];
     pop.y -= 1.0;
@@ -2904,6 +1344,7 @@ function update() {
     if (pop.alpha <= 0) popups.splice(i, 1);
   }
 
+  // Wybuchy
   for (let i = explosions.length - 1; i >= 0; i--) {
     const ex = explosions[i];
     ex.radius += (ex.maxRadius - ex.radius) * 0.25;
@@ -2911,6 +1352,7 @@ function update() {
     if (ex.alpha <= 0) explosions.splice(i, 1);
   }
 
+  // Cząsteczki farby
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx;
@@ -2919,6 +1361,7 @@ function update() {
     if (p.alpha <= 0) particles.splice(i, 1);
   }
 
+  // Ślady farby (splats)
   for (let i = splats.length - 1; i >= 0; i--) {
     splats[i].ageFrames++;
     if (splats[i].ageFrames >= splats[i].maxFrames) {
@@ -2927,6 +1370,7 @@ function update() {
     }
   }
 
+  // Chmury
   for (const cl of clouds) {
     cl.phase += 0.03;
     cl.x += cl.vx;
@@ -2941,16 +1385,16 @@ function update() {
     if (cl.y > maxY) { cl.y = maxY; cl.vy *= -1; }
   }
 
+  // Wyeliminowane postacie
   for (let i = eliminatedHumans.length - 1; i >= 0; i--) {
     eliminatedHumans[i].timer--;
     if (eliminatedHumans[i].timer <= 0) eliminatedHumans.splice(i, 1);
   }
 
-  // Obsługa oczekiwania na zakończenie lotu pocisków (Punkty 12, 13, 14, 15)
+  // Warunki zwycięstwa / przegranej
   const flyingProjectiles = bullets.length + homingRockets.length;
 
   if (enemies.length > 0) {
-    // Jeśli powracający przeciwnik powrócił na planszę, resetujemy stan zakończenia
     levelClearPending = false;
     levelVictoryDelay = 0;
   }
@@ -2973,7 +1417,6 @@ function update() {
     if (levelVictoryDelay > 0) {
       levelVictoryDelay--;
     }
-    // Po zabiciu ostatniego przeciwnika gra trwa jeszcze pół sekundy (30 klatek) niezależnie od lecących pocisków
     if (levelVictoryDelay <= 0 && flyingProjectiles === 0) {
       levelClearPending = false;
       handleLevelVictory();
@@ -2993,7 +1436,7 @@ hasStartedAnyGame = false;
 openMenu('select');
 requestAnimationFrame(gameLoop);
 
-// Konsolowa funkcja do odblokowywania poziomów wpisując ublock(n) lub unlock(n)
+// Konsolowa funkcja do odblokowywania poziomów
 window.ublock = function(n) {
   const target = parseInt(n, 10);
   if (isNaN(target) || target < 1) {
