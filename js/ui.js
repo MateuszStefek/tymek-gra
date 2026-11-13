@@ -730,6 +730,148 @@ function renderShopWeapons() {
       ammoNextNode
     )
   );
+
+  // Tor Pomocnika (Sojuszniczy gracz, 5 HP, wraca po 12s, unika min)
+  const helperCurrentNode = document.createElement('div');
+  if (!helperUnlocked) {
+    helperCurrentNode.className = 'tree-node locked';
+    helperCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
+        <div class="lvl-title" style="font-size:15px;color:#94a3b8;">🤝 Brak Pomocnika</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Walczysz na arenie w pojedynkę. Kup pomocnika po prawej stronie!</div>
+      </div>
+    `;
+  } else {
+    helperCurrentNode.className = 'tree-node owned last-owned';
+    helperCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN: AKTYWNY</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Sojuszniczy Pomocnik</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">5 HP. Po zabiciu powraca po 12s. Unika min, nie strzela w cywili, brak friendly fire!</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Zdrowie pomocnika: 5 HP | 🔄 Respawn: 12s</div>
+      </div>
+    `;
+  }
+
+  const helperNextNode = document.createElement('div');
+  if (!helperUnlocked) {
+    const helperCost = 1;
+    helperNextNode.className = 'tree-node next-unlock';
+    helperNextNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Sojusznik na Arenie (5 HP)</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Zyskujesz sojuszniczego gracza z 5 HP, który walczy u Twojego boku, unika min i wraca po 12s od eliminacji!</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🛡️ Wsparcie ogniowe | 🧠 Repositioning przy zablokowaniu</div>
+      </div>
+      <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+    `;
+    const btnBuyHelper = document.createElement('button');
+    btnBuyHelper.className = 'btn-green';
+    btnBuyHelper.disabled = diamonds < helperCost;
+    btnBuyHelper.textContent = diamonds >= helperCost
+      ? `🛒 Odblokuj Pomocnika (${helperCost} 💎)`
+      : `🔒 Brak 💎 (${diamonds}/${helperCost})`;
+    btnBuyHelper.onclick = () => {
+      if (diamonds < helperCost) return;
+      diamonds -= helperCost;
+      helperUnlocked = true;
+      if (typeof initHelper === 'function') initHelper();
+      saveProgress();
+      updateHud();
+      renderShopWeapons();
+    };
+    helperNextNode.querySelector('.custom-card-btns').appendChild(btnBuyHelper);
+  } else {
+    helperNextNode.className = 'tree-node owned';
+    helperNextNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">🏆 ODBLOKOWANO</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Pomocnik w pełnej gotowości!</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Twój sojusznik wchodzi na każdą arenę i wspiera Cię w walce.</div>
+      </div>
+    `;
+  }
+
+  shopWeaponsGrid.appendChild(
+    renderHorizontalTrack(
+      '🤝 Tor Pomocnika (Sojuszniczy Gracz)',
+      helperUnlocked
+        ? `<span style="font-size:12px;color:#4ade80;">🤝 Aktywny (5 HP | Respawn: 12s)</span>`
+        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany</span>`,
+      helperCurrentNode,
+      helperNextNode
+    )
+  );
+
+  // Tor Leczenia Pomocnika — nieskończony: 1HP/5s, 2HP/5s, 3HP/5s... ceny Fibonacciego (1, 2, 3, 5, 8...)
+  const curHHeal = helperHealingLevel;
+  const nextHHealLvl = curHHeal + 1;
+  const nextHHealCost = getFibonacciCost(nextHHealLvl);
+
+  const hHealCurrentNode = document.createElement('div');
+  if (curHHeal <= 0) {
+    hHealCurrentNode.className = 'tree-node locked';
+    hHealCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
+        <div class="lvl-title" style="font-size:15px;color:#94a3b8;">💚 Leczenie Pomocnika Wyłączone (0 HP/5s)</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Pomocnik nie regeneruje utraconego zdrowia w trakcie walki. Odblokuj tor po prawej!</div>
+      </div>
+    `;
+  } else {
+    hHealCurrentNode.className = 'tree-node owned last-owned';
+    hHealCurrentNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN (POZIOM ${curHHeal})</div>
+        <div class="lvl-title" style="font-size:15px;">💚 +${curHHeal} HP co 5 sekund</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Pomocnik automatycznie odzyskuje ${curHHeal} HP co 5 sekund!</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Średnio: ${(curHHeal / 5).toFixed(2)} HP/s</div>
+      </div>
+    `;
+  }
+
+  const hHealNextNode = document.createElement('div');
+  hHealNextNode.className = 'tree-node next-unlock';
+  const hHealLockedByHelper = !helperUnlocked;
+  hHealNextNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#facc15;">${curHHeal === 0 ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
+      <div class="lvl-title" style="font-size:15px;">💚 +${nextHHealLvl} HP co 5 sekund</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${hHealLockedByHelper ? '⚠️ Najpierw musisz odblokować Pomocnika w torze powyżej!' : `Każdy poziom zwiększa leczenie pomocnika o kolejne +1 HP co 5 sekund. Tor bez limitu!`}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Regeneracja: ${curHHeal} HP/5s ➡️ ${nextHHealLvl} HP/5s</div>
+    </div>
+    <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+  `;
+  const btnBuyHHeal = document.createElement('button');
+  btnBuyHHeal.className = 'btn-green';
+  btnBuyHHeal.disabled = hHealLockedByHelper || diamonds < nextHHealCost;
+  btnBuyHHeal.textContent = hHealLockedByHelper
+    ? '🔒 Wymaga Pomocnika'
+    : (diamonds >= nextHHealCost
+      ? `🛒 ${curHHeal === 0 ? 'Odblokuj tor' : 'Kup ulepszenie'}: +1 HP/5s (${nextHHealCost} 💎)`
+      : `🔒 Brak 💎 (${diamonds}/${nextHHealCost})`);
+  btnBuyHHeal.onclick = () => {
+    if (hHealLockedByHelper || diamonds < nextHHealCost) return;
+    diamonds -= nextHHealCost;
+    helperHealingLevel = nextHHealLvl;
+    saveProgress();
+    updateHud();
+    renderShopWeapons();
+  };
+  hHealNextNode.querySelector('.custom-card-btns').appendChild(btnBuyHHeal);
+
+  shopWeaponsGrid.appendChild(
+    renderHorizontalTrack(
+      '💚 Tor Leczenia Pomocnika (bez limitu)',
+      curHHeal > 0
+        ? `<span style="font-size:12px;color:#4ade80;">💚 +${curHHeal} HP/5s (Poziom ${curHHeal})</span>`
+        : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany</span>`,
+      hHealCurrentNode,
+      hHealNextNode
+    )
+  );
 }
 
 function openCustomMapsScreen(editIdx = null) {

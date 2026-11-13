@@ -199,6 +199,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
   const isBossKind = enemyObj && (enemyObj.kind === 'boss' || enemyObj.kind === 'returning_boss');
   const isProKind = enemyObj && (enemyObj.kind === 'pro' || enemyObj.kind === 'returning_pro');
   const isShieldKind = enemyObj && enemyObj.kind === 'shield';
+  const isHelperKind = enemyObj && enemyObj.kind === 'helper';
   const isRetKind = enemyObj && enemyObj.kind.startsWith('returning_');
 
   ctx.beginPath();
@@ -319,7 +320,7 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     const pct = Math.max(0, enemyObj.hp) / enemyObj.maxHp;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     ctx.fillRect(-20, -37, 40, 6);
-    ctx.fillStyle = isBossKind ? '#c084fc' : (isProKind ? '#818cf8' : (isShieldKind ? '#06b6d4' : '#f59e0b'));
+    ctx.fillStyle = isBossKind ? '#c084fc' : (isProKind ? '#818cf8' : (isShieldKind ? '#06b6d4' : (isHelperKind ? '#22c55e' : '#f59e0b')));
     ctx.fillRect(-19, -36, 38 * pct, 4);
   }
 
@@ -618,6 +619,16 @@ function renderScene() {
     drawHuman(player.x, player.y, player.angle, player.walkCycle, '#2563eb', true, player.splatColor, 'TY');
   }
 
+  // Sojuszniczy Pomocnik (jeśli żyje na arenie)
+  if (helper && helper.alive) {
+    drawHuman(helper.x, helper.y, helper.angle, helper.walkCycle, '#0284c7', false, helper.splatColor, '🤝 POMOCNIK', {
+      kind: 'helper',
+      hp: helper.hp,
+      maxHp: helper.maxHp,
+      aiState: helper.aiState
+    });
+  }
+
   for (const b of bullets) {
     ctx.beginPath();
     ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
@@ -739,6 +750,19 @@ function renderScene() {
     ctx.strokeText(pop.text, pop.x, pop.y);
     ctx.fillStyle = pop.color;
     ctx.fillText(pop.text, pop.x, pop.y);
+    ctx.restore();
+  }
+
+  if (helper && !helper.alive && helperUnlocked && gameState === 'playing') {
+    ctx.save();
+    ctx.font = 'bold 13px system-ui';
+    ctx.textAlign = 'left';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    const respMsg = `🤝 Pomocnik powraca za ${Math.ceil(helper.respawnTimer / 60)}s...`;
+    ctx.strokeText(respMsg, 16, canvas.height - 16);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(respMsg, 16, canvas.height - 16);
     ctx.restore();
   }
 
