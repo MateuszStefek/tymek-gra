@@ -2557,3 +2557,25 @@ startLevel(level);
 hasStartedAnyGame = false;
 openMenu('select');
 requestAnimationFrame(gameLoop);
+
+// Konsolowa funkcja do odblokowywania poziomów wpisując ublock(n) lub unlock(n)
+window.ublock = function(n) {
+  const target = parseInt(n, 10);
+  if (isNaN(target) || target < 1) {
+    console.warn('Użycie: ublock(n) - podaj numer poziomu do odblokowania (np. ublock(10))');
+    return 'Podaj poprawny numer poziomu (np. ublock(5))';
+  }
+  unlockedLevel = Math.max(unlockedLevel, target);
+  saveProgress();
+  updateHud();
+  if (typeof openMenu === 'function' && (gameState === 'menu' || gameState === 'select')) {
+    openMenu('select');
+  }
+  if (typeof renderEnemiesCatalog === 'function') {
+    renderEnemiesCatalog();
+  }
+  const msg = `🔓 Odblokowano poziomy do poziomu ${unlockedLevel}!`;
+  console.log(msg);
+  return msg;
+};
+window.unlock = window.ublock;
