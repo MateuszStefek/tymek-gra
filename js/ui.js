@@ -494,7 +494,7 @@ function renderShopWeapons() {
         if (diamonds < nextUpg.cost) return;
         diamonds -= nextUpg.cost;
         if (!ownedUpgrades.includes(nextUpg.id)) ownedUpgrades.push(nextUpg.id);
-        if (nextUpg.id === 'bazooka_rockets_5' || nextUpg.id === 'bazooka_rockets_7') {
+        if (nextUpg.id.startsWith('bazooka_rockets_')) {
           bazookaUpgraded = true;
           player.rockets = Math.max(player.rockets, getStartingRockets());
         }

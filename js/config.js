@@ -34,24 +34,40 @@ const weaponsCatalog = [
     name: '🚀 Bazooka Samonaprowadzająca',
     shortName: '🚀 Bazooka',
     cost: 1,
-    desc: 'Wystrzeliwuje rakietę, która namierza wroga najbliższego wskaźnikowi myszy i omija przeszkody! Start: 3 rakiety.',
-    ammoLabel: '🚀 Rakiety (3 na start rundy)',
+    desc: 'Wystrzeliwuje rakietę, która namierza wroga najbliższego wskaźnikowi myszy i omija przeszkody! Start: 2 rakiety.',
+    ammoLabel: '🚀 Rakiety (2 na start rundy)',
     upgrades: [
       {
-        id: 'bazooka_rockets_5',
-        name: '⚡ Wzmocnienie Bazooki I (5 rakiet)',
+        id: 'bazooka_rockets_3',
+        name: '⚡ Wzmocnienie Bazooki I (3 rakiety)',
         cost: 1,
-        desc: 'Zwiększa zapas startowy Bazooki z 3 do 5 rakiet na początku każdej rundy!',
-        effectLabel: '🚀 Startowe rakiety: 3 ➡️ 5',
+        desc: 'Zwiększa zapas startowy Bazooki z 2 do 3 rakiet na początku każdej rundy!',
+        effectLabel: '🚀 Startowe rakiety: 2 ➡️ 3',
         requiresUpgrade: null
       },
       {
-        id: 'bazooka_rockets_7',
-        name: '⚡ Wzmocnienie Bazooki II (7 rakiet)',
+        id: 'bazooka_rockets_5',
+        name: '⚡ Wzmocnienie Bazooki II (5 rakiet)',
         cost: 2,
+        desc: 'Zwiększa zapas startowy Bazooki z 3 do 5 rakiet na początku każdej rundy!',
+        effectLabel: '🚀 Startowe rakiety: 3 ➡️ 5',
+        requiresUpgrade: 'bazooka_rockets_3'
+      },
+      {
+        id: 'bazooka_rockets_7',
+        name: '⚡ Wzmocnienie Bazooki III (7 rakiet)',
+        cost: 3,
         desc: 'Zwiększa zapas startowy Bazooki z 5 do 7 rakiet na początku każdej rundy!',
         effectLabel: '🚀 Startowe rakiety: 5 ➡️ 7',
         requiresUpgrade: 'bazooka_rockets_5'
+      },
+      {
+        id: 'bazooka_rockets_8',
+        name: '⚡ Wzmocnienie Bazooki IV (8 rakiet)',
+        cost: 5,
+        desc: 'Maksymalne wzmocnienie Bazooki: aż 8 rakiet na początku każdej rundy!',
+        effectLabel: '🚀 Startowe rakiety: 7 ➡️ 8',
+        requiresUpgrade: 'bazooka_rockets_7'
       }
     ]
   }

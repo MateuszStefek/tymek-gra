@@ -189,7 +189,13 @@ try {
   if (bazookaUpgraded && !ownedUpgrades.includes('bazooka_rockets_5')) {
     ownedUpgrades.push('bazooka_rockets_5');
   }
-  if (ownedUpgrades.includes('bazooka_rockets_5')) {
+  if (ownedUpgrades.includes('bazooka_rockets_5') && !ownedUpgrades.includes('bazooka_rockets_3')) {
+    ownedUpgrades.push('bazooka_rockets_3');
+  }
+  if (ownedUpgrades.includes('bazooka_rockets_7') && !ownedUpgrades.includes('bazooka_rockets_5')) {
+    ownedUpgrades.push('bazooka_rockets_5');
+  }
+  if (ownedUpgrades.some(u => u.startsWith('bazooka_rockets_'))) {
     bazookaUpgraded = true;
   }
   const savedHpLevel = localStorage.getItem('tymek_paintball_hp_level');
@@ -255,9 +261,12 @@ function getStartingAmmo() {
 }
 
 function getStartingRockets() {
+  if (!ownedWeapons.includes('bazooka')) return 0;
+  if (ownedUpgrades.includes('bazooka_rockets_8')) return 8;
   if (ownedUpgrades.includes('bazooka_rockets_7')) return 7;
-  if (bazookaUpgraded || ownedUpgrades.includes('bazooka_rockets_5')) return 5;
-  return 3;
+  if (ownedUpgrades.includes('bazooka_rockets_5')) return 5;
+  if (ownedUpgrades.includes('bazooka_rockets_3')) return 3;
+  return 2;
 }
 
 player.maxHp = getStartingMaxHp();
