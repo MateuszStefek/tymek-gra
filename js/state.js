@@ -127,7 +127,7 @@ let bestTimes = {};
 let activeCustomMapIndex = null;
 let totalEnemiesInLevel = 1;
 let currentThemeIndex = 0;
-let diamonds = 0;
+let diamonds = 1;
 let ownedWeapons = ['pistol'];
 let defaultWeapon = 'pistol';
 let bazookaUpgraded = false;
@@ -162,8 +162,13 @@ try {
   if (!isNaN(savedTheme) && savedTheme >= 0 && savedTheme < graphicThemes.length) {
     currentThemeIndex = savedTheme;
   }
-  const savedDiamonds = parseInt(localStorage.getItem('tymek_paintball_diamonds') || '0', 10);
-  if (!isNaN(savedDiamonds) && savedDiamonds >= 0) diamonds = savedDiamonds;
+  const savedDiamonds = localStorage.getItem('tymek_paintball_diamonds');
+  if (savedDiamonds !== null) {
+    const parsedDiamonds = parseInt(savedDiamonds, 10);
+    if (!isNaN(parsedDiamonds) && parsedDiamonds >= 0) diamonds = parsedDiamonds;
+  } else {
+    diamonds = 1;
+  }
   const savedOwnedWeapons = JSON.parse(localStorage.getItem('tymek_paintball_owned_weapons') || '["pistol"]');
   if (Array.isArray(savedOwnedWeapons) && savedOwnedWeapons.length > 0) {
     ownedWeapons = savedOwnedWeapons.includes('pistol') ? savedOwnedWeapons : ['pistol', ...savedOwnedWeapons];
@@ -326,7 +331,7 @@ function resetAllProgress() {
   placedMines = [];
   bestTimes = {};
   activeCustomMapIndex = null;
-  diamonds = 0;
+  diamonds = 1;
   ownedWeapons = ['pistol'];
   defaultWeapon = 'pistol';
   bazookaUpgraded = false;
