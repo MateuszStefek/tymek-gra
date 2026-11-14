@@ -1754,16 +1754,15 @@ window.ublock = function(n) {
 };
 window.unlock = window.ublock;
 
-// Konsolowa funkcja do ustawiania / dodawania diamentów: diamonds(n)
-window.diamonds = function(n) {
+// Konsolowa funkcja do ustawiania / dodawania diamentów: diamonds(n) oraz diam(n) / d(n)
+window.diam = function(n) {
   const amount = parseInt(n, 10);
   if (isNaN(amount)) {
-    console.warn('Użycie: diamonds(n) - podaj liczbę diamentów do dodania lub ustawienia (np. diamonds(10))');
-    return `Aktualna liczba diamentów: ${diamonds} 💎. Użycie: diamonds(n)`;
+    console.warn('Użycie: diam(n) lub diamonds(n) - podaj liczbę diamentów do dodania (np. diam(50))');
+    return `Aktualna liczba diamentów: ${diamonds} 💎. Użycie: diam(n)`;
   }
-  // Jeśli podano wartość dodatnią, dodajemy do stanu lub ustawiamy
   diamonds = Math.max(0, diamonds + amount);
-  playPickupSound();
+  if (typeof playPickupSound === 'function') playPickupSound();
   saveProgress();
   updateHud();
   if (gameState === 'shop' && typeof renderShopWeapons === 'function') {
@@ -1775,3 +1774,5 @@ window.diamonds = function(n) {
   console.log(msg);
   return msg;
 };
+window.diamonds = window.diam;
+window.d = window.diam;
