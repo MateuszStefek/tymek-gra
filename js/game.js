@@ -557,15 +557,27 @@ function triggerNukeDetonation(x, y, radius, cost) {
     });
   }
 
-  // ZADANIE 3 HP OBRAŻEŃ WSZYSTKIM W PROMIENIU:
+  // ZADANIE OBRAŻEŃ WSZYSTKIM W PROMIENIU:
+  // W centrum (50% promienia): 7 HP obrażeń!
+  // W zewnętrznej strefie (50% - 100% promienia): 3 HP obrażeń.
+  const innerRadius = radius * 0.5;
+
   // 1. Przeciwnicy (w tym tarcza taktyczna — ignoruje tarczę, przenika przez ściany)
   for (let i = enemies.length - 1; i >= 0; i--) {
     const en = enemies[i];
     const d = Math.hypot(en.x - x, en.y - y);
     if (d <= radius + en.radius) {
-      en.hp -= 3;
-      en.hitFlash = 12;
-      popups.push({ x: en.x, y: en.y - 20, text: '-3 HP ☢️', color: '#ef4444', alpha: 1 });
+      const isInner = d <= innerRadius + en.radius;
+      const dmg = isInner ? 7 : 3;
+      en.hp -= dmg;
+      en.hitFlash = 14;
+      popups.push({
+        x: en.x,
+        y: en.y - 20,
+        text: `-${dmg} HP ☢️${isInner ? ' (CENTRUM!)' : ''}`,
+        color: isInner ? '#fde047' : '#ef4444',
+        alpha: 1
+      });
       if (en.hp <= 0) {
         eliminateEnemy(i, en, '#ef4444');
       }
@@ -577,9 +589,17 @@ function triggerNukeDetonation(x, y, radius, cost) {
     const civ = civilians[i];
     const d = Math.hypot(civ.x - x, civ.y - y);
     if (d <= radius + civ.radius) {
-      civ.hp -= 3;
-      civ.hitFlash = 12;
-      popups.push({ x: civ.x, y: civ.y - 20, text: '-3 HP ☢️', color: '#ef4444', alpha: 1 });
+      const isInner = d <= innerRadius + civ.radius;
+      const dmg = isInner ? 7 : 3;
+      civ.hp -= dmg;
+      civ.hitFlash = 14;
+      popups.push({
+        x: civ.x,
+        y: civ.y - 20,
+        text: `-${dmg} HP ☢️`,
+        color: isInner ? '#fde047' : '#ef4444',
+        alpha: 1
+      });
       if (civ.hp <= 0) {
         addPaintSplat(civ.x, civ.y, '#f43f5e', 30);
         eliminatedHumans.push({
@@ -599,9 +619,17 @@ function triggerNukeDetonation(x, y, radius, cost) {
   if (helper && helper.active) {
     const d = Math.hypot(helper.x - x, helper.y - y);
     if (d <= radius + helper.radius) {
-      helper.hp -= 3;
-      helper.hitFlash = 12;
-      popups.push({ x: helper.x, y: helper.y - 20, text: '-3 HP ☢️', color: '#ef4444', alpha: 1 });
+      const isInner = d <= innerRadius + helper.radius;
+      const dmg = isInner ? 7 : 3;
+      helper.hp -= dmg;
+      helper.hitFlash = 14;
+      popups.push({
+        x: helper.x,
+        y: helper.y - 20,
+        text: `-${dmg} HP ☢️`,
+        color: isInner ? '#fde047' : '#ef4444',
+        alpha: 1
+      });
       if (helper.hp <= 0) {
         eliminateHelper();
       }
@@ -611,9 +639,18 @@ function triggerNukeDetonation(x, y, radius, cost) {
   // 4. Sam Gracz (atak samobójczy, jeśli w promieniu rażenia!)
   const distToPlayer = Math.hypot(player.x - x, player.y - y);
   if (distToPlayer <= radius + player.radius) {
-    player.hp = Math.max(0, player.hp - 3);
-    player.hitFlash = 16;
-    popups.push({ x: player.x, y: player.y - 30, text: '-3 HP ☢️ (WŁASNA BOMBA!)', color: '#ef4444', alpha: 1 });
+    const isInner = distToPlayer <= innerRadius + player.radius;
+    const dmg = isInner ? 7 : 3;
+    player.hp = Math.max(0, player.hp - 3); // max dmg
+    player.hp = Math.max(0, player.hp - (dmg - 3)); // total: 7 or 3
+    player.hitFlash = 18;
+    popups.push({
+      x: player.x,
+      y: player.y - 30,
+      text: `-${dmg} HP ☢️ (WŁASNA BOMBA${isInner ? ' - CENTRUM!' : ''})`,
+      color: '#ef4444',
+      alpha: 1
+    });
     updateHud();
     if (player.hp <= 0) {
       playerDeadPending = true;

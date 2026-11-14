@@ -666,6 +666,60 @@ function renderShopWeapons() {
     )
   );
 
+  // Tor Początkowej Liczby Nabojów (Start Ammo) — nieskończony: każdy poziom +10 nabojów na start (30, 40, 50, 60...), ceny Fibonacciego (1, 2, 3, 5, 8...)
+  const startAmmoNextLvl = startingAmmoLevel + 1;
+  const startAmmoNextCost = getFibonacciCost(startAmmoNextLvl);
+  const curStartAmmoCount = getStartingAmmo();
+  const nextStartAmmoCount = curStartAmmoCount + 10;
+
+  const startAmmoCurrentNode = document.createElement('div');
+  startAmmoCurrentNode.className = 'tree-node owned last-owned';
+  startAmmoCurrentNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN (POZIOM ${startingAmmoLevel})</div>
+      <div class="lvl-title" style="font-size:15px;">📦 Startowe naboje: ${curStartAmmoCount} szt.</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${startingAmmoLevel === 0 ? 'Podstawowy zapas na start każdej rundy: 30 nabojów farby.' : `Kupiono ${startingAmmoLevel} poziomów magazynka (+${startingAmmoLevel * 10} nabojów do bazowych 30).`}</div>
+    </div>
+  `;
+
+  const startAmmoNextNode = document.createElement('div');
+  startAmmoNextNode.className = 'tree-node next-unlock';
+  startAmmoNextNode.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA</div>
+      <div class="lvl-title" style="font-size:15px;">📦 Magazynek Startowy ${startAmmoNextLvl} (+10 nabojów)</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Kolejne +10 nabojów do zapasu początkowego na starcie każdej rundy. Tor bez limitu!</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">📦 Startowe naboje: ${curStartAmmoCount} ➡️ ${nextStartAmmoCount} szt.</div>
+    </div>
+    <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+  `;
+  const startAmmoBtnWrap = startAmmoNextNode.querySelector('.custom-card-btns');
+  const btnBuyStartAmmo = document.createElement('button');
+  btnBuyStartAmmo.className = 'btn-green';
+  btnBuyStartAmmo.disabled = diamonds < startAmmoNextCost;
+  btnBuyStartAmmo.textContent = diamonds >= startAmmoNextCost
+    ? `🛒 Kup wzmocnienie (${startAmmoNextCost} 💎)`
+    : `🔒 Brak 💎 (${diamonds}/${startAmmoNextCost})`;
+  btnBuyStartAmmo.onclick = () => {
+    if (diamonds < startAmmoNextCost) return;
+    diamonds -= startAmmoNextCost;
+    startingAmmoLevel = startAmmoNextLvl;
+    player.ammo = Math.max(player.ammo, getStartingAmmo());
+    saveProgress();
+    updateHud();
+    renderShopWeapons();
+  };
+  startAmmoBtnWrap.appendChild(btnBuyStartAmmo);
+
+  shopWeaponsGrid.appendChild(
+    renderHorizontalTrack(
+      '📦 Tor Startowej Liczby Nabojów (bez limitu)',
+      `<span style="font-size:12px;color:#4ade80;">📦 Aktualnie na start: ${curStartAmmoCount} nab.</span>`,
+      startAmmoCurrentNode,
+      startAmmoNextNode
+    )
+  );
+
   // Tor Uzupełniania Nabojów — nieskończony: każdy poziom daje +1 nabój co 5 sekund, ceny Fibonacciego
   const curAmmo = ammoRegenLevel;
   const nextAmmoLvl = curAmmo + 1;

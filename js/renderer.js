@@ -872,11 +872,22 @@ function renderScene() {
     const duration = nukeAiming.holdFrames / 60;
     const isReady = duration >= 0.5;
 
-    // Przezroczysty obszar rażenia
+    // Przezroczysty obszar rażenia zewnętrznego (3 HP)
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = isReady ? 'rgba(239, 68, 68, 0.22)' : 'rgba(234, 179, 8, 0.18)';
+    ctx.fillStyle = isReady ? 'rgba(239, 68, 68, 0.18)' : 'rgba(234, 179, 8, 0.14)';
     ctx.fill();
+
+    // Wewnętrzna strefa epicentrum 50% promienia (7 HP)
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = isReady ? 'rgba(239, 68, 68, 0.36)' : 'rgba(234, 179, 8, 0.28)';
+    ctx.fill();
+    ctx.strokeStyle = isReady ? '#fde047' : '#facc15';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
 
     // Obracające się przerywane linie / okrąg zasięgu
     ctx.beginPath();

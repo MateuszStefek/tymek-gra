@@ -9,25 +9,8 @@ const weaponsCatalog = [
     shortName: '🔫 Marker',
     cost: 0,
     desc: 'Klasyczny szybkostrzelny marker paintballowy. Korzysta ze zwykłych nabojów farby.',
-    ammoLabel: '🎨 Naboje (30 na start)',
-    upgrades: [
-      {
-        id: 'pistol_ammo_1',
-        name: '📦 Powiększony Magazynek I',
-        cost: 1,
-        desc: 'Zwiększa liczbę nabojów na starcie rundy z 30 do 40 sztuk!',
-        effectLabel: '🎨 Startowe naboje: 30 ➡️ 40',
-        requiresUpgrade: null
-      },
-      {
-        id: 'pistol_ammo_2',
-        name: '📦 Powiększony Magazynek II',
-        cost: 2,
-        desc: 'Zwiększa liczbę nabojów na starcie rundy z 40 do 55 sztuk!',
-        effectLabel: '🎨 Startowe naboje: 40 ➡️ 55',
-        requiresUpgrade: 'pistol_ammo_1'
-      }
-    ]
+    ammoLabel: '🎨 Podstawowy magazynek (początkowe naboje rozwijane są w osobnym torze)',
+    upgrades: []
   },
   {
     id: 'bazooka',
@@ -85,8 +68,8 @@ const weaponsCatalog = [
     name: '☢️ Bomba Atomowa',
     shortName: '☢️ Atomówka',
     cost: 10,
-    desc: 'Niszczycielska broń taktyczna! Przytrzymaj strzał, aby powiększyć promień wybuchu. Koszt nabojów rośnie n log n. Fala niszczy wszystko w zasięgu (3 HP) i przenika przez tarcze oraz przeszkody!',
-    ammoLabel: '🎨 Zwykłe naboje farby (koszt n log n zależny od promienia)',
+    desc: 'Niszczycielska broń taktyczna! Przytrzymaj strzał, aby powiększyć promień wybuchu (koszt n log n). Fala niszczy wszystko w zasięgu: 3 HP na zewnątrz i aż 7 HP w centrum (50% promienia)!',
+    ammoLabel: '🎨 Zwykłe naboje farby (koszt n log n, do 7 HP w centrum)',
     upgrades: []
   }
 ];

@@ -133,6 +133,7 @@ let defaultWeapon = 'pistol';
 let bazookaUpgraded = false;
 let ownedUpgrades = [];
 let hpLevel = 0; // Nieskończony tor życia: każdy poziom = +5 max HP
+let startingAmmoLevel = 0; // Nieskończony tor startowych nabojów: każdy poziom = +10 nabojów na start rundy (cena Fibonacci)
 let ammoRegenLevel = 0; // Nieskończony tor uzupełniania nabojów: każdy poziom = +1 nabój co 5 sekund
 let healingLevel = 0; // Zaczynamy od 0 HP / 5s (pierwszy poziom leczenia również kupuje się w sklepie)
 let helperUnlocked = false; // Tor Pomocnika (sojuszniczy gracz, 5 HP, respawn 12s)
@@ -213,6 +214,15 @@ try {
     if (ownedUpgrades.includes('hp_boost_3')) oldBonus += 15;
     hpLevel = oldBonus / 5;
   }
+  const savedStartingAmmo = localStorage.getItem('tymek_paintball_starting_ammo_level');
+  if (savedStartingAmmo !== null) {
+    const parsedStartAmmo = parseInt(savedStartingAmmo, 10);
+    if (!isNaN(parsedStartAmmo) && parsedStartAmmo >= 0) startingAmmoLevel = parsedStartAmmo;
+  } else {
+    // Migracja z ulepszeń pistol_ammo_1 i pistol_ammo_2
+    if (ownedUpgrades.includes('pistol_ammo_2')) startingAmmoLevel = 2; // +25 (zaokrąglone do 2 poziomów)
+    else if (ownedUpgrades.includes('pistol_ammo_1')) startingAmmoLevel = 1;
+  }
   const savedHealing = parseInt(localStorage.getItem('tymek_paintball_healing_level') || '0', 10);
   if (!isNaN(savedHealing) && savedHealing >= 0) {
     healingLevel = savedHealing;
@@ -264,9 +274,7 @@ function getStartingMaxHp() {
 }
 
 function getStartingAmmo() {
-  if (ownedUpgrades.includes('pistol_ammo_2')) return 55;
-  if (ownedUpgrades.includes('pistol_ammo_1')) return 40;
-  return 30;
+  return 30 + startingAmmoLevel * 10;
 }
 
 function getStartingRockets() {
@@ -345,6 +353,7 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_upgrades', JSON.stringify(ownedUpgrades));
     localStorage.setItem('tymek_paintball_healing_level', String(healingLevel));
     localStorage.setItem('tymek_paintball_hp_level', String(hpLevel));
+    localStorage.setItem('tymek_paintball_starting_ammo_level', String(startingAmmoLevel));
     localStorage.setItem('tymek_paintball_ammo_regen_level', String(ammoRegenLevel));
     localStorage.setItem('tymek_paintball_helper_unlocked', helperUnlocked ? '1' : '0');
     localStorage.setItem('tymek_paintball_helper_healing_level', String(helperHealingLevel));
@@ -365,6 +374,7 @@ function resetAllProgress() {
     localStorage.removeItem('tymek_paintball_upgrades');
     localStorage.removeItem('tymek_paintball_healing_level');
     localStorage.removeItem('tymek_paintball_hp_level');
+    localStorage.removeItem('tymek_paintball_starting_ammo_level');
     localStorage.removeItem('tymek_paintball_ammo_regen_level');
     localStorage.removeItem('tymek_paintball_helper_unlocked');
     localStorage.removeItem('tymek_paintball_helper_healing_level');
