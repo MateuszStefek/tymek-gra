@@ -38,6 +38,16 @@ function eliminateEnemy(j, en, splatColor) {
 }
 
 function handleLevelVictory() {
+  if (typeof stopAllGameAudio === 'function') {
+    stopAllGameAudio();
+  }
+  if (typeof nukeAiming !== 'undefined') {
+    nukeAiming.active = false;
+    nukeAiming.holdFrames = 0;
+  }
+  nukeFlashTimer = 0;
+  nukeScreenShake = 0;
+
   const tStr = survivalSeconds.toFixed(1);
   lastDiamondsEarned = 0;
   if (activeCustomMapIndex === null) {

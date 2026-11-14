@@ -1080,6 +1080,16 @@ function renderCustomMapEditor(idx) {
 }
 
 function openResultPopup(mode) {
+  if (typeof stopAllGameAudio === 'function') {
+    stopAllGameAudio();
+  }
+  if (typeof nukeAiming !== 'undefined') {
+    nukeAiming.active = false;
+    nukeAiming.holdFrames = 0;
+  }
+  if (typeof nukeFlashTimer !== 'undefined') nukeFlashTimer = 0;
+  if (typeof nukeScreenShake !== 'undefined') nukeScreenShake = 0;
+
   if (menuCountdownInterval) {
     clearInterval(menuCountdownInterval);
     menuCountdownInterval = null;
@@ -1207,6 +1217,16 @@ function openResultPopup(mode) {
 }
 
 function openMenu(mode = 'select') {
+  if (typeof stopAllGameAudio === 'function') {
+    stopAllGameAudio();
+  }
+  if (typeof nukeAiming !== 'undefined') {
+    nukeAiming.active = false;
+    nukeAiming.holdFrames = 0;
+  }
+  if (typeof nukeFlashTimer !== 'undefined') nukeFlashTimer = 0;
+  if (typeof nukeScreenShake !== 'undefined') nukeScreenShake = 0;
+
   if (mode === 'level_clear' || mode === 'dead') {
     openResultPopup(mode);
     return;

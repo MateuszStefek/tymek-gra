@@ -178,7 +178,36 @@ function playShieldBlockSound() {
   } catch (e) {}
 }
 
-let nukeChargeAudioNodes = null;
+let activeAudioNodes = new Set();
+
+function stopAllGameAudio() {
+  stopNukeChargeSound();
+  try {
+    if (activeAudioNodes && activeAudioNodes.size > 0) {
+      for (const node of activeAudioNodes) {
+        try {
+          if (node.stop) node.stop();
+          else if (node.disconnect) node.disconnect();
+        } catch (e) {}
+      }
+      activeAudioNodes.clear();
+    }
+  } catch (e) {}
+}
+
+function registerAudioSource(sourceNode, durationSec) {
+  try {
+    activeAudioNodes.add(sourceNode);
+    sourceNode.onended = () => {
+      activeAudioNodes.delete(sourceNode);
+    };
+    if (typeof durationSec === 'number' && durationSec > 0) {
+      setTimeout(() => {
+        activeAudioNodes.delete(sourceNode);
+      }, (durationSec + 0.15) * 1000);
+    }
+  } catch (e) {}
+}
 
 function startNukeChargeSound() {
   try {
@@ -233,6 +262,7 @@ function playNukeExplosionSound() {
     subGain.connect(audioCtx.destination);
     subOsc.start(now);
     subOsc.stop(now + 1.4);
+    registerAudioSource(subOsc, 1.4);
 
     // Szum fali uderzeniowej (syntetyzowany białym szumem)
     const bufferSize = audioCtx.sampleRate * 1.5;
@@ -255,6 +285,7 @@ function playNukeExplosionSound() {
     noiseGain.connect(audioCtx.destination);
     noise.start(now);
     noise.stop(now + 1.5);
+    registerAudioSource(noise, 1.5);
 
     // Dźwięk syreny / alarmu w tle
     const sirenOsc = audioCtx.createOscillator();
@@ -268,6 +299,7 @@ function playNukeExplosionSound() {
     sirenGain.connect(audioCtx.destination);
     sirenOsc.start(now);
     sirenOsc.stop(now + 0.9);
+    registerAudioSource(sirenOsc, 0.9);
   } catch (e) {}
 }
 
