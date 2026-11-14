@@ -18,6 +18,16 @@ if (btnOpenShop) {
   });
 }
 
+if (shopTabWeapons) {
+  shopTabWeapons.addEventListener('click', () => switchShopCategory('weapons'));
+}
+if (shopTabHealth) {
+  shopTabHealth.addEventListener('click', () => switchShopCategory('health'));
+}
+if (shopTabTeam) {
+  shopTabTeam.addEventListener('click', () => switchShopCategory('team'));
+}
+
 if (btnSwitchWeapon) {
   btnSwitchWeapon.addEventListener('click', switchWeaponInStage);
 }

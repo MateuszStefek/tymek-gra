@@ -378,15 +378,35 @@ function renderHorizontalTrack(trackTitle, headerRightHtml, currentStateNode, ne
   return trackEl;
 }
 
+function switchShopCategory(cat) {
+  if (['weapons', 'health', 'team'].includes(cat)) {
+    currentShopCategory = cat;
+    renderShopWeapons();
+  }
+}
+
 function renderShopWeapons() {
   if (!shopWeaponsGrid) return;
   const defObj = weaponsCatalog.find(w => w.id === defaultWeapon) || weaponsCatalog[0];
+  const avgHeal = getAverageHealingPerSecond(healingLevel);
+
+  // Aktualizacja stanu przycisków zakładek
+  if (shopTabWeapons) shopTabWeapons.classList.toggle('active', currentShopCategory === 'weapons');
+  if (shopTabHealth) shopTabHealth.classList.toggle('active', currentShopCategory === 'health');
+  if (shopTabTeam) shopTabTeam.classList.toggle('active', currentShopCategory === 'team');
+
   if (shopSubtitle) {
-    const avgHeal = getAverageHealingPerSecond(healingLevel);
-    shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe HP: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b> | Leczenie śr.: <b style="color:#4ade80;">${avgHeal.toFixed(2)} HP/s 💚</b><br><span style="font-size:12px;color:#94a3b8;">Każdy tor pokazuje po lewej <b>aktualny stan</b>, a po prawej <b>następną rzecz do kupienia</b> (pierwszy zakup odblokowuje tor).</span>`;
+    if (currentShopCategory === 'weapons') {
+      shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Domyślna broń: <b style="color:#fde047;">${defObj.name}</b> | Startowe naboje: <b style="color:#38bdf8;">${getStartingAmmo()} 📦</b> | Odnawianie: <b style="color:#38bdf8;">+${ammoRegenLevel}/5s 🎨</b><br><span style="font-size:12px;color:#94a3b8;">Kategoria <b>Broń</b>: arsenał, zapas i odnawianie amunicji.</span>`;
+    } else if (currentShopCategory === 'health') {
+      shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Startowe HP gracza: <b style="color:#4ade80;">${getStartingMaxHp()} ❤️</b> | Leczenie gracza śr.: <b style="color:#4ade80;">${avgHeal.toFixed(2)} HP/s 💚</b><br><span style="font-size:12px;color:#94a3b8;">Kategoria <b>Zdrowie</b>: maksymalne życie oraz impulsy leczące gracza.</span>`;
+    } else if (currentShopCategory === 'team') {
+      shopSubtitle.innerHTML = `Masz <b style="color:#38bdf8;">💎 ${diamonds} diamentów</b> | Pomocnicy: <b style="color:#a855f7;">${helperUnlocked ? helperCount : 0}/3 🤝</b> | Pula leczenia drużyny: <b style="color:#4ade80;">+${helperHealingLevel} HP/5s 💚</b><br><span style="font-size:12px;color:#94a3b8;">Kategoria <b>Drużyna</b>: rekrutacja sojuszników i wspólne leczenie.</span>`;
+    }
   }
   shopWeaponsGrid.innerHTML = '';
 
+  if (currentShopCategory === 'weapons') {
   // Tory broni
   weaponsCatalog.forEach(w => {
     const isWeaponOwned = ownedWeapons.includes(w.id);
@@ -545,7 +565,9 @@ function renderShopWeapons() {
     }
     shopWeaponsGrid.appendChild(trackEl);
   });
+  } // Koniec if (currentShopCategory === 'weapons')
 
+  if (currentShopCategory === 'health') {
   // Tor Wzmocnienia Życia (HP) — nieskończony: każdy poziom +5 max HP, cena rośnie ciągiem Fibonacciego (1, 2, 3, 5, 8...)
   const hpNextLvl = hpLevel + 1;
   const hpNextCost = getFibonacciCost(hpNextLvl);
@@ -673,7 +695,9 @@ function renderShopWeapons() {
       healNextNode
     )
   );
+  } // Koniec if (currentShopCategory === 'health')
 
+  if (currentShopCategory === 'weapons') {
   // Tor Początkowej Liczby Nabojów (Start Ammo) — nieskończony: każdy poziom +10 nabojów na start (30, 40, 50, 60...), ceny Fibonacciego (1, 2, 3, 5, 8...)
   const startAmmoNextLvl = startingAmmoLevel + 1;
   const startAmmoNextCost = getFibonacciCost(startAmmoNextLvl);
@@ -792,7 +816,9 @@ function renderShopWeapons() {
       ammoNextNode
     )
   );
+  } // Koniec if (currentShopCategory === 'weapons')
 
+  if (currentShopCategory === 'team') {
   // Tor Pomocnika (Sojuszniczy gracz, 5 HP, wraca po 12s, unika min)
   const helperCurrentNode = document.createElement('div');
   if (!helperUnlocked) {
@@ -991,6 +1017,7 @@ function renderShopWeapons() {
       hHealNextNode
     )
   );
+  } // Koniec if (currentShopCategory === 'team')
 }
 
 function openCustomMapsScreen(editIdx = null) {

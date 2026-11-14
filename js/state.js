@@ -72,6 +72,9 @@ const btnCloseCustom = document.getElementById('btnCloseCustom');
 const shopOverlay = document.getElementById('shopOverlay');
 const shopSubtitle = document.getElementById('shopSubtitle');
 const shopWeaponsGrid = document.getElementById('shopWeaponsGrid');
+const shopTabWeapons = document.getElementById('shopTabWeapons');
+const shopTabHealth = document.getElementById('shopTabHealth');
+const shopTabTeam = document.getElementById('shopTabTeam');
 const btnShopToLevels = document.getElementById('btnShopToLevels');
 const btnCloseShop = document.getElementById('btnCloseShop');
 
@@ -125,6 +128,7 @@ let unlockedLevel = 1;
 let minesCount = 2; // Na starcie mamy 2 miny!
 let bestTimes = {};
 let activeCustomMapIndex = null;
+let currentShopCategory = 'weapons'; // 'weapons' | 'health' | 'team'
 let totalEnemiesInLevel = 1;
 let currentThemeIndex = 0;
 let diamonds = 1;
