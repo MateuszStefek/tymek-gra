@@ -137,8 +137,10 @@ let startingAmmoLevel = 0; // Nieskończony tor startowych nabojów: każdy pozi
 let ammoRegenLevel = 0; // Nieskończony tor uzupełniania nabojów: każdy poziom = +1 nabój co 5 sekund
 let healingLevel = 0; // Zaczynamy od 0 HP / 5s (pierwszy poziom leczenia również kupuje się w sklepie)
 let helperUnlocked = false; // Tor Pomocnika (sojuszniczy gracz, 5 HP, respawn 12s)
+let helperCount = 1; // Liczba pomocników: 1 (start), 2 (+10 💎), 3 (+20 💎)
 let helperHealingLevel = 0; // Tor leczenia pomocnika: 1HP/5s, 2HP/5s, 3HP/5s...
-let helper = null;
+let helper = null; // Dla kompatybilności wstecznej (wskazuje helpers[0])
+let helpers = []; // Tablica wszystkich sojuszniczych pomocników
 let lastDiamondsEarned = 0;
 
 let customMaps = [
@@ -232,6 +234,10 @@ try {
     ammoRegenLevel = savedAmmoRegen;
   }
   helperUnlocked = localStorage.getItem('tymek_paintball_helper_unlocked') === '1';
+  const savedHelperCount = parseInt(localStorage.getItem('tymek_paintball_helper_count') || '1', 10);
+  if (!isNaN(savedHelperCount) && savedHelperCount >= 1) {
+    helperCount = Math.min(3, Math.max(1, savedHelperCount));
+  }
   const savedHelperHeal = parseInt(localStorage.getItem('tymek_paintball_helper_healing_level') || '0', 10);
   if (!isNaN(savedHelperHeal) && savedHelperHeal >= 0) {
     helperHealingLevel = savedHelperHeal;
@@ -356,6 +362,7 @@ function saveProgress() {
     localStorage.setItem('tymek_paintball_starting_ammo_level', String(startingAmmoLevel));
     localStorage.setItem('tymek_paintball_ammo_regen_level', String(ammoRegenLevel));
     localStorage.setItem('tymek_paintball_helper_unlocked', helperUnlocked ? '1' : '0');
+    localStorage.setItem('tymek_paintball_helper_count', String(helperCount));
     localStorage.setItem('tymek_paintball_helper_healing_level', String(helperHealingLevel));
   } catch (e) {}
 }
@@ -377,6 +384,7 @@ function resetAllProgress() {
     localStorage.removeItem('tymek_paintball_starting_ammo_level');
     localStorage.removeItem('tymek_paintball_ammo_regen_level');
     localStorage.removeItem('tymek_paintball_helper_unlocked');
+    localStorage.removeItem('tymek_paintball_helper_count');
     localStorage.removeItem('tymek_paintball_helper_healing_level');
   } catch (e) {}
 

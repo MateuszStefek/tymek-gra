@@ -615,24 +615,24 @@ function triggerNukeDetonation(x, y, radius, cost) {
     }
   }
 
-  // 3. Pomocnik gracza
-  if (helper && helper.active) {
+  // 3. Pomocnicy gracza
+  if (typeof helpers !== 'undefined' && Array.isArray(helpers)) {
+    for (const h of helpers) {
+      if (h && h.alive) {
+        const d = Math.hypot(h.x - x, h.y - y);
+        if (d <= radius + h.radius) {
+          const isInner = d <= innerRadius + h.radius;
+          const dmg = isInner ? 7 : 3;
+          damageHelper(dmg, '#ef4444', h);
+        }
+      }
+    }
+  } else if (helper && helper.alive) {
     const d = Math.hypot(helper.x - x, helper.y - y);
     if (d <= radius + helper.radius) {
       const isInner = d <= innerRadius + helper.radius;
       const dmg = isInner ? 7 : 3;
-      helper.hp -= dmg;
-      helper.hitFlash = 14;
-      popups.push({
-        x: helper.x,
-        y: helper.y - 20,
-        text: `-${dmg} HP ☢️`,
-        color: isInner ? '#fde047' : '#ef4444',
-        alpha: 1
-      });
-      if (helper.hp <= 0) {
-        eliminateHelper();
-      }
+      damageHelper(dmg, '#ef4444', helper);
     }
   }
 
@@ -1404,10 +1404,23 @@ function update() {
           }
         }
         continue;
-      } else if (helper && helper.alive && Math.hypot(b.x - helper.x, b.y - helper.y) < helper.radius + 6) {
-        bullets.splice(i, 1);
-        damageHelper(1, b.color);
-        continue;
+      } else {
+        let hitH = false;
+        if (typeof helpers !== 'undefined' && Array.isArray(helpers)) {
+          for (const h of helpers) {
+            if (h && h.alive && Math.hypot(b.x - h.x, b.y - h.y) < h.radius + 6) {
+              bullets.splice(i, 1);
+              damageHelper(1, b.color, h);
+              hitH = true;
+              break;
+            }
+          }
+        } else if (helper && helper.alive && Math.hypot(b.x - helper.x, b.y - helper.y) < helper.radius + 6) {
+          bullets.splice(i, 1);
+          damageHelper(1, b.color, helper);
+          hitH = true;
+        }
+        if (hitH) continue;
       }
     }
   }

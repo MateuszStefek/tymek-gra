@@ -800,10 +800,10 @@ function renderShopWeapons() {
     helperCurrentNode.className = 'tree-node owned last-owned';
     helperCurrentNode.innerHTML = `
       <div>
-        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN: AKTYWNY</div>
-        <div class="lvl-title" style="font-size:15px;">🤝 Sojuszniczy Pomocnik</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">5 HP. Po zabiciu powraca po 12s. Unika min, nie strzela w cywili, brak friendly fire!</div>
-        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ Zdrowie pomocnika: 5 HP | 🔄 Respawn: 12s</div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN: AKTYWNY (${helperCount} ${helperCount === 1 ? 'POMOCNIK' : (helperCount === 2 ? 'POMOCNIKÓW' : 'POMOCNIKÓW')})</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Drużyna: ${helperCount} ${helperCount === 1 ? 'Sojusznik' : 'Sojuszników'} na arenie</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Każdy ma 5 HP i po eliminacji wraca po 12s. Unikają min i wspierają Cię ogniem!</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">❤️ 5 HP na pomocnika | 🔄 Respawn: 12s | Liczba: ${helperCount}/3</div>
       </div>
     `;
   }
@@ -815,7 +815,7 @@ function renderShopWeapons() {
     helperNextNode.innerHTML = `
       <div>
         <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)</div>
-        <div class="lvl-title" style="font-size:15px;">🤝 Sojusznik na Arenie (5 HP)</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Pierwszy Sojusznik na Arenie (5 HP)</div>
         <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Zyskujesz sojuszniczego gracza z 5 HP, który walczy u Twojego boku, unika min i wraca po 12s od eliminacji!</div>
         <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">🛡️ Wsparcie ogniowe | 🧠 Repositioning przy zablokowaniu</div>
       </div>
@@ -831,28 +831,85 @@ function renderShopWeapons() {
       if (diamonds < helperCost) return;
       diamonds -= helperCost;
       helperUnlocked = true;
+      helperCount = 1;
       if (typeof initHelper === 'function') initHelper();
       saveProgress();
       updateHud();
       renderShopWeapons();
     };
     helperNextNode.querySelector('.custom-card-btns').appendChild(btnBuyHelper);
+  } else if (helperCount === 1) {
+    const cost2 = 10;
+    helperNextNode.className = 'tree-node next-unlock';
+    helperNextNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Drugi Pomocnik na Arenie (10 💎)</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Kup drugiego sojusznika! Na arenie walczyć będzie dwóch pomocników jednocześnie.</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">👥 Drużyna: 1 ➡️ 2 pomocników (każdy 5 HP)</div>
+      </div>
+      <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+    `;
+    const btnBuy2 = document.createElement('button');
+    btnBuy2.className = 'btn-green';
+    btnBuy2.disabled = diamonds < cost2;
+    btnBuy2.textContent = diamonds >= cost2
+      ? `🛒 Kup Drugiego Pomocnika (${cost2} 💎)`
+      : `🔒 Brak 💎 (${diamonds}/${cost2})`;
+    btnBuy2.onclick = () => {
+      if (diamonds < cost2) return;
+      diamonds -= cost2;
+      helperCount = 2;
+      if (typeof initHelper === 'function') initHelper();
+      saveProgress();
+      updateHud();
+      renderShopWeapons();
+    };
+    helperNextNode.querySelector('.custom-card-btns').appendChild(btnBuy2);
+  } else if (helperCount === 2) {
+    const cost3 = 20;
+    helperNextNode.className = 'tree-node next-unlock';
+    helperNextNode.innerHTML = `
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Trzeci Pomocnik na Arenie (20 💎)</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Kup trzeciego sojusznika! Potężna 3-osobowa eskadra wspiera Cię na każdej arenie.</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">👥 Drużyna: 2 ➡️ 3 pomocników (każdy 5 HP)</div>
+      </div>
+      <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
+    `;
+    const btnBuy3 = document.createElement('button');
+    btnBuy3.className = 'btn-green';
+    btnBuy3.disabled = diamonds < cost3;
+    btnBuy3.textContent = diamonds >= cost3
+      ? `🛒 Kup Trzeciego Pomocnika (${cost3} 💎)`
+      : `🔒 Brak 💎 (${diamonds}/${cost3})`;
+    btnBuy3.onclick = () => {
+      if (diamonds < cost3) return;
+      diamonds -= cost3;
+      helperCount = 3;
+      if (typeof initHelper === 'function') initHelper();
+      saveProgress();
+      updateHud();
+      renderShopWeapons();
+    };
+    helperNextNode.querySelector('.custom-card-btns').appendChild(btnBuy3);
   } else {
     helperNextNode.className = 'tree-node owned';
     helperNextNode.innerHTML = `
       <div>
-        <div style="font-size:10px;font-weight:900;color:#4ade80;">🏆 ODBLOKOWANO</div>
-        <div class="lvl-title" style="font-size:15px;">🤝 Pomocnik w pełnej gotowości!</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Twój sojusznik wchodzi na każdą arenę i wspiera Cię w walce.</div>
+        <div style="font-size:10px;font-weight:900;color:#4ade80;">🏆 MAKSYMALNY POZIOM DRUŻYNY</div>
+        <div class="lvl-title" style="font-size:15px;">🤝 Pełna 3-osobowa drużyna odblokowana!</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Wszyscy trzej sojusznicy wchodzą z Tobą na arenę i wspierają Cię w walce.</div>
       </div>
     `;
   }
 
   shopWeaponsGrid.appendChild(
     renderHorizontalTrack(
-      '🤝 Tor Pomocnika (Sojuszniczy Gracz)',
+      '🤝 Tor Pomocnika (Sojusznicza Drużyna)',
       helperUnlocked
-        ? `<span style="font-size:12px;color:#4ade80;">🤝 Aktywny (5 HP | Respawn: 12s)</span>`
+        ? `<span style="font-size:12px;color:#4ade80;">🤝 Aktywny (${helperCount} ${helperCount === 1 ? 'pomocnik' : 'pomocników'} | Respawn: 12s)</span>`
         : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany</span>`,
       helperCurrentNode,
       helperNextNode
@@ -871,7 +928,7 @@ function renderShopWeapons() {
       <div>
         <div style="font-size:10px;font-weight:900;color:#94a3b8;">🔒 AKTUALNY STAN: TOR ZABLOKOWANY</div>
         <div class="lvl-title" style="font-size:15px;color:#94a3b8;">💚 Leczenie Pomocnika Wyłączone (0 HP/5s)</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Pomocnik nie regeneruje utraconego zdrowia w trakcie walki. Odblokuj tor po prawej!</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Pomocnicy nie regenerują utraconego zdrowia. Odblokuj tor po prawej!</div>
       </div>
     `;
   } else {
@@ -879,9 +936,9 @@ function renderShopWeapons() {
     hHealCurrentNode.innerHTML = `
       <div>
         <div style="font-size:10px;font-weight:900;color:#4ade80;">✅ AKTUALNY STAN (POZIOM ${curHHeal})</div>
-        <div class="lvl-title" style="font-size:15px;">💚 +${curHHeal} HP co 5 sekund</div>
-        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Pomocnik automatycznie odzyskuje ${curHHeal} HP co 5 sekund!</div>
-        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Średnio: ${(curHHeal / 5).toFixed(2)} HP/s</div>
+        <div class="lvl-title" style="font-size:15px;">💚 +${curHHeal} HP puli co 5 sekund</div>
+        <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">Nowe zdrowie dzieli się równomiernie na wszystkich aktualnie żywych pomocników!</div>
+        <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Łączna pula: ${curHHeal} HP/5s (dzielona na żywych)</div>
       </div>
     `;
   }
@@ -892,9 +949,9 @@ function renderShopWeapons() {
   hHealNextNode.innerHTML = `
     <div>
       <div style="font-size:10px;font-weight:900;color:#facc15;">${curHHeal === 0 ? '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)' : '🔓 NASTĘPNA RZECZ DO KUPIENIA'}</div>
-      <div class="lvl-title" style="font-size:15px;">💚 +${nextHHealLvl} HP co 5 sekund</div>
-      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${hHealLockedByHelper ? '⚠️ Najpierw musisz odblokować Pomocnika w torze powyżej!' : `Każdy poziom zwiększa leczenie pomocnika o kolejne +1 HP co 5 sekund. Tor bez limitu!`}</div>
-      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Regeneracja: ${curHHeal} HP/5s ➡️ ${nextHHealLvl} HP/5s</div>
+      <div class="lvl-title" style="font-size:15px;">💚 +${nextHHealLvl} HP puli co 5 sekund</div>
+      <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${hHealLockedByHelper ? '⚠️ Najpierw musisz odblokować Pomocnika w torze powyżej!' : `Zwiększa łączną pulę leczenia o kolejne +1 HP co 5s (dzielone po równo między żywych pomocników).`}</div>
+      <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">Pula leczenia: ${curHHeal} HP/5s ➡️ ${nextHHealLvl} HP/5s</div>
     </div>
     <div class="custom-card-btns" style="margin-top:6px;justify-content:flex-start;"></div>
   `;
@@ -918,9 +975,9 @@ function renderShopWeapons() {
 
   shopWeaponsGrid.appendChild(
     renderHorizontalTrack(
-      '💚 Tor Leczenia Pomocnika (bez limitu)',
+      '💚 Tor Leczenia Pomocników (dzielone na żywych)',
       curHHeal > 0
-        ? `<span style="font-size:12px;color:#4ade80;">💚 +${curHHeal} HP/5s (Poziom ${curHHeal})</span>`
+        ? `<span style="font-size:12px;color:#4ade80;">💚 +${curHHeal} HP puli/5s (Poziom ${curHHeal})</span>`
         : `<span style="font-size:12px;color:#94a3b8;">🔒 Tor zablokowany</span>`,
       hHealCurrentNode,
       hHealNextNode

@@ -665,8 +665,19 @@ function renderScene() {
     drawHuman(player.x, player.y, player.angle, player.walkCycle, '#2563eb', true, player.splatColor, 'TY');
   }
 
-  // Sojuszniczy Pomocnik (jeśli żyje na arenie)
-  if (helper && helper.alive) {
+  // Sojuszniczy Pomocnicy (wszyscy żywi pomocnicy na arenie)
+  if (typeof helpers !== 'undefined' && Array.isArray(helpers)) {
+    for (const h of helpers) {
+      if (h && h.alive) {
+        drawHuman(h.x, h.y, h.angle, h.walkCycle, '#0284c7', false, h.splatColor, `🤝 ${h.name}`, {
+          kind: 'helper',
+          hp: h.hp,
+          maxHp: h.maxHp,
+          aiState: h.aiState
+        });
+      }
+    }
+  } else if (helper && helper.alive) {
     drawHuman(helper.x, helper.y, helper.angle, helper.walkCycle, '#0284c7', false, helper.splatColor, '🤝 POMOCNIK', {
       kind: 'helper',
       hp: helper.hp,
@@ -799,7 +810,23 @@ function renderScene() {
     ctx.restore();
   }
 
-  if (helper && !helper.alive && helperUnlocked && gameState === 'playing') {
+  // Informacja o odradzających się pomocnikach w lewym dolnym rogu
+  if (helperUnlocked && gameState === 'playing' && typeof helpers !== 'undefined' && Array.isArray(helpers)) {
+    const deadHelpers = helpers.filter(h => !h.alive);
+    if (deadHelpers.length > 0) {
+      ctx.save();
+      ctx.font = 'bold 13px system-ui';
+      ctx.textAlign = 'left';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 3;
+      const respMsg = deadHelpers.map(h => `${h.name} (${Math.ceil(h.respawnTimer / 60)}s)`).join(', ');
+      const fullText = `🤝 Powrót: ${respMsg}...`;
+      ctx.strokeText(fullText, 16, canvas.height - 16);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText(fullText, 16, canvas.height - 16);
+      ctx.restore();
+    }
+  } else if (helper && !helper.alive && helperUnlocked && gameState === 'playing') {
     ctx.save();
     ctx.font = 'bold 13px system-ui';
     ctx.textAlign = 'left';
