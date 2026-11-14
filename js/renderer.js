@@ -258,6 +258,27 @@ function drawHuman(x, y, aimAngle, walkCycle, shirtColor, isPlayer, splatColor, 
     ctx.fillStyle = '#f59e0b';
     ctx.fillRect(25, -6, 2.5, 12);
     ctx.fillRect(31, -6, 2.5, 12);
+  } else if (isPlayer && player.weapon === 'nuke') {
+    // Rysuj wyrzutnię / detonator Bomby Atomowej
+    ctx.fillStyle = '#1c1917';
+    ctx.strokeStyle = '#eab308';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(0, -6, 26, 12, 3);
+    ctx.fill();
+    ctx.stroke();
+    // Żółto-czarne ostrzeżenie radiacyjne
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(18, -5, 6, 10);
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(21, 0, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Czerwona dioda/antena
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(4, -8, 2, 0, Math.PI * 2);
+    ctx.fill();
   } else {
     ctx.fillStyle = isProKind ? '#0f172a' : '#334155';
     ctx.fillRect(10, -2, 18, 6);
@@ -524,6 +545,13 @@ function drawNpcPreviewOnCanvas(previewCanvas, kind) {
 }
 
 function renderScene() {
+  ctx.save();
+  if (typeof nukeScreenShake === 'number' && nukeScreenShake > 0) {
+    const shakeX = (Math.random() - 0.5) * nukeScreenShake * 1.6;
+    const shakeY = (Math.random() - 0.5) * nukeScreenShake * 1.6;
+    ctx.translate(shakeX, shakeY);
+  }
+
   const theme = graphicThemes[currentThemeIndex % graphicThemes.length] || graphicThemes[0];
   ctx.fillStyle = theme.arenaBgOverride || currentArena.bgColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -834,4 +862,109 @@ function renderScene() {
     ctx.fill();
     ctx.restore();
   }
+
+  // Rysowanie wskaźnika ładowania Bomby Atomowej (kółko zasięgu nukeAiming)
+  if (typeof nukeAiming !== 'undefined' && nukeAiming && nukeAiming.active && gameState === 'playing') {
+    ctx.save();
+    const cx = nukeAiming.x;
+    const cy = nukeAiming.y;
+    const r = nukeAiming.radius;
+    const duration = nukeAiming.holdFrames / 60;
+    const isReady = duration >= 0.5;
+
+    // Przezroczysty obszar rażenia
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = isReady ? 'rgba(239, 68, 68, 0.22)' : 'rgba(234, 179, 8, 0.18)';
+    ctx.fill();
+
+    // Obracające się przerywane linie / okrąg zasięgu
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = isReady ? '#ef4444' : '#eab308';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 6]);
+    ctx.lineDashOffset = -(performance.now() / 35);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Symbol radioaktywny w środku
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+    ctx.fillStyle = isReady ? '#ef4444' : '#eab308';
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Etykieta kosztu markerów oraz czasu ładowania
+    ctx.font = 'bold 15px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 4;
+    const costText = `☢️ ${nukeAiming.cost} markerów${isReady ? '' : ' (przytrzymaj >0.5s)'}`;
+    ctx.strokeText(costText, cx, cy - r - 12);
+    ctx.fillText(costText, cx, cy - r - 12);
+
+    // Kreski celownicze łączące środek
+    ctx.strokeStyle = isReady ? '#ef4444' : '#eab308';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 24, cy); ctx.lineTo(cx - 14, cy);
+    ctx.moveTo(cx + 14, cy); ctx.lineTo(cx + 24, cy);
+    ctx.moveTo(cx, cy - 24); ctx.lineTo(cx, cy - 14);
+    ctx.moveTo(cx, cy + 14); ctx.lineTo(cx, cy + 24);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Rysowanie animacji eksplozji atomowej (nukeExplosions)
+  if (typeof nukeExplosions !== 'undefined' && Array.isArray(nukeExplosions)) {
+    for (const ne of nukeExplosions) {
+      ctx.save();
+      const progress = 1 - (ne.timer / ne.maxTimer); // 0 -> 1
+      const currentR = ne.radius * Math.min(1, progress * 1.6);
+      const alpha = Math.max(0, 1 - progress);
+
+      // Zewnętrzna fala uderzeniowa (shockwave)
+      ctx.beginPath();
+      ctx.arc(ne.x, ne.y, currentR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+      ctx.lineWidth = 14 * (1 - progress * 0.7);
+      ctx.stroke();
+
+      // Fala ognia i plazmy
+      ctx.beginPath();
+      ctx.arc(ne.x, ne.y, currentR * 0.88, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(249, 115, 22, ${alpha * 0.45})`;
+      ctx.fill();
+
+      // Gorące biało-żółte jądro wybuchu
+      const coreR = currentR * 0.5 * (1 - progress * 0.4);
+      if (coreR > 0) {
+        const grad = ctx.createRadialGradient(ne.x, ne.y, 0, ne.x, ne.y, coreR);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        grad.addColorStop(0.4, `rgba(254, 240, 138, ${alpha * 0.9})`);
+        grad.addColorStop(0.8, `rgba(239, 68, 68, ${alpha * 0.6})`);
+        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.beginPath();
+        ctx.arc(ne.x, ne.y, coreR, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // Błysk jądrowy na całym ekranie (nuclear flash)
+  if (typeof nukeFlashTimer === 'number' && nukeFlashTimer > 0) {
+    const flashAlpha = Math.min(0.85, (nukeFlashTimer / 30) * 0.85);
+    ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  ctx.restore(); // Przywrócenie transformacji z nukeScreenShake
 }

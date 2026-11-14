@@ -147,7 +147,7 @@ function updateHud() {
   if (touchMineBadge) touchMineBadge.textContent = minesCount;
   if (touchBtnMine) touchBtnMine.disabled = minesCount <= 0;
   if (touchBtnWeapon) {
-    touchBtnWeapon.textContent = player.weapon === 'bazooka' ? '🚀' : (player.weapon === 'minigun' ? '🔥' : '🔫');
+    touchBtnWeapon.textContent = player.weapon === 'bazooka' ? '🚀' : (player.weapon === 'minigun' ? '🔥' : (player.weapon === 'nuke' ? '☢️' : '🔫'));
   }
   hpText.textContent = `${hp}/${player.maxHp}`;
   hpFill.style.width = pct + '%';

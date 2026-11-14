@@ -307,6 +307,29 @@ let clouds = [];
 let paintCanvasDirty = false;
 let eliminatedHumans = [];
 
+// ==================== ZMIENNE STANU DLA BOMBY ATOMOWEJ ====================
+let nukeAiming = {
+  active: false,
+  x: 0,
+  y: 0,
+  holdFrames: 0,
+  radius: 40,
+  cost: 5
+};
+let nukeExplosions = [];
+let nukeFlashTimer = 0;
+let nukeScreenShake = 0;
+
+// Obliczenie kosztu markerów n log n na podstawie promienia r (od rMin = 40 do rMax = 320)
+function computeNukeAmmoCost(radius) {
+  const rMin = 40;
+  const rClamped = Math.max(rMin, radius);
+  const n = (rClamped - rMin) / 10 + 2; // n rośnie od 2 do ok. 30
+  // n * log2(n) * 2.2 skaluje koszt od 5 do ok. 80-120 markerów
+  const cost = Math.round(n * Math.log2(n) * 2.2);
+  return Math.max(5, cost);
+}
+
 function saveProgress() {
   try {
     localStorage.setItem('tymek_paintball_unlocked', String(unlockedLevel));

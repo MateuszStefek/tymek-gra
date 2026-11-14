@@ -79,6 +79,15 @@ const weaponsCatalog = [
     desc: 'Ciężki minigun o potężnej szybkostrzelności! Strzela bardzo szybko i korzysta ze zwykłych nabojów farby.',
     ammoLabel: '🎨 Zwykłe naboje farby (wysoka szybkostrzelność)',
     upgrades: []
+  },
+  {
+    id: 'nuke',
+    name: '☢️ Bomba Atomowa',
+    shortName: '☢️ Atomówka',
+    cost: 10,
+    desc: 'Niszczycielska broń taktyczna! Przytrzymaj strzał, aby powiększyć promień wybuchu. Koszt nabojów rośnie n log n. Fala niszczy wszystko w zasięgu (3 HP) i przenika przez tarcze oraz przeszkody!',
+    ammoLabel: '🎨 Zwykłe naboje farby (koszt n log n zależny od promienia)',
+    upgrades: []
   }
 ];
 

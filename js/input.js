@@ -329,7 +329,7 @@ function handleCanvasTouchStart(e) {
       mouse.down = true;
       mouse.active = true;
 
-      if (gameState === 'playing') {
+      if (gameState === 'playing' && player.weapon !== 'nuke') {
         const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
         firePlayerWeapon(player.x, player.y, angle);
       }
@@ -474,8 +474,10 @@ canvas.addEventListener('mousedown', e => {
   if (gameState !== 'playing') return;
   mouse.down = true;
   mouse.active = true;
-  const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-  firePlayerWeapon(player.x, player.y, angle);
+  if (player.weapon !== 'nuke') {
+    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    firePlayerWeapon(player.x, player.y, angle);
+  }
 });
 
 window.addEventListener('mouseup', () => {

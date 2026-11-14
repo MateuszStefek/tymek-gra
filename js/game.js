@@ -303,6 +303,11 @@ function startLevel(targetLevel) {
   ammoSpawnTimer = 360;
   rocketSpawnTimer = 1500;
   explosions = [];
+  nukeExplosions = [];
+  nukeFlashTimer = 0;
+  nukeScreenShake = 0;
+  nukeAiming.active = false;
+  nukeAiming.holdFrames = 0;
   particles = [];
   splats = [];
   eliminatedHumans = [];
@@ -396,6 +401,11 @@ function startCustomMap(idx) {
   ammoSpawnTimer = 360;
   rocketSpawnTimer = 1500;
   explosions = [];
+  nukeExplosions = [];
+  nukeFlashTimer = 0;
+  nukeScreenShake = 0;
+  nukeAiming.active = false;
+  nukeAiming.holdFrames = 0;
   particles = [];
   splats = [];
   eliminatedHumans = [];
@@ -484,6 +494,124 @@ function getBestFallbackWeapon() {
     }
   }
   return best;
+}
+
+function triggerNukeDetonation(x, y, radius, cost) {
+  if (player.hp <= 0) return;
+  if (player.ammo < cost) {
+    playEmptyAmmoSound();
+    popups.push({ x: player.x, y: player.y - 28, text: 'ZA MAŁO NABOJÓW NA WYBUCH!', color: '#ef4444', alpha: 1 });
+    return;
+  }
+
+  // Pobranie amunicji
+  player.ammo -= cost;
+  updateHud();
+
+  // Dźwięk i efekty wizualne
+  playNukeExplosionSound();
+  nukeFlashTimer = 30; // ~0.5s białego rozbłysku
+  nukeScreenShake = 22; // Silny wstrząs ekranu
+
+  nukeExplosions.push({
+    x,
+    y,
+    radius,
+    timer: 70,
+    maxTimer: 70
+  });
+
+  // Dodanie wielu plam na planszy
+  const splatCount = Math.min(18, Math.floor(radius / 15));
+  for (let i = 0; i < splatCount; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const dist = Math.random() * radius * 0.9;
+    const sx = x + Math.cos(ang) * dist;
+    const sy = y + Math.sin(ang) * dist;
+    const col = colors[Math.floor(Math.random() * colors.length)];
+    addPaintSplat(sx, sy, col, 28 + Math.random() * 20);
+  }
+
+  // Drobne cząsteczki ognia/dymu
+  for (let i = 0; i < 45; i++) {
+    const pAng = Math.random() * Math.PI * 2;
+    const pSpd = 2 + Math.random() * 8;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(pAng) * pSpd,
+      vy: Math.sin(pAng) * pSpd,
+      r: 3 + Math.random() * 5,
+      color: Math.random() < 0.6 ? '#f97316' : '#ef4444',
+      alpha: 1
+    });
+  }
+
+  // ZADANIE 3 HP OBRAŻEŃ WSZYSTKIM W PROMIENIU:
+  // 1. Przeciwnicy (w tym tarcza taktyczna — ignoruje tarczę, przenika przez ściany)
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const en = enemies[i];
+    const d = Math.hypot(en.x - x, en.y - y);
+    if (d <= radius + en.radius) {
+      en.hp -= 3;
+      en.hitFlash = 12;
+      popups.push({ x: en.x, y: en.y - 20, text: '-3 HP ☢️', color: '#ef4444', alpha: 1 });
+      if (en.hp <= 0) {
+        eliminateEnemy(i, en, '#ef4444');
+      }
+    }
+  }
+
+  // 2. Cywile
+  for (let i = civilians.length - 1; i >= 0; i--) {
+    const civ = civilians[i];
+    const d = Math.hypot(civ.x - x, civ.y - y);
+    if (d <= radius + civ.radius) {
+      civ.hp -= 3;
+      civ.hitFlash = 12;
+      popups.push({ x: civ.x, y: civ.y - 20, text: '-3 HP ☢️', color: '#ef4444', alpha: 1 });
+      if (civ.hp <= 0) {
+        addPaintSplat(civ.x, civ.y, '#f43f5e', 30);
+        eliminatedHumans.push({
+          x: civ.x,
+          y: civ.y,
+          shirtColor: '#f43f5e',
+          splatColor: '#f43f5e',
+          timer: 48
+        });
+        civilians.splice(i, 1);
+        civilianRespawnQueue.push({ timer: 10 * 60 });
+      }
+    }
+  }
+
+  // 3. Pomocnik gracza
+  if (helper && helper.active) {
+    const d = Math.hypot(helper.x - x, helper.y - y);
+    if (d <= radius + helper.radius) {
+      helper.hp -= 3;
+      helper.hitFlash = 12;
+      popups.push({ x: helper.x, y: helper.y - 20, text: '-3 HP ☢️', color: '#ef4444', alpha: 1 });
+      if (helper.hp <= 0) {
+        eliminateHelper();
+      }
+    }
+  }
+
+  // 4. Sam Gracz (atak samobójczy, jeśli w promieniu rażenia!)
+  const distToPlayer = Math.hypot(player.x - x, player.y - y);
+  if (distToPlayer <= radius + player.radius) {
+    player.hp = Math.max(0, player.hp - 3);
+    player.hitFlash = 16;
+    popups.push({ x: player.x, y: player.y - 30, text: '-3 HP ☢️ (WŁASNA BOMBA!)', color: '#ef4444', alpha: 1 });
+    updateHud();
+    if (player.hp <= 0) {
+      playerDeadPending = true;
+      playDeadSound();
+    }
+  }
+
+  player.cooldown = 45; // Krótkie opóźnienie po zrzuceniu atomówki
 }
 
 function firePlayerWeapon(fromX, fromY, angle) {
@@ -608,8 +736,15 @@ function update() {
   if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
 
+  const isNukeAimingWithGamepad = player.weapon === 'nuke' && nukeAiming.active && gpInput && gpInput.isShooting;
+
   let speedFactor = 1;
-  if (touchJoystick.active) {
+  if (isNukeAimingWithGamepad) {
+    // Na padzie podczas celowania atomówką gracz nie może się poruszać, lewa gałka steruje pozycją celownika
+    dx = 0;
+    dy = 0;
+    speedFactor = 0;
+  } else if (touchJoystick.active) {
     dx += touchJoystick.dx;
     dy += touchJoystick.dy;
     if (!keys['KeyW'] && !keys['KeyS'] && !keys['KeyA'] && !keys['KeyD']) {
@@ -649,11 +784,92 @@ function update() {
     player.angle = Math.atan2(touchJoystick.dy, touchJoystick.dx);
   }
 
+  // ==================== OBSŁUGA ŁADOWANIA I CELOWANIA BOMBY ATOMOWEJ ====================
+  const isFireButtonHeld = mouse.down || (gpInput && gpInput.isShooting);
+
+  if (player.weapon === 'nuke') {
+    if (isFireButtonHeld && player.hp > 0) {
+      if (!nukeAiming.active) {
+        // Sprawdź czy gracz ma minimalną ilość amunicji (5 markerów)
+        if (player.ammo < 5) {
+          playEmptyAmmoSound();
+          popups.push({ x: player.x, y: player.y - 28, text: 'BRAK NABOJÓW NA ATOMÓWKĘ (min. 5)!', color: '#ef4444', alpha: 1 });
+          player.cooldown = 15;
+        } else {
+          // Początek ładowania bomby atomowej
+          nukeAiming.active = true;
+          nukeAiming.holdFrames = 0;
+          nukeAiming.radius = 40;
+          nukeAiming.cost = 5;
+          if (gpInput && isNukeAimingWithGamepad) {
+            // Na padzie zacznij celownik w odległości 120px przed graczem
+            nukeAiming.x = Math.max(30, Math.min(canvas.width - 30, player.x + Math.cos(player.angle) * 120));
+            nukeAiming.y = Math.max(30, Math.min(canvas.height - 30, player.y + Math.sin(player.angle) * 120));
+          } else {
+            nukeAiming.x = mouse.x;
+            nukeAiming.y = mouse.y;
+          }
+          startNukeChargeSound();
+        }
+      } else {
+        // Ładowanie trwa: aktualizuj pozycję celownika
+        nukeAiming.holdFrames++;
+        if (gpInput && isNukeAimingWithGamepad) {
+          // Gałki kontrolera przesuwają celownik po planszy
+          const aimSpd = 6.5;
+          const stickX = (Math.abs(gpInput.aimX) > 0.18 ? gpInput.aimX : gpInput.moveX);
+          const stickY = (Math.abs(gpInput.aimY) > 0.18 ? gpInput.aimY : gpInput.moveY);
+          nukeAiming.x += stickX * aimSpd;
+          nukeAiming.y += stickY * aimSpd;
+          nukeAiming.x = Math.max(20, Math.min(canvas.width - 20, nukeAiming.x));
+          nukeAiming.y = Math.max(20, Math.min(canvas.height - 20, nukeAiming.y));
+          mouse.x = nukeAiming.x;
+          mouse.y = nukeAiming.y;
+        } else {
+          nukeAiming.x = mouse.x;
+          nukeAiming.y = mouse.y;
+        }
+
+        // Promień rośnie w czasie, ale koszt nie może przekroczyć amunicji gracza
+        const maxPossibleRadius = 340;
+        const potentialRadius = Math.min(maxPossibleRadius, 40 + (nukeAiming.holdFrames / 60) * 110);
+        const costForPotential = computeNukeAmmoCost(potentialRadius);
+
+        if (costForPotential <= player.ammo) {
+          nukeAiming.radius = potentialRadius;
+          nukeAiming.cost = costForPotential;
+        } else {
+          // Nie rośnie dalej niż pozwala amunicja gracza
+          nukeAiming.cost = computeNukeAmmoCost(nukeAiming.radius);
+        }
+      }
+    } else if (nukeAiming.active) {
+      // Puszczenie przycisku fire!
+      stopNukeChargeSound();
+      const holdTimeSec = nukeAiming.holdFrames / 60;
+      if (holdTimeSec >= 0.5) {
+        // Wystarczająco długo przytrzymane (> 0.5s) -> Detonacja!
+        triggerNukeDetonation(nukeAiming.x, nukeAiming.y, nukeAiming.radius, nukeAiming.cost);
+      } else {
+        // Za krótko (< 0.5s) -> anuluj bez straty amunicji
+        popups.push({ x: player.x, y: player.y - 28, text: 'ZBYT KRÓTKO! PRZYTRZYMAJ MIN. 0.5s', color: '#eab308', alpha: 1 });
+      }
+      nukeAiming.active = false;
+      nukeAiming.holdFrames = 0;
+    }
+  } else {
+    // Jeśli gracz zmienił broń podczas ładowania
+    if (nukeAiming.active) {
+      stopNukeChargeSound();
+      nukeAiming.active = false;
+    }
+  }
+
   if (player.cooldown > 0) player.cooldown--;
 
-  // Strzał (mysz lub spust/przycisk kontrolera Xbox)
+  // Strzał dla pozostałych broni (pistol, bazooka, minigun)
   const shouldShoot = (mouse.down || (gpInput && gpInput.isShooting)) && player.cooldown <= 0;
-  if (shouldShoot) {
+  if (shouldShoot && player.weapon !== 'nuke') {
     const spread = player.weapon === 'bazooka' ? 0 : (player.weapon === 'minigun' ? (Math.random() - 0.5) * 0.16 : (Math.random() - 0.5) * 0.08);
     firePlayerWeapon(player.x, player.y, player.angle + spread);
   }
@@ -1355,6 +1571,21 @@ function update() {
     ex.radius += (ex.maxRadius - ex.radius) * 0.25;
     ex.alpha -= 0.05;
     if (ex.alpha <= 0) explosions.splice(i, 1);
+  }
+
+  // Animacje wybuchów atomowych (nukeExplosions)
+  for (let i = nukeExplosions.length - 1; i >= 0; i--) {
+    nukeExplosions[i].timer--;
+    if (nukeExplosions[i].timer <= 0) {
+      nukeExplosions.splice(i, 1);
+    }
+  }
+
+  // Wstrząs ekranu i błysk wybuchu atomowego
+  if (nukeFlashTimer > 0) nukeFlashTimer--;
+  if (nukeScreenShake > 0) {
+    nukeScreenShake *= 0.92;
+    if (nukeScreenShake < 0.2) nukeScreenShake = 0;
   }
 
   // Cząsteczki farby
