@@ -448,10 +448,14 @@ function renderShopWeapons() {
     const nextNode = document.createElement('div');
     if (!isWeaponOwned) {
       // Pierwsza rzecz do kupienia to odblokowanie toru (zakup broni)
+      const reqLvl = w.requiredLevel || 1;
+      const isLevelLocked = unlockedLevel < reqLvl;
       nextNode.className = 'tree-node next-unlock';
       nextNode.innerHTML = `
         <div>
-          <div style="font-size:10px;font-weight:900;color:#facc15;">🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)</div>
+          <div style="font-size:10px;font-weight:900;color:${isLevelLocked ? '#ef4444' : '#facc15'};">
+            ${isLevelLocked ? `🔒 WYMAGA ODBLOKOWANIA POZIOMU ${reqLvl}` : '🔓 NASTĘPNA RZECZ DO KUPIENIA (ODBLOKOWANIE TORU)'}
+          </div>
           <div class="lvl-title" style="font-size:15px;">${w.name}</div>
           <div class="lvl-enemies" style="font-size:11px;margin:3px 0;">${w.desc}</div>
           <div class="lvl-enemies" style="color:#93c5fd;font-size:11px;">${w.ammoLabel}</div>
@@ -461,10 +465,14 @@ function renderShopWeapons() {
       const btnWrap = nextNode.querySelector('.custom-card-btns');
       const btnBuy = document.createElement('button');
       btnBuy.className = 'btn-green';
-      btnBuy.disabled = diamonds < w.cost;
-      btnBuy.textContent = diamonds >= w.cost ? `🛒 Odblokuj tor (${w.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
+      btnBuy.disabled = isLevelLocked || diamonds < w.cost;
+      if (isLevelLocked) {
+        btnBuy.textContent = `🔒 Odblokuj Poziom ${reqLvl} (Masz: ${unlockedLevel})`;
+      } else {
+        btnBuy.textContent = diamonds >= w.cost ? `🛒 Odblokuj tor (${w.cost} 💎)` : `🔒 Brak 💎 (${diamonds}/${w.cost})`;
+      }
       btnBuy.onclick = () => {
-        if (diamonds < w.cost) return;
+        if (isLevelLocked || diamonds < w.cost) return;
         diamonds -= w.cost;
         if (!ownedWeapons.includes(w.id)) ownedWeapons.push(w.id);
         defaultWeapon = w.id;

@@ -3,32 +3,6 @@
 // Topbar i przyciski menu
 btnPause.addEventListener('click', togglePause);
 
-let diamondCheatClicks = 0;
-if (diamondStatBox) {
-  diamondStatBox.addEventListener('click', () => {
-    diamondCheatClicks++;
-    if (diamondCheatClicks >= 7) {
-      diamondCheatClicks = 0;
-      diamonds += 10;
-      playPickupSound();
-      saveProgress();
-      updateHud();
-      popups.push({
-        x: player.x,
-        y: player.y - 32,
-        text: '💎 +10 DIAMENTÓW!',
-        color: '#38bdf8',
-        alpha: 1
-      });
-      if (gameState === 'shop') {
-        renderShopWeapons();
-      } else if (gameState === 'menu' || gameState === 'level_clear' || gameState === 'dead') {
-        openMenu(gameState === 'menu' ? 'select' : gameState);
-      }
-    }
-  });
-}
-
 if (btnOpenShop) {
   btnOpenShop.addEventListener('click', () => {
     if (gameState === 'shop') {

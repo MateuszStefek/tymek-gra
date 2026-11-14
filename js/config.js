@@ -17,7 +17,8 @@ const weaponsCatalog = [
     name: '🚀 Bazooka Samonaprowadzająca',
     shortName: '🚀 Bazooka',
     cost: 1,
-    desc: 'Wystrzeliwuje rakietę, która namierza wroga najbliższego wskaźnikowi myszy i omija przeszkody! Start: 2 rakiety.',
+    requiredLevel: 3,
+    desc: 'Wystrzeliwuje rakietę, która namierza wroga najbliższego wskaźnikowi myszy i omija przeszkody! Start: 2 rakiety. Wymaga odblokowania Poziomu 3.',
     ammoLabel: '🚀 Rakiety (2 na start rundy)',
     upgrades: [
       {
@@ -59,7 +60,8 @@ const weaponsCatalog = [
     name: '🔥 Minigun',
     shortName: '🔥 Minigun',
     cost: 1,
-    desc: 'Ciężki minigun o potężnej szybkostrzelności! Strzela bardzo szybko i korzysta ze zwykłych nabojów farby.',
+    requiredLevel: 7,
+    desc: 'Ciężki minigun o potężnej szybkostrzelności! Strzela bardzo szybko i korzysta ze zwykłych nabojów farby. Wymaga odblokowania Poziomu 7.',
     ammoLabel: '🎨 Zwykłe naboje farby (wysoka szybkostrzelność)',
     upgrades: []
   },
@@ -68,7 +70,8 @@ const weaponsCatalog = [
     name: '☢️ Bomba Atomowa',
     shortName: '☢️ Atomówka',
     cost: 10,
-    desc: 'Niszczycielska broń taktyczna! Przytrzymaj strzał, aby powiększyć promień wybuchu (koszt n log n). Fala niszczy wszystko w zasięgu: 3 HP na zewnątrz i aż 7 HP w centrum (50% promienia)!',
+    requiredLevel: 15,
+    desc: 'Niszczycielska broń taktyczna! Przytrzymaj strzał, aby powiększyć promień wybuchu (koszt n log n). Fala niszczy wszystko w zasięgu: 3 HP na zewnątrz i aż 7 HP w centrum (50% promienia)! Wymaga odblokowania Poziomu 15.',
     ammoLabel: '🎨 Zwykłe naboje farby (koszt n log n, do 7 HP w centrum)',
     upgrades: []
   }

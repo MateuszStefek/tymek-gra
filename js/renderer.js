@@ -810,35 +810,7 @@ function renderScene() {
     ctx.restore();
   }
 
-  // Informacja o odradzających się pomocnikach w lewym dolnym rogu
-  if (helperUnlocked && gameState === 'playing' && typeof helpers !== 'undefined' && Array.isArray(helpers)) {
-    const deadHelpers = helpers.filter(h => !h.alive);
-    if (deadHelpers.length > 0) {
-      ctx.save();
-      ctx.font = 'bold 13px system-ui';
-      ctx.textAlign = 'left';
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 3;
-      const respMsg = deadHelpers.map(h => `${h.name} (${Math.ceil(h.respawnTimer / 60)}s)`).join(', ');
-      const fullText = `🤝 Powrót: ${respMsg}...`;
-      ctx.strokeText(fullText, 16, canvas.height - 16);
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillText(fullText, 16, canvas.height - 16);
-      ctx.restore();
-    }
-  } else if (helper && !helper.alive && helperUnlocked && gameState === 'playing') {
-    ctx.save();
-    ctx.font = 'bold 13px system-ui';
-    ctx.textAlign = 'left';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 3;
-    const respMsg = `🤝 Pomocnik powraca za ${Math.ceil(helper.respawnTimer / 60)}s...`;
-    ctx.strokeText(respMsg, 16, canvas.height - 16);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText(respMsg, 16, canvas.height - 16);
-    ctx.restore();
-  }
-
+  // Level banner
   if (levelBannerTimer > 0 && gameState === 'playing') {
     const cfg = getLevelConfig(level);
     ctx.save();

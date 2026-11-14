@@ -1753,3 +1753,25 @@ window.ublock = function(n) {
   return msg;
 };
 window.unlock = window.ublock;
+
+// Konsolowa funkcja do ustawiania / dodawania diamentów: diamonds(n)
+window.diamonds = function(n) {
+  const amount = parseInt(n, 10);
+  if (isNaN(amount)) {
+    console.warn('Użycie: diamonds(n) - podaj liczbę diamentów do dodania lub ustawienia (np. diamonds(10))');
+    return `Aktualna liczba diamentów: ${diamonds} 💎. Użycie: diamonds(n)`;
+  }
+  // Jeśli podano wartość dodatnią, dodajemy do stanu lub ustawiamy
+  diamonds = Math.max(0, diamonds + amount);
+  playPickupSound();
+  saveProgress();
+  updateHud();
+  if (gameState === 'shop' && typeof renderShopWeapons === 'function') {
+    renderShopWeapons();
+  } else if (['menu', 'level_clear', 'dead'].includes(gameState) && typeof openMenu === 'function') {
+    openMenu(gameState === 'menu' ? 'select' : gameState);
+  }
+  const msg = `💎 Diamenty zaktualizowane! Aktualny stan: ${diamonds} 💎`;
+  console.log(msg);
+  return msg;
+};
